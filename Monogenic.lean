@@ -35,12 +35,11 @@ lemma lemma_3_2 (R S : Type)
     rcases IsLocalRing.maximal_ideal_unique R with ⟨mr, hmr⟩
     rcases IsLocalRing.maximal_ideal_unique S with ⟨ms, hms⟩
     have eq_max_prod : Ideal.span (ϕ '' mr)  = ms := by
-      have unramified_ϕ: ϕ.FormallyUnramified := by
-        --apply RingHom.etale_iff_formallyUnramified_and_smooth.2 ϕ
-
-        sorry
+      have unramified_ϕ: ϕ.FormallyUnramified :=
+        ((RingHom.etale_iff_formallyUnramified_and_smooth ϕ).mp etale).1
 
       sorry
+
 
 
 
