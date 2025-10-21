@@ -10,9 +10,8 @@ import Mathlib.Algebra.Polynomial.Basic
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.Etale.Basic
 import Mathlib.RingTheory.Ideal.Span
-
---import Mathlib.RingTheory.Etale
-
+import Mathlib.RingTheory.Unramified.LocalRing
+import Mathlib.RingTheory.LocalRing.ResidueField.Defs
 
 
 #eval Lean.versionString
@@ -25,8 +24,7 @@ import Mathlib.RingTheory.Ideal.Span
 lemma lemma_3_2 (R S : Type)
   [CommRing R] [CommRing S]
   [IsLocalRing R] [IsLocalRing S]
-  --[Algebra R S]
-  (ϕ : R →+* S)
+  (ϕ : R →+* S) (hfin : ϕ.Finite)(hinj: Function.Injective ϕ)
   (etale : RingHom.Etale ϕ) :
   ∃ β : S, (Algebra.adjoin ϕ.range {β} = S) ∧
   ∃ (f : Polynomial R) (fmon : f.Monic), Polynomial.eval β (Polynomial.map ϕ f) = 0 ∧
@@ -34,17 +32,27 @@ lemma lemma_3_2 (R S : Type)
   IsUnit (Polynomial.eval β (Polynomial.map ϕ (Polynomial.derivative f))) := by
     rcases IsLocalRing.maximal_ideal_unique R with ⟨mr, hmr⟩
     rcases IsLocalRing.maximal_ideal_unique S with ⟨ms, hms⟩
-    have eq_max_prod : Ideal.span (ϕ '' mr)  = ms := by
+    have eq_max_prod : Ideal.map ϕ mr  = ms := by
       have unramified_ϕ: ϕ.FormallyUnramified :=
         ((RingHom.etale_iff_formallyUnramified_and_smooth ϕ).mp etale).1
       let S_is_R_algebra : Algebra R S := RingHom.toAlgebra ϕ
       have ϕ_S_R_map : algebraMap R S = ϕ :=
         RingHom.algebraMap_toAlgebra ϕ
+      have unramifed_alg_rs: Algebra.FormallyUnramified R S := by
+        rw [← ϕ_S_R_map] at unramified_ϕ
+        exact unramified_ϕ;
+      have local_ϕ : IsLocalHom ϕ := by
+        refine RingHom.IsIntegral.isLocalHom ?_ ?_
+        exact RingHom.IsIntegral.of_finite hfin
+        exact hinj
+
+
 
 
 
       sorry
     sorry
+
 
 
 /-
