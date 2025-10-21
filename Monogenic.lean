@@ -12,6 +12,7 @@ import Mathlib.RingTheory.Etale.Basic
 import Mathlib.RingTheory.Ideal.Span
 import Mathlib.RingTheory.Unramified.LocalRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Defs
+import Mathlib.RingTheory.EssentialFiniteness
 
 
 #eval Lean.versionString
@@ -45,6 +46,10 @@ lemma lemma_3_2 (R S : Type)
         refine RingHom.IsIntegral.isLocalHom ?_ ?_
         exact RingHom.IsIntegral.of_finite hfin
         exact hinj
+      --have fin_R_S : EssFiniteType R S := by sorry
+      #check Algebra.FormallyUnramified.map_maximalIdeal
+
+
 
 
 
