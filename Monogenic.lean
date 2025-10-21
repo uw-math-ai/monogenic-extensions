@@ -58,6 +58,33 @@ lemma lemma_3_2 (R S : Type)
       sorry
     sorry
 
+/-  lemma packaging sentence 2 and first part of sentence 3 from Lemma 3.2
+hypotheses: TBD
+result: R/mr-> S/ms separable
+-/
+
+
+/-  lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
+hypotheses: TBD
+result: R/mr-> S/ms = R/mr[beta0] and the minimal polynomial f0 is separable
+-/
+
+
+/-  lemma packaging sentence 5 (displayed equation) from Lemma 3.2
+hypotheses: TBD
+result: If beta is a lift of beta0, then R[beta]/mr simeq S/ms
+-/
+
+/-  lemma packaging sentence 6  from Lemma 3.2, uses Nakayama
+hypotheses: TBD
+result: R[beta] = S
+-/
+
+/-  lemma packaging sentence 7 & 8 from Lemma 3.2
+hypotheses: TBD
+result: f'(beta) is not in ms
+-/
+
 
 
 /-
