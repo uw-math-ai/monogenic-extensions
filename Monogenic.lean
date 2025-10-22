@@ -12,7 +12,7 @@ import Mathlib.RingTheory.Etale.Basic
 import Mathlib.RingTheory.Ideal.Span
 import Mathlib.RingTheory.Unramified.LocalRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Defs
-import Mathlib.RingTheory.EssentialFiniteness
+import Mathlib.RingTheory.Kaehler.Basic
 
 
 #eval Lean.versionString
@@ -22,17 +22,17 @@ import Mathlib.RingTheory.EssentialFiniteness
 
 
 
-lemma lemma_3_2 (R S : Type)
+lemma Lemma_3_2 (R S : Type)
   [CommRing R] [CommRing S]
   [IsLocalRing R] [IsLocalRing S]
-  (ϕ : R →+* S) (hfin : ϕ.Finite)(hinj: Function.Injective ϕ)
+  (ϕ : R →+* S) (hfin : ϕ.Finite) (hinj : Function.Injective ϕ)
   (etale : RingHom.Etale ϕ) :
   ∃ β : S, (Algebra.adjoin ϕ.range {β} = S) ∧
   ∃ (f : Polynomial R) (fmon : f.Monic), Polynomial.eval β (Polynomial.map ϕ f) = 0 ∧
   (∀ (g : Polynomial R), Polynomial.eval β (Polynomial.map ϕ g) = 0 → f ∣ g) ∧
   IsUnit (Polynomial.eval β (Polynomial.map ϕ (Polynomial.derivative f))) := by
-    rcases IsLocalRing.maximal_ideal_unique R with ⟨mr, hmr⟩
-    rcases IsLocalRing.maximal_ideal_unique S with ⟨ms, hms⟩
+    let mr : Ideal R := IsLocalRing.maximalIdeal R
+    let ms : Ideal S := IsLocalRing.maximalIdeal S
     have eq_max_prod : Ideal.map ϕ mr  = ms := by
       have unramified_ϕ: ϕ.FormallyUnramified :=
         ((RingHom.etale_iff_formallyUnramified_and_smooth ϕ).mp etale).1
@@ -40,22 +40,16 @@ lemma lemma_3_2 (R S : Type)
       have ϕ_S_R_map : algebraMap R S = ϕ :=
         RingHom.algebraMap_toAlgebra ϕ
       have unramifed_alg_rs: Algebra.FormallyUnramified R S := by
-        rw [← ϕ_S_R_map] at unramified_ϕ
-        exact unramified_ϕ;
-      have local_ϕ : IsLocalHom ϕ := by
+        rw [← ϕ_S_R_map] at unramified_ϕ; exact unramified_ϕ;
+      have local_ϕ : IsLocalHom (algebraMap R S) := by
         refine RingHom.IsIntegral.isLocalHom ?_ ?_
         exact RingHom.IsIntegral.of_finite hfin
         exact hinj
-      --have fin_R_S : EssFiniteType R S := by sorry
-      #check Algebra.FormallyUnramified.map_maximalIdeal
+      have fin_R_S : Algebra.EssFiniteType R S :=
+        RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hfin)
+      apply Algebra.FormallyUnramified.map_maximalIdeal
 
 
-
-
-
-
-
-      sorry
     sorry
 
 /-  lemma packaging sentence 2 and first part of sentence 3 from Lemma 3.2
