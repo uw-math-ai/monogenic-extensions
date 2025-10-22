@@ -19,8 +19,9 @@ import Mathlib.RingTheory.Kaehler.Basic
 
 #eval 3+4
 
-
-
+variable (R S : Type*) [CommRing R] [CommRing S][Algebra R S]
+def RingHom.IsSeparable (f : R →+* S) : Prop :=
+      Algebra.IsSeparable R S
 
 lemma Lemma_3_2 (R S : Type)
   [CommRing R] [CommRing S]
@@ -50,12 +51,28 @@ lemma Lemma_3_2 (R S : Type)
       apply Algebra.FormallyUnramified.map_maximalIdeal
 
 
+    /-  (Task 2)lemma packaging sentence 2 and first part of sentence 3 from Lemma 3.2
+    hypotheses: TBD
+    result: R/mr-> S/ms separable
+    -/
+    have induced_algebra : Algebra (R ⧸ mr) (S ⧸ms) := by
+      sorry
+    have separable_of_induced_map : Algebra.IsSeparable (R ⧸ mr) (S ⧸ ms) := by
+      sorry
+
+
+
+    /- () lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
+    hypotheses: TBD
+    result: R/mr-> S/ms = R/mr[beta0] and the minimal polynomial f0 is separable
+    -/
+
+
+
+
     sorry
 
-/-  lemma packaging sentence 2 and first part of sentence 3 from Lemma 3.2
-hypotheses: TBD
-result: R/mr-> S/ms separable
--/
+
 
 
 /-  lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
