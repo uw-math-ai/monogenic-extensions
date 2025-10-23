@@ -29,8 +29,8 @@ lemma Lemma_3_2 (R S : Type)
   (ϕ : R →+* S) (hfin : ϕ.Finite) (hinj : Function.Injective ϕ)
   (etale : RingHom.Etale ϕ) :
   ∃ β : S, (Algebra.adjoin ϕ.range {β} = S) ∧
-  ∃ (f : Polynomial R) (fmon : f.Monic), Polynomial.eval β (Polynomial.map ϕ f) = 0 ∧
-  (∀ (g : Polynomial R), Polynomial.eval β (Polynomial.map ϕ g) = 0 → f ∣ g) ∧
+  ∃ (f : Polynomial R) (fmon : f.Monic), Polynomial.eval β (Polynomial.map ϕ f) =
+  0 ∧ (∀ (g : Polynomial R), Polynomial.eval β (Polynomial.map ϕ g) = 0 → f ∣ g) ∧
   IsUnit (Polynomial.eval β (Polynomial.map ϕ (Polynomial.derivative f))) := by
     let mr : Ideal R := IsLocalRing.maximalIdeal R
     let ms : Ideal S := IsLocalRing.maximalIdeal S
@@ -42,10 +42,8 @@ lemma Lemma_3_2 (R S : Type)
         RingHom.algebraMap_toAlgebra ϕ
       have unramifed_alg_rs: Algebra.FormallyUnramified R S := by
         rw [← ϕ_S_R_map] at unramified_ϕ; exact unramified_ϕ;
-      have local_ϕ : IsLocalHom (algebraMap R S) := by
-        refine RingHom.IsIntegral.isLocalHom ?_ ?_
-        exact RingHom.IsIntegral.of_finite hfin
-        exact hinj
+      have local_ϕ : IsLocalHom (algebraMap R S) :=
+        RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite hfin) hinj
       have fin_R_S : Algebra.EssFiniteType R S :=
         RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hfin)
       apply Algebra.FormallyUnramified.map_maximalIdeal
@@ -61,65 +59,40 @@ lemma Lemma_3_2 (R S : Type)
       sorry
 
 
-
-    /- () lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
+    /- (Task 3) lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
     hypotheses: TBD
-    result: R/mr-> S/ms = R/mr[beta0] and the minimal polynomial f0 is separable
+    result: R/mr-> S/ms = R/mr[β_0] and the minimal polynomial f0 is separable
+    -/
+    have adjoined_algebra : ∃ β_0 : (S ⧸ ms), Algebra.adjoin (R ⧸ mr) {β_0} = (S ⧸ ms) := by
+      sorry
+
+
+    /- (Task 4) lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
+    hypotheses: TBD
+    result: R/mr-> S/ms = R/mr[β_0] and the minimal polynomial f0 is separable
     -/
 
 
 
-
     sorry
 
 
 
 
-/-  lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
-hypotheses: TBD
-result: R/mr-> S/ms = R/mr[beta0] and the minimal polynomial f0 is separable
--/
+
 
 
 /-  lemma packaging sentence 5 (displayed equation) from Lemma 3.2
 hypotheses: TBD
-result: If beta is a lift of beta0, then R[beta]/mr simeq S/ms
+result: If β is a lift of β_0, then R[β]/mr simeq S/ms
 -/
 
 /-  lemma packaging sentence 6  from Lemma 3.2, uses Nakayama
 hypotheses: TBD
-result: R[beta] = S
+result: R[β] = S
 -/
 
 /-  lemma packaging sentence 7 & 8 from Lemma 3.2
 hypotheses: TBD
-result: f'(beta) is not in ms
+result: f'(β) is not in ms
 -/
-
-
-
-/-
-lemma lemma_3_2' (R S : Type)
-  [CommRing R] [CommRing S]
-  [IsLocalRing R] [IsLocalRing S]
-  [Algebra R S] : let ϕ := algebraMap R S;
-  ∃ β : S, (Algebra.adjoin ϕ.range {β} = S) ∧
-  ∃ (f : Polynomial R) (fmon : f.Monic), Polynomial.eval β (Polynomial.map ϕ f) = 0 ∧
-  (∀ (g : Polynomial R), Polynomial.eval β (Polynomial.map ϕ g) = 0 → f ∣ g) ∧
-  IsUnit (Polynomial.eval β (Polynomial.map ϕ (Polynomial.derivative f))) := by
-    let ϕ := algebraMap R S
-    rcases IsLocalRing.maximal_ideal_unique R with ⟨mr, hmr⟩
-    rcases IsLocalRing.maximal_ideal_unique S with ⟨ms, hms⟩
-    have eq_max_prod : Ideal.span (ϕ '' mr)  = ms := by
-      have unramified_ϕ: ϕ.FormallyUnramified := sorry
-        --((RingHom.etale_iff_formallyUnramified_and_smooth ϕ).mp etale).1
-      #check RingHom.FormallyUnramified ϕ
-      #check RingHom.OfLocalizationSpanTarget
-      --have unramifed_alg_rs: Algebra.FormallyUnramified R S := by sorry
-      sorry
-
-
-
-
-    sorry
-  -/
