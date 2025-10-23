@@ -19,7 +19,7 @@ import Mathlib.RingTheory.Kaehler.Basic
 
 #eval 3+4
 
-variable (R S : Type*) [CommRing R] [CommRing S][Algebra R S]
+variable (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
 def RingHom.IsSeparable (f : R →+* S) : Prop :=
       Algebra.IsSeparable R S
 
@@ -67,12 +67,17 @@ lemma Lemma_3_2 (R S : Type)
       sorry
 
 
-    /- (Task 4) lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
+    /-  lemma packaging sentence 5 (displayed equation) from Lemma 3.2
     hypotheses: TBD
-    result: R/mr-> S/ms = R/mr[β_0] and the minimal polynomial f0 is separable
+    result: If β is a lift of β_0, then R[β]/mr simeq S/ms
     -/
+    have s_algebra_quotient : Algebra (R ⧸ mr) S := by
+      sorry
+    rcases adjoined_algebra with ⟨β_0, hb⟩
+    have lift_β_0 (β : S) : (Ideal.Quotient.mk ms) β = β_0 →
+      (Algebra.adjoin (R ⧸ mr) {β}) ≃ (S⧸ ms) := by
 
-
+      sorry
 
     sorry
 
