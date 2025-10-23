@@ -51,8 +51,7 @@ lemma Lemma_3_2 (R S : Type)
 
     /-  (Task 2)lemma packaging sentence 2 and first part of sentence 3 from Lemma 3.2
     hypotheses: TBD
-    result: R/mr-> S/ms separable
-    -/
+    result: R/mr-> S/ms separable -/
     have induced_algebra : Algebra (R ⧸ mr) (S ⧸ms) := by
       sorry
     have separable_of_induced_map : Algebra.IsSeparable (R ⧸ mr) (S ⧸ ms) := by
@@ -61,16 +60,14 @@ lemma Lemma_3_2 (R S : Type)
 
     /- (Task 3) lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
     hypotheses: TBD
-    result: R/mr-> S/ms = R/mr[β_0] and the minimal polynomial f0 is separable
-    -/
+    result: R/mr-> S/ms = R/mr[β_0] and the minimal polynomial f0 is separable -/
     have adjoined_algebra : ∃ β_0 : (S ⧸ ms), Algebra.adjoin (R ⧸ mr) {β_0} = (S ⧸ ms) := by
       sorry
 
 
-    /-  lemma packaging sentence 5 (displayed equation) from Lemma 3.2
+    /- (Task 4) lemma packaging sentence 5 (displayed equation) from Lemma 3.2
     hypotheses: TBD
-    result: If β is a lift of β_0, then R[β]/mr simeq S/ms
-    -/
+    result: If β is a lift of β_0, then R[β]/mr simeq S/ms -/
     have s_algebra_quotient : Algebra (R ⧸ mr) S := by
       sorry
     rcases adjoined_algebra with ⟨β_0, hb⟩
@@ -80,17 +77,6 @@ lemma Lemma_3_2 (R S : Type)
       sorry
 
     sorry
-
-
-
-
-
-
-
-/-  lemma packaging sentence 5 (displayed equation) from Lemma 3.2
-hypotheses: TBD
-result: If β is a lift of β_0, then R[β]/mr simeq S/ms
--/
 
 /-  lemma packaging sentence 6  from Lemma 3.2, uses Nakayama
 hypotheses: TBD
