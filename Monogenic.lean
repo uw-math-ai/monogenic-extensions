@@ -16,7 +16,6 @@ import Mathlib.RingTheory.Kaehler.Basic
 
 
 #eval Lean.versionString
-
 #eval 3+4
 
 variable (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
@@ -53,7 +52,8 @@ lemma Lemma_3_2 (R S : Type)
     hypotheses: TBD
     result: R/mr-> S/ms separable -/
     have induced_algebra : Algebra (R ⧸ mr) (S ⧸ms) := by
-      sorry
+      refine Ideal.Quotient.algebraQuotientOfLEComap ?_
+      rw [ϕ_S_R_map]; apply Ideal.le_comap_of_map_le; simp[eq_max_prod]
     have separable_of_induced_map : Algebra.IsSeparable (R ⧸ mr) (S ⧸ ms) := by
       sorry
 
@@ -73,12 +73,15 @@ lemma Lemma_3_2 (R S : Type)
     rcases adjoined_algebra with ⟨β_0, hb⟩
     have lift_β_0 : (β : S) → (Ideal.Quotient.mk ms) β = β_0 →
       (Algebra.adjoin (R ⧸ mr) {β}) ≃ (S⧸ ms) := by
-
-      sorry
-    have exists_preimage : ∃ β, (Ideal.Quotient.mk ms) β = β_0 := by
       sorry
 
-    /-  lemma packaging sentence 6  from Lemma 3.2, uses Nakayama
+    let exists_preimage : ∃ β, (Ideal.Quotient.mk ms) β = β_0 := by
+      rcases Ideal.instIsTwoSided ms
+      have surj_of : Function.Surjective (Ideal.Quotient.mk ms) := by
+        exact Ideal.Quotient.mk_surjective
+      exact surj_of β_0
+
+    /- (Task 5) lemma packaging sentence 6  from Lemma 3.2, uses Nakayama
     hypotheses: TBD
     result: R[β] = S
     -/
@@ -86,13 +89,12 @@ lemma Lemma_3_2 (R S : Type)
     have lifted_adjoined : Algebra.adjoin R {β} = S := by
       sorry
 
-    /-  lemma packaging sentence 7 & 8 from Lemma 3.2
+    /- (Task 6) lemma packaging sentence 7 & 8 from Lemma 3.2
     hypotheses: TBD
     result: f'(β) is not in ms
     -/
     let f := Polynomial.derivative (Polynomial.map ϕ (minpoly R β))
     have is_unit_minpoly : Polynomial.eval β f ∉ ms := by
-
       sorry
 
     sorry
