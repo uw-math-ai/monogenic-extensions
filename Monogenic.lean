@@ -65,27 +65,57 @@ lemma Lemma_3_2 (R S : Type)
       sorry
 
 
+---------------------
+
     /- (Task 4) lemma packaging sentence 5 (displayed equation) from Lemma 3.2
     hypotheses: TBD
-    result: If β is a lift of β_0, then R[β]/mr simeq S/ms -/
-    have s_algebra_quotient : Algebra (R ⧸ mr) S := by
-      sorry
-    rcases adjoined_algebra with ⟨β_0, hb⟩
-    have lift_β_0 : (β : S) → (Ideal.Quotient.mk ms) β = β_0 →
-      (Algebra.adjoin (R ⧸ mr) {β}) ≃ (S⧸ ms) := by
-      sorry
+    result: If β is a lift of β_0, then R[β]/(mr R[β]) simeq S/ms -/
 
-    let exists_preimage : ∃ β, (Ideal.Quotient.mk ms) β = β_0 := by
+    -- exhibit β_0 from previous step
+    rcases adjoined_algebra with ⟨β_0, hb⟩
+
+    -- get a preimage β in S of β_0 in S/ms
+    let exists_preimage : ∃ (β : S), (Ideal.Quotient.mk ms) β = β_0 := by
       rcases Ideal.instIsTwoSided ms
       have surj_of : Function.Surjective (Ideal.Quotient.mk ms) := by
         exact Ideal.Quotient.mk_surjective
       exact surj_of β_0
 
+    -- exhibit such a β (in S)
+    rcases exists_preimage with ⟨β, hb2⟩
+
+    -- get inclusion R -> R[β]
+
+
+    -- #check Algebra.adjoin R {β} -- Type Subalgebra R S
+    -- #check Ideal.span {mr}
+
+    -- the following doesn't work, need mr to be viewed as a set *in R[β]*
+      -- (currently viewed as a set in R)
+
+    -- have compared_quotients : (Algebra.adjoin R {β}) ⧸ (Ideal.span {mr}) ≃ (S ⧸ ms) := by
+      -- sorry
+
+
+    have extended_algebra : Algebra.adjoin ϕ.range {β} := by
+      sorry
+
+    have Image_Rmr : Subalgebra (Algebra.adjoin (R ⧸ mr) {β_0}) (S ⧸ ms) := by
+      sorry
+
+    -- \quot -> ⧸
+    -- have Image_Rbeta : Subalgebra ((Algebra.adjoin R {β}) ⧸ (Algebra.ideal.span R {mr})) (S ⧸ ms) := by
+    --   sorry
+    -- have quotient_iso_adjoin_beta : (Image_Rmr) ≃ (Image_Rbeta) := by
+      -- sorry
+
+---------------------
+
     /- (Task 5) lemma packaging sentence 6  from Lemma 3.2, uses Nakayama
     hypotheses: TBD
     result: R[β] = S
     -/
-    rcases exists_preimage with ⟨β,hb⟩
+    -- rcases exists_preimage with ⟨β,hb⟩
     have lifted_adjoined : Algebra.adjoin R {β} = S := by
       sorry
 
