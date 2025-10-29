@@ -89,6 +89,8 @@ lemma Lemma_3_2 (R S : Type)
     let μ : (R →+* R_beta) := by
       apply RingHom.smulOneHom
 
+
+
     -- #check R_beta
     -- #check Algebra.semiringToRing R_beta
 
@@ -99,8 +101,8 @@ lemma Lemma_3_2 (R S : Type)
     -- the following doesn't work, need mr to be viewed as a set *in R[β]*
       -- (currently viewed as a set in R)
 
-    -- have compared_quotients : (Algebra.adjoin R {β}) ⧸ (Ideal.span {mr}) ≃ (S ⧸ ms) := by
-      -- sorry
+    have compared_quotients : (Algebra.adjoin R {β}) ⧸ (Ideal.span {mr}) ≃ (S ⧸ ms) := by
+      sorry
 
 
     have extended_algebra : Algebra.adjoin ϕ.range {β} := by
