@@ -76,7 +76,6 @@ lemma Lemma_3_2 (R S : Type)
 
     -- get a preimage β in S of β_0 in S/ms
     let exists_preimage : ∃ (β : S), (Ideal.Quotient.mk ms) β = β_0 := by
-      rcases Ideal.instIsTwoSided ms
       have surj_of : Function.Surjective (Ideal.Quotient.mk ms) := by
         exact Ideal.Quotient.mk_surjective
       exact surj_of β_0
@@ -84,7 +83,14 @@ lemma Lemma_3_2 (R S : Type)
     -- exhibit such a β (in S)
     rcases exists_preimage with ⟨β, hb2⟩
 
-    -- get inclusion R -> R[β]
+    -- -- get inclusion R -> R[β]
+    let R_beta : Subalgebra R S := (Algebra.adjoin R {β})
+
+    let μ : (R →+* R_beta) := by
+      apply RingHom.smulOneHom
+
+    -- #check R_beta
+    -- #check Algebra.semiringToRing R_beta
 
 
     -- #check Algebra.adjoin R {β} -- Type Subalgebra R S
