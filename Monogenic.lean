@@ -83,37 +83,48 @@ lemma Lemma_3_2 (R S : Type)
     -- exhibit such a β (in S)
     rcases exists_preimage with ⟨β, hb2⟩
 
-    -- -- get inclusion R -> R[β]
+    -- get inclusions R -> R[β] and R[β] → S
     let R_beta : Subalgebra R S := (Algebra.adjoin R {β})
 
-    let μ : (R →+* R_beta) := by
-      apply RingHom.smulOneHom
+    let μ : (R →+* R_beta) := by apply RingHom.smulOneHom
 
+    let ν : (R_beta →+* S) := by apply RingHom.smulOneHom
 
+    have composition : ν ∘ μ = ϕ := by
+      sorry
 
-    -- #check R_beta
-    -- #check Algebra.semiringToRing R_beta
+    -- get the ideal mr R[β]
+    let mrR_beta : Ideal R_beta := Ideal.map μ mr
 
+    -- want to witness R[β]/mr R[β] as a subalgebra of S/ms
+    -- need to show mr R[β] maps into ms (then leverage univ prop of quotient)
 
-    -- #check Algebra.adjoin R {β} -- Type Subalgebra R S
-    -- #check Ideal.span {mr}
+    let mrR_betaS : Ideal S := Ideal.map ν mrR_beta
 
-    -- the following doesn't work, need mr to be viewed as a set *in R[β]*
-      -- (currently viewed as a set in R)
+    have ideal_inc : mrR_betaS ≤ ms := by
+      sorry
 
-    have compared_quotients : (Algebra.adjoin R {β}) ⧸ (Ideal.span {mr}) ≃ (S ⧸ ms) := by
+    have extensionintower : mrR_betaS = ms := by
       sorry
 
 
-    have extended_algebra : Algebra.adjoin ϕ.range {β} := by
+
+
+    -- statement of isomorphism
+    have compared_quotients : (R_beta ⧸ mrR_beta) = (S ⧸ ms) := by
       sorry
 
-    have Image_Rmr : Subalgebra (Algebra.adjoin (R ⧸ mr) {β_0}) (S ⧸ ms) := by
-      sorry
+
+
+    -- have extended_algebra : Algebra.adjoin ϕ.range {β} := by
+    --   sorry
+
+    -- have Image_Rmr : Subalgebra (Algebra.adjoin (R ⧸ mr) {β_0}) (S ⧸ ms) := by
+    --   sorry
 
     -- \quot -> ⧸
     -- have Image_Rbeta : Subalgebra ((Algebra.adjoin R {β}) ⧸ (Algebra.ideal.span R {mr})) (S ⧸ ms) := by
-    --   sorry
+      -- sorry
     -- have quotient_iso_adjoin_beta : (Image_Rmr) ≃ (Image_Rbeta) := by
       -- sorry
 
