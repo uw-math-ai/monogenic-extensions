@@ -86,26 +86,37 @@ lemma Lemma_3_2 (R S : Type)
     -- get inclusions R -> R[β] and R[β] → S
     let R_beta : Subalgebra R S := (Algebra.adjoin R {β})
 
-    let μ : (R →+* R_beta) := by apply RingHom.smulOneHom
+    let μ : R →+* R_beta := algebraMap R R_beta
 
-    let ν : (R_beta →+* S) := by apply RingHom.smulOneHom
+    let ν : R_beta →+* S := (R_beta.val : R_beta →ₐ[R] S).toRingHom
 
-    have composition : ν ∘ μ = ϕ := by
-      sorry
+    have composition : ν.comp μ = ϕ := by
+      apply RingHom.ext
+      intro r
+      dsimp [μ, ν]
+      -- R_beta.val (algebraMap R R_beta r) is (algebraMap R R_beta r : S),
+      -- and that equals algebraMap R S r, which by `ϕ_S_R_map` is `ϕ r`.
+      simp [ϕ_S_R_map]
 
     -- get the ideal mr R[β]
     let mrR_beta : Ideal R_beta := Ideal.map μ mr
 
     -- want to witness R[β]/mr R[β] as a subalgebra of S/ms
-    -- need to show mr R[β] maps into ms (then leverage univ prop of quotient)
+    -- need to show mr R[β] maps into ms (then leverage universal property of quotient)
 
     let mrR_betaS : Ideal S := Ideal.map ν mrR_beta
 
-    have ideal_inc : mrR_betaS ≤ ms := by
-      sorry
-
     have extensionintower : mrR_betaS = ms := by
-      sorry
+      dsimp [mrR_betaS]
+      -- (first `μ` then `ν`) reduces to `Ideal.map (ν.comp μ) mr`
+      rw [Ideal.map_map μ ν]
+      -- replace `ν.comp μ` by `ϕ`
+      rw [composition]
+      -- use the previously established equality `Ideal.map ϕ mr = ms`
+      exact eq_max_prod
+
+    have ideal_inc : mrR_betaS ≤ ms :=
+      le_of_eq extensionintower
 
 
 
