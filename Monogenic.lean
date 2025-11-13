@@ -13,7 +13,7 @@ import Mathlib.RingTheory.Ideal.Span
 import Mathlib.RingTheory.Unramified.LocalRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Defs
 import Mathlib.RingTheory.Kaehler.Basic
-
+import Mathlib.RingTheory.Ideal.Maps
 
 -- #eval Lean.versionString
 -- #eval 3+4
@@ -93,6 +93,7 @@ lemma Lemma_3_2 (R S : Type)
     have nualgmap : algebraMap R_beta S = ν := by
       rfl
 
+    -- describe relations between μ, ν, and ϕ
     have composition : ν.comp μ = ϕ := by
       apply RingHom.ext
       intro r
@@ -104,9 +105,8 @@ lemma Lemma_3_2 (R S : Type)
     -- get the ideal mr R[β]
     let mrR_beta : Ideal R_beta := Ideal.map μ mr
 
-    -- want to witness R[β]/mr R[β] as a subalgebra of S/ms
+    -- want to witness R[β]/mr R[β] as a subalgebra of S/ms?
     -- need to show mr R[β] maps into ms (then leverage universal property of quotient)
-
     let mrR_betaS : Ideal S := Ideal.map ν mrR_beta
 
     have extensionintower : mrR_betaS = ms := by
@@ -128,19 +128,48 @@ lemma Lemma_3_2 (R S : Type)
       exact Ideal.le_comap_of_map_le intermediate_ideal_inc
 
 
-    -- have intermediate_subalg : Subalgebra (R_beta ⧸ mrR_beta) (S ⧸ ms) := by
-    --   exact Subalgebra.center (↥R_beta ⧸ mrR_beta) (S ⧸ ms)
-
     -- can we show that R[beta] / mr R[beta] = R/mr [beta_0] ?
 
     #check Algebra.adjoin (R ⧸ mr) {β_0}
     #check (R_beta ⧸ mrR_beta)
-    have adjoin_iso : Algebra.adjoin (R ⧸ mr) {β_0} ≃ (R_beta ⧸ mrR_beta) := by
+    -- have adjoin_iso : Algebra.adjoin (R ⧸ mr) {β_0} ≃ (R_beta ⧸ mrR_beta) := by
+      -- sorry
+
+    -- trying to setup for first iso theorem?
+    let π : S →+* S ⧸ ms := Ideal.Quotient.mk ms
+
+    -- π ∘ ν : R[β] -> S/ms
+    -- want to show that the kernel of the composition π ∘ ν is exactly mr R[β]
+    -- then use the first isomorphism theorem for rings
+    -- issue: need to argue that π ∘ ν is surjective - I think this is the main content
+    let ker : Ideal R_beta := RingHom.ker (π.comp ν)
+
+    -- the kernel of π : S → S/ms is ms
+    have kerpi_eq : RingHom.ker π  = ms := by
+      -- ker of quotient map is the ideal itself
+      exact Ideal.mk_ker
+
+    have ν_inj : Function.Injective ν := by
+      -- ν is injective since R[β] is a subalgebra of S
+      exact (Set.injective_codRestrict Subtype.property).mp fun ⦃a₁ a₂⦄ a ↦ a
+
+    have preim : Ideal.comap ν ms = mrR_beta := by
+      rw [← extensionintower]
+      unfold mrR_betaS
+      -- rw [Ideal.le_comap_map]
+
       sorry
+      -- exact Ideal.comap_map_eq_of_surjective ν (Ideal.le_refl ms)
 
-    let pi : S → S ⧸ ms := Ideal.Quotient.mk ms
+    -- the kernel of π ∘ ν is the preimage under ν of the kernel of π
+    have ker_eq : RingHom.ker (π.comp ν) = mrR_beta := by
+      rw[← RingHom.comap_ker]
+      rw[kerpi_eq]
+      exact preim
 
 
+    -- have identifykernel : Ideal.comap (pi ∘ ν) mrR_beta = mrR_beta := by
+      -- sorry
 
 
     -- statement of isomorphism
