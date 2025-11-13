@@ -15,8 +15,8 @@ import Mathlib.RingTheory.LocalRing.ResidueField.Defs
 import Mathlib.RingTheory.Kaehler.Basic
 
 
-#eval Lean.versionString
-#eval 3+4
+-- #eval Lean.versionString
+-- #eval 3+4
 
 variable (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
 def RingHom.IsSeparable (f : R →+* S) : Prop :=
@@ -88,7 +88,10 @@ lemma Lemma_3_2 (R S : Type)
 
     let μ : R →+* R_beta := algebraMap R R_beta
 
-    let ν : R_beta →+* S := (R_beta.val : R_beta →ₐ[R] S).toRingHom
+    let ν : R_beta →+* S := (R_beta.val : R_beta →ₐ[R] S)
+
+    have nualgmap : algebraMap R_beta S = ν := by
+      rfl
 
     have composition : ν.comp μ = ϕ := by
       apply RingHom.ext
@@ -115,20 +118,35 @@ lemma Lemma_3_2 (R S : Type)
       -- use the previously established equality `Ideal.map ϕ mr = ms`
       exact eq_max_prod
 
-    have ideal_inc : mrR_betaS ≤ ms :=
+    have intermediate_ideal_inc : mrR_betaS ≤ ms :=
       le_of_eq extensionintower
+
+    have intermediate_induced_algebra : Algebra (R_beta ⧸ mrR_beta) (S ⧸ ms) := by
+      -- need to show mrR_beta maps into ms under ν
+      refine Ideal.Quotient.algebraQuotientOfLEComap ?_
+      rw [nualgmap]
+      exact Ideal.le_comap_of_map_le intermediate_ideal_inc
+
+
+    -- have intermediate_subalg : Subalgebra (R_beta ⧸ mrR_beta) (S ⧸ ms) := by
+    --   exact Subalgebra.center (↥R_beta ⧸ mrR_beta) (S ⧸ ms)
+
+    -- can we show that R[beta] / mr R[beta] = R/mr [beta_0] ?
+
+    #check Algebra.adjoin (R ⧸ mr) {β_0}
+    #check (R_beta ⧸ mrR_beta)
+    have adjoin_iso : Algebra.adjoin (R ⧸ mr) {β_0} ≃ (R_beta ⧸ mrR_beta) := by
+      sorry
+
+    let pi : S → S ⧸ ms := Ideal.Quotient.mk ms
 
 
 
 
     -- statement of isomorphism
     have compared_quotients : (R_beta ⧸ mrR_beta) = (S ⧸ ms) := by
+      -- exact?
       sorry
-
-
-
-    -- have extended_algebra : Algebra.adjoin ϕ.range {β} := by
-    --   sorry
 
     -- have Image_Rmr : Subalgebra (Algebra.adjoin (R ⧸ mr) {β_0}) (S ⧸ ms) := by
     --   sorry
