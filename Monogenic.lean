@@ -88,6 +88,31 @@ lemma Lemma_3_2 (R S : Type)
     have smooth_alg : Algebra.FormallySmooth R S :=
       RingHom.FormallySmooth.toAlgebra smooth_ϕ
 
+    -- -- we know that ϕ is finite ->
+    -- have fintype : Algebra.FiniteType R S := by
+    --   sorry
+
+    -- have essfin : Algebra.EssFiniteType R S := by
+    --   -- Algebra.EssFiniteType.of_finiteType
+    --   sorry
+    have fin_R_S : Algebra.EssFiniteType R S :=
+        RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hfin)
+    -- at this stage we know:
+    -- R, S local rings
+    -- FormallyUnramified R S
+    -- EssFiniteType R S
+
+
+
+    -- then  Algebra.instIsSeparableResidueFieldOfFormallyUnramified
+    -- should hopefully work to close the goal
+
+    -- this should show that the residue field of S is a separable extn
+    -- of the residue field of R
+
+    -- IsLocalRing.ResidueField R = R ⧸ mr
+    -- IsLocalRing.ResidueField S = S ⧸ ms
+
     -- Step 3: define the quotient map R → R ⧸ mr (this will be our base-change map)
     let f : R →+* (R ⧸ mr) := Ideal.Quotient.mk mr
 
