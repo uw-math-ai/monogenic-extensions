@@ -19,10 +19,12 @@ import Mathlib.RingTheory.RingHom.Unramified
 import Mathlib.RingTheory.RingHom.Smooth
 import Mathlib/LinearAlgebra/TensorProduct
 
+import Mathlib.RingTheory.Ideal.Maps
+import Mathlib.Algebra.Polynomial.Eval.Algebra
 
 
-#eval Lean.versionStrin
-#eval 3 + 4
+-- #eval Lean.versionString
+-- #eval 3+4
 
 variable (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
 def RingHom.IsSeparable (f : R →+* S) : Prop :=
@@ -194,28 +196,42 @@ lemma Lemma_3_2 (R S : Type)
     -- get inclusions R -> R[β] and R[β] → S
     let R_beta : Subalgebra R S := (Algebra.adjoin R {β})
 
-    let μ : (R →+* R_beta) := by apply RingHom.smulOneHom
+    let μ : R →+* R_beta := algebraMap R R_beta
 
-    let ν : (R_beta →+* S) := by apply RingHom.smulOneHom
+    let ν : R_beta →+* S := (R_beta.val : R_beta →ₐ[R] S)
 
-    have composition : ν ∘ μ = ϕ := by
-      sorry
+    have nualgmap : algebraMap R_beta S = ν := by
+      rfl
+
+    -- describe relations between μ, ν, and ϕ
+    have composition : ν.comp μ = ϕ := by
+      apply RingHom.ext
+      intro r
+      dsimp [μ, ν]
+      -- R_beta.val (algebraMap R R_beta r) is (algebraMap R R_beta r : S),
+      -- and that equals algebraMap R S r, which by `ϕ_S_R_map` is `ϕ r`.
+      simp [ϕ_S_R_map]
 
     -- get the ideal mr R[β]
     let mrR_beta : Ideal R_beta := Ideal.map μ mr
 
-    -- want to witness R[β]/mr R[β] as a subalgebra of S/ms
-    -- need to show mr R[β] maps into ms (then leverage univ prop of quotient)
-
+    -- want to witness R[β]/mr R[β] as a subalgebra of S/ms?
+    -- need to show mr R[β] maps into ms (then leverage universal property of quotient)
     let mrR_betaS : Ideal S := Ideal.map ν mrR_beta
-
-    have ideal_inc : mrR_betaS ≤ ms := by
-      sorry
 
     have extensionintower : mrR_betaS = ms := by
       sorry
+      -- exact Ideal.comap_map_eq_of_surjective ν (Ideal.le_refl ms)
+
+    -- the kernel of π ∘ ν is the preimage under ν of the kernel of π
+    have ker_eq : RingHom.ker (π.comp ν) = mrR_beta := by
+      rw[← RingHom.comap_ker]
+      rw[kerpi_eq]
+      exact preim
 
 
+    -- have identifykernel : Ideal.comap (pi ∘ ν) mrR_beta = mrR_beta := by
+      -- sorry
 
     have compared_quotients : (R_beta ⧸ mrR_beta) ≃ₐ[R ⧸ mr] (S ⧸ ms) := by
       -- Use the universal property of quotients
@@ -223,11 +239,22 @@ lemma Lemma_3_2 (R S : Type)
       exact extensionintower
     have compared_quotients : (R_beta ⧸ mrR_beta) = (S ⧸ ms) := by
       sorry
+      -- exact Ideal.comap_map_eq_of_surjective ν (Ideal.le_refl ms)
+
+    -- the kernel of π ∘ ν is the preimage under ν of the kernel of π
+    have ker_eq : RingHom.ker (π.comp ν) = mrR_beta := by
+      rw[← RingHom.comap_ker]
+      rw[kerpi_eq]
+      exact preim
 
 
+    -- have identifykernel : Ideal.comap (pi ∘ ν) mrR_beta = mrR_beta := by
+      -- sorry
 
-    -- have extended_algebra : Algebra.adjoin ϕ.range {β} := by
-    --   sorry
+    have compared_quotients : (R_beta ⧸ mrR_beta) ≃ₐ[R ⧸ mr] (S ⧸ ms) := by
+      -- Use the universal property of quotients
+      refine Ideal.quotientEquivOfEq ideal_inc _
+      exact extensionintower
 
     -- have Image_Rmr : Subalgebra (Algebra.adjoin (R ⧸ mr) {β_0}) (S ⧸ ms) := by
     --   sorry
@@ -252,5 +279,66 @@ lemma Lemma_3_2 (R S : Type)
     have lifted_adjoined : Algebra.adjoin R {β} = S := by
       sorry
 
-    /- (Task 6) lemma packaging-/
-sorry
+    /- (Task 6) lemma packaging sentence 7 & 8 from Lemma 3.2
+    hypotheses: TBD
+    result: f'(β) is not in ms
+    -/
+    /-
+    let f' : Polynomial S := Polynomial.derivative (Polynomial.map ϕ (minpoly R β))
+    have is_unit_minpoly_deriv : Polynomial.aeval β f' ∉ ms := by
+
+      sorry
+    -/
+
+    /-
+    let f'_map_ideal := Polynomial.map (Ideal.Quotient.mk ms) f'
+      have poly_zero : (Ideal.Quotient.mk ms) (Polynomial.aeval β f') = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.2 cont
+      unfold f' at poly_zero
+      rw[Polynomial.derivative_map (minpoly R β) ϕ] at poly_zero
+      have eq_mod_ms :  Polynomial.map (Ideal.Quotient.mk ms) (Polynomial.map ϕ f)
+        = Polynomial.map (algebraMap (R ⧸ mr) (S ⧸ ms)) f_0 := by
+        unfold f_0 f
+        have div_min_of_min : Polynomial.map (algebraMap (R ⧸ mr) (S ⧸ ms)) f_0 ∣
+          Polynomial.map (Ideal.Quotient.mk ms) (Polynomial.map ϕ f) := by
+          have eval_zero_of_f : Polynomial.eval β_0 (Polynomial.map (Ideal.Quotient.mk ms)
+            (Polynomial.map ϕ f)) = 0 := by
+    -/
+
+
+    have field_quot_S : Field (S ⧸ ms) := Ideal.Quotient.field ms
+    have field_quot_R : Field (R ⧸ mr) := Ideal.Quotient.field mr
+    let f' : Polynomial S := Polynomial.derivative (Polynomial.map ϕ (minpoly R β))
+    let f : Polynomial R := minpoly R β
+    let f_0 : Polynomial (R ⧸ mr) :=  minpoly (R ⧸ mr) β_0
+    have is_unit_minpoly_deriv : Polynomial.eval β f' ∉ ms := by
+      by_contra cont
+      have not_zero_of_β_0 : Polynomial.eval β_0 (Polynomial.derivative
+        (Polynomial.map (Ideal.Quotient.mk ms) (Polynomial.map ϕ f))) ≠ 0 := by
+        by_contra ct
+        rw [Polynomial.derivative_map] at ct
+        rw [Polynomial.eval_map] at ct
+        have h_comm_map : ∀(a : S), Commute ((Ideal.Quotient.mk ms) a)
+          ((Ideal.Quotient.mk ms β)) :=
+          fun a ↦ Commute.all ((Ideal.Quotient.mk ms) a) ((Ideal.Quotient.mk ms) β)
+        let preimage_β: β_0 = (Ideal.Quotient.mk ms) β := id (Eq.symm hb2)
+        rw [preimage_β] at ct
+        rw [← Polynomial.eval₂RingHom'_apply (Ideal.Quotient.mk ms) β h_comm_map
+          (Polynomial.derivative (Polynomial.map ϕ f))] at ct
+        have  β_0_from_ct : (Polynomial.eval₂RingHom' (Ideal.Quotient.mk ms) ((Ideal.Quotient.mk ms) β) h_comm_map) = Polynomial.eval₂ β_0 := by
+          sorry
+
+        #check Polynomial.aeval_algebraMap_apply
+        sorry
+
+
+
+      sorry
+
+    sorry
+
+        #check Polynomial.Separable.aeval_derivative_ne_zero
+
+      sorry
+
+    sorry
