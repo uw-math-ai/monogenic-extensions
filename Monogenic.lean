@@ -14,6 +14,8 @@ import Mathlib.RingTheory.Unramified.LocalRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Defs
 import Mathlib.RingTheory.Kaehler.Basic
 import Mathlib.RingTheory.Ideal.Maps
+import Mathlib.Algebra.Polynomial.Eval.Algebra
+
 
 -- #eval Lean.versionString
 -- #eval 3+4
@@ -200,8 +202,62 @@ lemma Lemma_3_2 (R S : Type)
     hypotheses: TBD
     result: f'(β) is not in ms
     -/
-    let f := Polynomial.derivative (Polynomial.map ϕ (minpoly R β))
-    have is_unit_minpoly : Polynomial.eval β f ∉ ms := by
+    /-
+    let f' : Polynomial S := Polynomial.derivative (Polynomial.map ϕ (minpoly R β))
+    have is_unit_minpoly_deriv : Polynomial.aeval β f' ∉ ms := by
+
+      sorry
+    -/
+
+    /-
+    let f'_map_ideal := Polynomial.map (Ideal.Quotient.mk ms) f'
+      have poly_zero : (Ideal.Quotient.mk ms) (Polynomial.aeval β f') = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.2 cont
+      unfold f' at poly_zero
+      rw[Polynomial.derivative_map (minpoly R β) ϕ] at poly_zero
+      have eq_mod_ms :  Polynomial.map (Ideal.Quotient.mk ms) (Polynomial.map ϕ f)
+        = Polynomial.map (algebraMap (R ⧸ mr) (S ⧸ ms)) f_0 := by
+        unfold f_0 f
+        have div_min_of_min : Polynomial.map (algebraMap (R ⧸ mr) (S ⧸ ms)) f_0 ∣
+          Polynomial.map (Ideal.Quotient.mk ms) (Polynomial.map ϕ f) := by
+          have eval_zero_of_f : Polynomial.eval β_0 (Polynomial.map (Ideal.Quotient.mk ms)
+            (Polynomial.map ϕ f)) = 0 := by
+    -/
+
+
+    have field_quot_S : Field (S ⧸ ms) := Ideal.Quotient.field ms
+    have field_quot_R : Field (R ⧸ mr) := Ideal.Quotient.field mr
+    let f' : Polynomial S := Polynomial.derivative (Polynomial.map ϕ (minpoly R β))
+    let f : Polynomial R := minpoly R β
+    let f_0 : Polynomial (R ⧸ mr) :=  minpoly (R ⧸ mr) β_0
+    have is_unit_minpoly_deriv : Polynomial.eval β f' ∉ ms := by
+      by_contra cont
+      have not_zero_of_β_0 : Polynomial.eval β_0 (Polynomial.derivative
+        (Polynomial.map (Ideal.Quotient.mk ms) (Polynomial.map ϕ f))) ≠ 0 := by
+        by_contra ct
+        rw [Polynomial.derivative_map] at ct
+        rw [Polynomial.eval_map] at ct
+        have h_comm_map : ∀(a : S), Commute ((Ideal.Quotient.mk ms) a)
+          ((Ideal.Quotient.mk ms β)) :=
+          fun a ↦ Commute.all ((Ideal.Quotient.mk ms) a) ((Ideal.Quotient.mk ms) β)
+        let preimage_β: β_0 = (Ideal.Quotient.mk ms) β := id (Eq.symm hb2)
+        rw [preimage_β] at ct
+        rw [← Polynomial.eval₂RingHom'_apply (Ideal.Quotient.mk ms) β h_comm_map
+          (Polynomial.derivative (Polynomial.map ϕ f))] at ct
+        have  β_0_from_ct : (Polynomial.eval₂RingHom' (Ideal.Quotient.mk ms) ((Ideal.Quotient.mk ms) β) h_comm_map) = Polynomial.eval₂ β_0 := by
+          sorry
+
+        #check Polynomial.aeval_algebraMap_apply
+        sorry
+
+
+
+      sorry
+
+    sorry
+
+        #check Polynomial.Separable.aeval_derivative_ne_zero
+
       sorry
 
     sorry
