@@ -2,8 +2,6 @@ import Monogenic.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.RingTheory.LocalRing.Defs
 import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.RingTheory.Etale.Basic
-import Mathlib.Algebra.Algebra.Basic
 import Mathlib.Algebra.Polynomial.Degree.Definitions
 import Mathlib.Algebra.Polynomial.Eval.Defs
 import Mathlib.Algebra.Algebra.Subalgebra.Lattice
@@ -15,12 +13,9 @@ import Mathlib.RingTheory.Ideal.Span
 import Mathlib.RingTheory.Unramified.LocalRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Defs
 import Mathlib.RingTheory.Kaehler.Basic
-import Mathlib.RingTheory.RingHom.Unramified
-import Mathlib.RingTheory.RingHom.Smooth
-import Mathlib/LinearAlgebra/TensorProduct
-
 import Mathlib.RingTheory.Ideal.Maps
 import Mathlib.Algebra.Polynomial.Eval.Algebra
+import Mathlib.RingTheory.AdjoinRoot
 
 
 -- #eval Lean.versionString
@@ -28,7 +23,7 @@ import Mathlib.Algebra.Polynomial.Eval.Algebra
 
 variable (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
 def RingHom.IsSeparable (f : R →+* S) : Prop :=
-  Algebra.IsSeparable R S
+      Algebra.IsSeparable R S
 
 lemma Lemma_3_2 (R S : Type)
   [CommRing R] [CommRing S]
@@ -36,41 +31,41 @@ lemma Lemma_3_2 (R S : Type)
   (ϕ : R →+* S) (hfin : ϕ.Finite) (hinj : Function.Injective ϕ)
   (etale : RingHom.Etale ϕ) :
   ∃ β : S, (Algebra.adjoin ϕ.range {β} = S) ∧
-  ∃ (f : Polynomial R) (fmon : f.Monic), Polynomial.eval β (Polynomial.map ϕ f) = 0 ∧
-  (∀ (g : Polynomial R), Polynomial.eval β (Polynomial.map ϕ g) = 0 → f ∣ g) ∧
+  ∃ (f : Polynomial R) (fmon : f.Monic), Polynomial.eval β (Polynomial.map ϕ f) =
+  0 ∧ (∀ (g : Polynomial R), Polynomial.eval β (Polynomial.map ϕ g) = 0 → f ∣ g) ∧
   IsUnit (Polynomial.eval β (Polynomial.map ϕ (Polynomial.derivative f))) := by
-  let mr : Ideal R := IsLocalRing.maximalIdeal R
-  let ms : Ideal S := IsLocalRing.maximalIdeal S
-  let S_is_R_algebra : Algebra R S := RingHom.toAlgebra ϕ
-  have ϕ_S_R_map : algebraMap R S = ϕ :=
-    RingHom.algebraMap_toAlgebra ϕ
-  have eq_max_prod : Ideal.map ϕ mr = ms := by
-    have unramified_ϕ: ϕ.FormallyUnramified :=
-      ((RingHom.etale_iff_formallyUnramified_and_smooth ϕ).mp etale).1
-    have unramifed_alg_rs: Algebra.FormallyUnramified R S := by
-      rw [← ϕ_S_R_map] at unramified_ϕ
-      exact unramified_ϕ
-    have local_ϕ : IsLocalHom (algebraMap R S) :=
-      RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite hfin) hinj
-    have fin_R_S : Algebra.EssFiniteType R S :=
-      RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hfin)
-    apply Algebra.FormallyUnramified.map_maximalIdeal
+    let mr : Ideal R := IsLocalRing.maximalIdeal R
+    let ms : Ideal S := IsLocalRing.maximalIdeal S
+    let S_is_R_algebra : Algebra R S := RingHom.toAlgebra ϕ
+    have ϕ_S_R_map : algebraMap R S = ϕ :=
+        RingHom.algebraMap_toAlgebra ϕ
+    have eq_max_prod : Ideal.map ϕ mr  = ms := by
+      have unramified_ϕ: ϕ.FormallyUnramified :=
+        ((RingHom.etale_iff_formallyUnramified_and_smooth ϕ).mp etale).1
+      have unramifed_alg_rs: Algebra.FormallyUnramified R S := by
+        rw [← ϕ_S_R_map] at unramified_ϕ; exact unramified_ϕ;
+      have local_ϕ : IsLocalHom (algebraMap R S) :=
+        RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite hfin) hinj
+      have fin_R_S : Algebra.EssFiniteType R S :=
+        RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hfin)
+      apply Algebra.FormallyUnramified.map_maximalIdeal
 
 
 /-  (Task 2) lemma packaging sentence 2 and first part of sentence 3 from Lemma 3.2
       hypotheses: TBD
       result: R/mr -> S/ms separable -/
-  have induced_algebra : Algebra (R ⧸ mr) (S ⧸ ms) := by
-    refine Ideal.Quotient.algebraQuotientOfLEComap ?_
-    rw [ϕ_S_R_map]
-    apply Ideal.le_comap_of_map_le
-    simp [eq_max_prod]
+    have induced_algebra : Algebra (R ⧸ mr) (S ⧸ ms) := by
+      refine Ideal.Quotient.algebraQuotientOfLEComap ?_
+      rw [ϕ_S_R_map]
+      apply Ideal.le_comap_of_map_le
+      simp [eq_max_prod]
 
   -- REQUIRED: register the algebra structure
-  letI : Algebra (R ⧸ mr) (S ⧸ ms) := induced_algebra
+    letI : Algebra (R ⧸ mr) (S ⧸ ms) := induced_algebra
 
-  have separable_of_induced_map :
-      Algebra.IsSeparable (R ⧸ mr) (S ⧸ ms) := by
+    have separable_of_induced_map :
+        Algebra.IsSeparable (R ⧸ mr) (S ⧸ ms) := by
+        sorry
 
     -- Extract formally unramified and formally smooth for the ring hom ϕ
     -- Extract unramified and smooth from etale
@@ -85,7 +80,7 @@ lemma Lemma_3_2 (R S : Type)
       (RingHom.smooth_def (f := ϕ)).1 h.2
 
     have smooth_ϕ : ϕ.FormallySmooth :=
-      h_smooth.1
+        h_smooth.1
 
     have unram_alg : Algebra.FormallyUnramified R S := by
       simpa [RingHom.FormallyUnramified] using unram_ϕ
@@ -128,10 +123,10 @@ lemma Lemma_3_2 (R S : Type)
 
     -- Apply stability-under-base-change to the pushout square
     have etale_base_pushout :
-        (CommRingCat.Hom.hom
-          (CategoryTheory.Limits.pushout.inl f₀ g₀)).Etale :=
-      RingHom.IsStableUnderBaseChange.pushout_inl
-        hP hP' f₀ g₀ etale_g₀
+          (CommRingCat.Hom.hom
+            (CategoryTheory.Limits.pushout.inl f₀ g₀)).Etale :=
+        RingHom.IsStableUnderBaseChange.pushout_inl
+          hP hP' f₀ g₀ etale_g₀
 
     -- Now rewrite the pushout as the tensor product (R ⧸ mr) ⊗[R] S
     -- using the standard isomorphism of pushouts with tensor products.
@@ -148,21 +143,21 @@ lemma Lemma_3_2 (R S : Type)
 
 
     have etale_base :
-        (algebraMap (R ⧸ mr) (TensorProduct R (R ⧸ mr) S)).Etale := by
-      -- transport etaleness along the iso in the arrow category
-      have h₁ :
-          (CommRingCat.Hom.hom
-            (CategoryTheory.Limits.pushout.inl f₀ g₀)).Etale :=
-        etale_base_pushout
-      have h₂ :=
-        (RingHom.RespectsIso.arrow_mk_iso_iff hP' iso_pushout_tensor).mp h₁
-      -- rewrite the conclusion into the desired form
-      simpa using h₂
+          (algebraMap (R ⧸ mr) (TensorProduct R (R ⧸ mr) S)).Etale := by
+        -- transport etaleness along the iso in the arrow category
+        have h₁ :
+            (CommRingCat.Hom.hom
+              (CategoryTheory.Limits.pushout.inl f₀ g₀)).Etale :=
+          etale_base_pushout
+        have h₂ :=
+          (RingHom.RespectsIso.arrow_mk_iso_iff hP' iso_pushout_tensor).mp h₁
+        -- rewrite the conclusion into the desired form
+        simpa using h₂
 
 
     -- Step 5: etale ⇒ separable
     -- use the etale result above; replace `etale_quot` with the name you actually constructed
-    admit
+
 
 
 
@@ -171,8 +166,9 @@ lemma Lemma_3_2 (R S : Type)
     result: R/mr-> S/ms = R/mr[β_0] and the minimal polynomial f0 is separable -/
     have adjoined_algebra : ∃ β_0 : (S ⧸ ms), Algebra.adjoin (R ⧸ mr) {β_0} = (S ⧸ ms) := by
       -- Use separability to find a generator
-      obtain ⟨β_0, hβ_0⟩ := Algebra.IsSeparable.exists_adjoin_eq_top separable_of_induced_map
-      exact ⟨β_0, hβ_0⟩
+      --obtain ⟨β_0, hβ_0⟩ := Algebra.IsSeparable.exists_adjoin_eq_top separable_of_induced_map
+      --exact ⟨β_0, hβ_0⟩
+      sorry
 
 
 ---------------------
@@ -220,6 +216,54 @@ lemma Lemma_3_2 (R S : Type)
     let mrR_betaS : Ideal S := Ideal.map ν mrR_beta
 
     have extensionintower : mrR_betaS = ms := by
+      dsimp [mrR_betaS]
+      -- (first `μ` then `ν`) reduces to `Ideal.map (ν.comp μ) mr`
+      rw [Ideal.map_map μ ν]
+      -- replace `ν.comp μ` by `ϕ`
+      rw [composition]
+      -- use the previously established equality `Ideal.map ϕ mr = ms`
+      exact eq_max_prod
+
+    have intermediate_ideal_inc : mrR_betaS ≤ ms :=
+      le_of_eq extensionintower
+
+    have intermediate_induced_algebra : Algebra (R_beta ⧸ mrR_beta) (S ⧸ ms) := by
+      -- need to show mrR_beta maps into ms under ν
+      refine Ideal.Quotient.algebraQuotientOfLEComap ?_
+      rw [nualgmap]
+      exact Ideal.le_comap_of_map_le intermediate_ideal_inc
+
+
+    -- can we show that R[beta] / mr R[beta] = R/mr [beta_0] ?
+
+    #check Algebra.adjoin (R ⧸ mr) {β_0}
+    #check (R_beta ⧸ mrR_beta)
+    -- have adjoin_iso : Algebra.adjoin (R ⧸ mr) {β_0} ≃ (R_beta ⧸ mrR_beta) := by
+      -- sorry
+
+    -- trying to setup for first iso theorem?
+    let π : S →+* S ⧸ ms := Ideal.Quotient.mk ms
+
+    -- π ∘ ν : R[β] -> S/ms
+    -- want to show that the kernel of the composition π ∘ ν is exactly mr R[β]
+    -- then use the first isomorphism theorem for rings
+    -- issue: need to argue that π ∘ ν is surjective - I think this is the main content
+    let ker : Ideal R_beta := RingHom.ker (π.comp ν)
+
+    -- the kernel of π : S → S/ms is ms
+    have kerpi_eq : RingHom.ker π  = ms := by
+      -- ker of quotient map is the ideal itself
+      exact Ideal.mk_ker
+
+    have ν_inj : Function.Injective ν := by
+      -- ν is injective since R[β] is a subalgebra of S
+      exact (Set.injective_codRestrict Subtype.property).mp fun ⦃a₁ a₂⦄ a ↦ a
+
+    have preim : Ideal.comap ν ms = mrR_beta := by
+      rw [← extensionintower]
+      unfold mrR_betaS
+      -- rw [Ideal.le_comap_map]
+
       sorry
       -- exact Ideal.comap_map_eq_of_surjective ν (Ideal.le_refl ms)
 
@@ -233,28 +277,11 @@ lemma Lemma_3_2 (R S : Type)
     -- have identifykernel : Ideal.comap (pi ∘ ν) mrR_beta = mrR_beta := by
       -- sorry
 
-    have compared_quotients : (R_beta ⧸ mrR_beta) ≃ₐ[R ⧸ mr] (S ⧸ ms) := by
-      -- Use the universal property of quotients
-      refine Ideal.quotientEquivOfEq ideal_inc _
-      exact extensionintower
+
+    -- statement of isomorphism
     have compared_quotients : (R_beta ⧸ mrR_beta) = (S ⧸ ms) := by
+      -- exact?
       sorry
-      -- exact Ideal.comap_map_eq_of_surjective ν (Ideal.le_refl ms)
-
-    -- the kernel of π ∘ ν is the preimage under ν of the kernel of π
-    have ker_eq : RingHom.ker (π.comp ν) = mrR_beta := by
-      rw[← RingHom.comap_ker]
-      rw[kerpi_eq]
-      exact preim
-
-
-    -- have identifykernel : Ideal.comap (pi ∘ ν) mrR_beta = mrR_beta := by
-      -- sorry
-
-    have compared_quotients : (R_beta ⧸ mrR_beta) ≃ₐ[R ⧸ mr] (S ⧸ ms) := by
-      -- Use the universal property of quotients
-      refine Ideal.quotientEquivOfEq ideal_inc _
-      exact extensionintower
 
     -- have Image_Rmr : Subalgebra (Algebra.adjoin (R ⧸ mr) {β_0}) (S ⧸ ms) := by
     --   sorry
@@ -268,12 +295,8 @@ lemma Lemma_3_2 (R S : Type)
 ---------------------
 
     /- (Task 5) lemma packaging sentence 6  from Lemma 3.2, uses Nakayama
-    have lifted_adjoined : Algebra.adjoin R {β} = S := by
-      -- Use Nakayama's lemma to show equality
-      apply Algebra.adjoin_eq_of_le
-      · exact Algebra.subset_adjoin
-      · apply Ideal.eq_top_of_is_unit
-        exact is_unit_minpoly
+    hypotheses: TBD
+    result: R[β] = S
     -/
     -- rcases exists_preimage with ⟨β,hb⟩
     have lifted_adjoined : Algebra.adjoin R {β} = S := by
@@ -306,12 +329,13 @@ lemma Lemma_3_2 (R S : Type)
     -/
 
 
-    have field_quot_S : Field (S ⧸ ms) := Ideal.Quotient.field ms
-    have field_quot_R : Field (R ⧸ mr) := Ideal.Quotient.field mr
+    let field_quot_S := Ideal.Quotient.field ms
+    let field_quot_R := Ideal.Quotient.field mr
     let f' : Polynomial S := Polynomial.derivative (Polynomial.map ϕ (minpoly R β))
     let f : Polynomial R := minpoly R β
     let f_0 : Polynomial (R ⧸ mr) :=  minpoly (R ⧸ mr) β_0
     have is_unit_minpoly_deriv : Polynomial.eval β f' ∉ ms := by
+
       by_contra cont
       have not_zero_of_β_0 : Polynomial.eval β_0 (Polynomial.derivative
         (Polynomial.map (Ideal.Quotient.mk ms) (Polynomial.map ϕ f))) ≠ 0 := by
@@ -320,25 +344,59 @@ lemma Lemma_3_2 (R S : Type)
         rw [Polynomial.eval_map] at ct
         have h_comm_map : ∀(a : S), Commute ((Ideal.Quotient.mk ms) a)
           ((Ideal.Quotient.mk ms β)) :=
-          fun a ↦ Commute.all ((Ideal.Quotient.mk ms) a) ((Ideal.Quotient.mk ms) β)
-        let preimage_β: β_0 = (Ideal.Quotient.mk ms) β := id (Eq.symm hb2)
-        rw [preimage_β] at ct
-        rw [← Polynomial.eval₂RingHom'_apply (Ideal.Quotient.mk ms) β h_comm_map
-          (Polynomial.derivative (Polynomial.map ϕ f))] at ct
-        have  β_0_from_ct : (Polynomial.eval₂RingHom' (Ideal.Quotient.mk ms) ((Ideal.Quotient.mk ms) β) h_comm_map) = Polynomial.eval₂ β_0 := by
-          sorry
+          fun a => Commute.all ((Ideal.Quotient.mk ms) a) ((Ideal.Quotient.mk ms) β)
+        rw [← hb2] at ct
+        rw [Polynomial.derivative_map] at ct
+        rw[Polynomial.eval₂_map ϕ (Ideal.Quotient.mk ms) β] at ct
+        simp[hb2] at ct
+        have minpoly_minpoly : Polynomial.eval₂ ((Ideal.Quotient.mk ms).comp ϕ)
+          β_0 (Polynomial.derivative f) = Polynomial.eval β_0 (Polynomial.map
+          (algebraMap (R ⧸ mr) (S ⧸ ms)) (Polynomial.derivative f_0)) := by
+          have free_module_R_S : Module.Free R S := by
+            have finite_R_S : Module.Finite R S := hfin
+            have flat_R_S : Module.Flat R S := by
+              sorry
+            apply Module.free_of_flat_of_isLocalRing
 
-        #check Polynomial.aeval_algebraMap_apply
+          --let basis_R_S := Module.Free.exists_set R S
+          --rcases basis_R_S with ⟨basis, h_nonempty, h_bas⟩
+          have finite_of_basis : Fintype (Module.Free.ChooseBasisIndex R S) := by
+            have fin_mod_R : Module.Finite R S := by
+              exact RingHom.finite_algebraMap.1 hfin
+            apply Module.Free.ChooseBasisIndex.fintype
+          rcases finite_of_basis with ⟨basis, h_bas⟩
+          #check Module.Free.chooseBasis R S
+          have minpoly_nonzero : f_0 ≠ 0 := minpoly.ne_zero_iff.mpr
+            (Algebra.IsSeparable.isIntegral (R ⧸ mr) β_0)
+          let h_adjoin_PowerBasis := AdjoinRoot.powerBasis minpoly_nonzero
+          unfold AdjoinRoot f_0 at h_adjoin_PowerBasis
+
+          --rw [Polynomial.annIdealGenerator_eq_minpoly β_0] at h_adjoin_PowerBasis
+          --have quot_is_beta : Polynomial (R ⧸ mr) ⧸ Ideal.span {minpoly (R ⧸ mr) β_0} = mr := by
+            --sorry
+
+
+
+
+
+
+
+          --have equiv_free_mod_S : S ≃
+          let ρ : RingHom (R ⧸ mr) (S ⧸ ms) := by
+            --let R_tensor := TensorProduct.mk R (R ⧸ mr)
+            --let S_tensor := TensorProduct.mk S (R ⧸ mr)
+            sorry
+          --#check {Algebra R S}
+          sorry
+        rw [minpoly_minpoly] at ct
+        dsimp[f_0] at ct
+
+
+
+
         sorry
 
-
-
       sorry
 
-    sorry
-
-        #check Polynomial.Separable.aeval_derivative_ne_zero
-
-      sorry
 
     sorry
