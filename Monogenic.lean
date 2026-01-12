@@ -190,9 +190,19 @@ lemma Lemma_3_2 (R S : Type)
     hypotheses: TBD
     result: R/mr-> S/ms = R/mr[β_0] and the minimal polynomial f0 is separable -/
     have adjoined_algebra : ∃ β_0 : (S ⧸ ms), Algebra.adjoin (R ⧸ mr) {β_0} = (S ⧸ ms) := by
-      -- Use separability to find a generator
-      --obtain ⟨β_0, hβ_0⟩ := Algebra.IsSeparable.exists_adjoin_eq_top separable_of_induced_map
-      --exact ⟨β_0, hβ_0⟩
+      let field_quot_S := Ideal.Quotient.field ms
+      let field_quot_R := Ideal.Quotient.field mr
+      have fin_R_S : FiniteDimensional (R ⧸ mr) (S ⧸ ms) := by
+        have hFinQuots: Algebra.EssFiniteType (R ⧸ mr) (S ⧸ ms) := by
+          sorry
+        sorry
+      have sep_fields : Algebra.IsSeparable (R ⧸ mr) (S ⧸ ms) := by sorry
+      let power_basis_β := Field.powerBasisOfFiniteOfSeparable (R ⧸ mr) (S ⧸ ms)
+      let minβ := PowerBasis.minpolyGen power_basis_β
+      let β_0 := power_basis_β.gen; use β_0
+      unfold β_0 power_basis_β
+      rw[PowerBasis.adjoin_gen_eq_top]
+
       sorry
 
 
