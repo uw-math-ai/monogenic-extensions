@@ -16,7 +16,6 @@ import Mathlib.RingTheory.Kaehler.Basic
 import Mathlib.RingTheory.Ideal.Maps
 import Mathlib.Algebra.Polynomial.Eval.Algebra
 import Mathlib.RingTheory.AdjoinRoot
-import Mathlib.LinearAlgebra.AnnihilatingPolynomial
 
 
 -- #eval Lean.versionString
@@ -88,6 +87,31 @@ lemma Lemma_3_2 (R S : Type)
 
     have smooth_alg : Algebra.FormallySmooth R S :=
       RingHom.FormallySmooth.toAlgebra smooth_ϕ
+
+    -- -- we know that ϕ is finite ->
+    -- have fintype : Algebra.FiniteType R S := by
+    --   sorry
+
+    -- have essfin : Algebra.EssFiniteType R S := by
+    --   -- Algebra.EssFiniteType.of_finiteType
+    --   sorry
+    have fin_R_S : Algebra.EssFiniteType R S :=
+        RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hfin)
+    -- at this stage we know:
+    -- R, S local rings
+    -- FormallyUnramified R S
+    -- EssFiniteType R S
+
+
+
+    -- then  Algebra.instIsSeparableResidueFieldOfFormallyUnramified
+    -- should hopefully work to close the goal
+
+    -- this should show that the residue field of S is a separable extn
+    -- of the residue field of R
+
+    -- IsLocalRing.ResidueField R = R ⧸ mr
+    -- IsLocalRing.ResidueField S = S ⧸ ms
 
     -- Step 3: define the quotient map R → R ⧸ mr (this will be our base-change map)
     let f : R →+* (R ⧸ mr) := Ideal.Quotient.mk mr
@@ -165,24 +189,11 @@ lemma Lemma_3_2 (R S : Type)
     /- (Task 3) lemma packaging last part of sentence 3 + sentence 4 from Lemma 3.2
     hypotheses: TBD
     result: R/mr-> S/ms = R/mr[β_0] and the minimal polynomial f0 is separable -/
-    have adjoined_algebra : ∃ β_0 : (S ⧸ ms), Algebra.adjoin (R ⧸ mr) {β_0} = ⊤ := by
-      let field_quot_S := Ideal.Quotient.field ms
-      let field_quot_R := Ideal.Quotient.field mr
-      have fin_R_S : FiniteDimensional (R ⧸ mr) (S ⧸ ms) := by
-        have hFinQuots: Algebra.EssFiniteType (R ⧸ mr) (S ⧸ ms) := by
-          have finRS : Module.Finite R S := hfin
-          have : Module.Finite R (S ⧸ ms) := by
-            apply Module.Finite.quotient R ms
-          sorry
-        sorry
-      have sep_fields : Algebra.IsSeparable (R ⧸ mr) (S ⧸ ms) := separable_of_induced_map
-      let power_basis_β := Field.powerBasisOfFiniteOfSeparable (R ⧸ mr) (S ⧸ ms)
-      --let minβ := PowerBasis.minpolyGen power_basis_β
-      let β_0 := power_basis_β.gen; use β_0
-      unfold β_0 power_basis_β
-      rw[PowerBasis.adjoin_gen_eq_top]
-
-
+    have adjoined_algebra : ∃ β_0 : (S ⧸ ms), Algebra.adjoin (R ⧸ mr) {β_0} = (S ⧸ ms) := by
+      -- Use separability to find a generator
+      --obtain ⟨β_0, hβ_0⟩ := Algebra.IsSeparable.exists_adjoin_eq_top separable_of_induced_map
+      --exact ⟨β_0, hβ_0⟩
+      sorry
 
 
 ---------------------
@@ -347,55 +358,68 @@ lemma Lemma_3_2 (R S : Type)
     let field_quot_R := Ideal.Quotient.field mr
     let f' : Polynomial S := Polynomial.derivative (Polynomial.map ϕ (minpoly R β))
     let f : Polynomial R := minpoly R β
-    --let f_0 : Polynomial (R ⧸ mr) :=  minpoly (R ⧸ mr) β_0
+    let f_0 : Polynomial (R ⧸ mr) :=  minpoly (R ⧸ mr) β_0
     have is_unit_minpoly_deriv : Polynomial.eval β f' ∉ ms := by
-      have fin_R_S : FiniteDimensional (R ⧸ mr) (S ⧸ ms) := by
-        have hFinQuots: Algebra.EssFiniteType (R ⧸ mr) (S ⧸ ms) := by
+
+      by_contra cont
+      have not_zero_of_β_0 : Polynomial.eval β_0 (Polynomial.derivative
+        (Polynomial.map (Ideal.Quotient.mk ms) (Polynomial.map ϕ f))) ≠ 0 := by
+        by_contra ct
+        rw [Polynomial.derivative_map] at ct
+        rw [Polynomial.eval_map] at ct
+        have h_comm_map : ∀(a : S), Commute ((Ideal.Quotient.mk ms) a)
+          ((Ideal.Quotient.mk ms β)) :=
+          fun a => Commute.all ((Ideal.Quotient.mk ms) a) ((Ideal.Quotient.mk ms) β)
+        rw [← hb2] at ct
+        rw [Polynomial.derivative_map] at ct
+        rw[Polynomial.eval₂_map ϕ (Ideal.Quotient.mk ms) β] at ct
+        simp[hb2] at ct
+        have minpoly_minpoly : Polynomial.eval₂ ((Ideal.Quotient.mk ms).comp ϕ)
+          β_0 (Polynomial.derivative f) = Polynomial.eval β_0 (Polynomial.map
+          (algebraMap (R ⧸ mr) (S ⧸ ms)) (Polynomial.derivative f_0)) := by
+          have free_module_R_S : Module.Free R S := by
+            have finite_R_S : Module.Finite R S := hfin
+            have flat_R_S : Module.Flat R S := by
+              sorry
+            apply Module.free_of_flat_of_isLocalRing
+
+          --let basis_R_S := Module.Free.exists_set R S
+          --rcases basis_R_S with ⟨basis, h_nonempty, h_bas⟩
+          have finite_of_basis : Fintype (Module.Free.ChooseBasisIndex R S) := by
+            have fin_mod_R : Module.Finite R S := by
+              exact RingHom.finite_algebraMap.1 hfin
+            apply Module.Free.ChooseBasisIndex.fintype
+          rcases finite_of_basis with ⟨basis, h_bas⟩
+          #check Module.Free.chooseBasis R S
+          have minpoly_nonzero : f_0 ≠ 0 := minpoly.ne_zero_iff.mpr
+            (Algebra.IsSeparable.isIntegral (R ⧸ mr) β_0)
+          let h_adjoin_PowerBasis := AdjoinRoot.powerBasis minpoly_nonzero
+          unfold AdjoinRoot f_0 at h_adjoin_PowerBasis
+
+          --rw [Polynomial.annIdealGenerator_eq_minpoly β_0] at h_adjoin_PowerBasis
+          --have quot_is_beta : Polynomial (R ⧸ mr) ⧸ Ideal.span {minpoly (R ⧸ mr) β_0} = mr := by
+            --sorry
+
+
+
+
+
+
+
+          --have equiv_free_mod_S : S ≃
+          let ρ : RingHom (R ⧸ mr) (S ⧸ ms) := by
+            --let R_tensor := TensorProduct.mk R (R ⧸ mr)
+            --let S_tensor := TensorProduct.mk S (R ⧸ mr)
+            sorry
+          --#check {Algebra R S}
           sorry
+        rw [minpoly_minpoly] at ct
+        dsimp[f_0] at ct
+
+
+
+
         sorry
-      let power_basis_β := Field.powerBasisOfFiniteOfSeparable (R ⧸ mr) (S ⧸ ms)
-      let β_0 := power_basis_β.gen
-      let f_0 := PowerBasis.minpolyGen power_basis_β
-      let f_in_S : Polynomial S := Polynomial.map ϕ f
-      have minpoly_minpoly : Polynomial.map (Ideal.Quotient.mk mr) f = f_0 := by
-        refine Polynomial.eq_of_monic_of_associated ?_ ?_ ?_
-        refine Polynomial.Monic.map (Ideal.Quotient.mk mr) ?_
-        refine minpoly.monic ?_
-        have : IsIntegral R β := by
-          sorry
-        exact this
-        exact PowerBasis.minpolyGen_monic power_basis_β
-        unfold f_0
-        #check PowerBasis.minpolyGen
-        have : Polynomial.eval β_0 (Polynomial.map (Ideal.Quotient.mk ms)
-          (Polynomial.map ϕ f)) = 0 := by
-          have : (Ideal.Quotient.mk ms) β = β_0 := by sorry
-          rw[←this]
-          rw[Polynomial.eval_map (Ideal.Quotient.mk ms) β]
-          rw[Polynomial.eval₂_hom (Ideal.Quotient.mk ms) β]
-          rw[Polynomial.eval_map ϕ β]
-          --#check Polynomial.eval β f
-
-
-          --rw[Polynomial.eval₂_hom ϕ β]
-          --rw[Polynomial.eval₂_hom
-          sorry
-        have div_minpolys : f_0 ∣ Polynomial.map (Ideal.Quotient.mk mr) f := by
-          --refine minpoly.dvd_iff
-          --refine minpoly.dvd_map_of_isScalarTower R (R ⧸ mr)
-          #check minpoly.dvd_map_of_isScalarTower
-
-          sorry
-        --refine Polynomial.associated_of_dvd_of_degree_eq ?_ ?_
-
-
-
-
-
-        sorry
-      unfold f'
-
-
 
       sorry
 
