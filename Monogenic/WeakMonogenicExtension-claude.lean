@@ -17,23 +17,7 @@ variable {R S : Type u} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S
 lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
   [mod_fin : Module.Finite R S] [Algebra.Etale R S] :
     ∃(β : S), Algebra.adjoin R {β} = ⊤ := by
-  -- NoZeroSMulDivisors follows from φ being injective and S being a domain
   let φ := algebraMap R S
-  -- haveI : NoZeroSMulDivisors R S := NoZeroSMulDivisors.iff_algebraMap_injective.mpr
-  --   (by rw [RingHom.algebraMap_toAlgebra]; exact φ_inj)
-  -- have φ_eq : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
-  -- Extract formally unramified from étale
-  -- have h_etale := (RingHom.etale_iff_formallyUnramified_and_smooth φ).mp φ_et
-  -- have unram_φ : φ.FormallyUnramified := h_etale.1
-  -- have unram_alg : Algebra.FormallyUnramified R S := inferInstance
-  -- by rwa [← φ_eq] at unram_φ
-  -- φ finite and injective implies local homomorphism
-  -- have local_φ : IsLocalHom (algebraMap R S) := by
-  --   rw [φ_eq]
-  --   exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite φ_fin) φ_inj
-  -- φ finite implies essentially finite type
-  -- have essfin : Algebra.EssFiniteType R S := inferInstance
-  -- RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite φ_fin)
   -- Key: maximal ideal maps to maximal ideal (from Mathlib's unramified local ring theory)
   have eq_max : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) =
       IsLocalRing.maximalIdeal S :=
@@ -59,10 +43,13 @@ lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
   have adjoin_eq_top : S' = ⊤ := by
     -- The intermediate field k_R⟮β₀⟯ = ⊤ means β₀ generates k_S over k_R
     -- Since β₀ is algebraic (k_S is finite over k_R), the subalgebra equals the intermediate field
-    haveI h_alg_ext : Algebra.IsAlgebraic (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) :=
-      Algebra.IsAlgebraic.of_finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
-    have h_alg_β₀ : IsAlgebraic (IsLocalRing.ResidueField R) β₀ := Algebra.IsAlgebraic.isAlgebraic β₀
-    -- Use the fact that IntermediateField.adjoin K {α} has toSubalgebra = Algebra.adjoin K {α} when α is algebraic
+    haveI h_alg_ext : Algebra.IsAlgebraic (IsLocalRing.ResidueField R)
+      (IsLocalRing.ResidueField S) :=
+        Algebra.IsAlgebraic.of_finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+    have h_alg_β₀ : IsAlgebraic (IsLocalRing.ResidueField R) β₀ :=
+      Algebra.IsAlgebraic.isAlgebraic β₀
+    -- Use the fact that IntermediateField.adjoin K {α} has
+    -- toSubalgebra = Algebra.adjoin K {α} when α is algebraic
     have h_subalg := IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic h_alg_β₀
     -- Now k_R⟮β₀⟯ = ⊤ implies Algebra.adjoin k_R {β₀} = ⊤
     have h_adjoin_top : Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} = ⊤ := by
