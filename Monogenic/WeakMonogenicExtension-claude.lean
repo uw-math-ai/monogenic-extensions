@@ -30,7 +30,6 @@ lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
   -- Lift β₀ to β in S via the quotient map
   obtain ⟨β, hβ⟩ := Ideal.Quotient.mk_surjective β₀
   -- φ finite implies S is integral over R
-  -- haveI : Module.Finite R S := φ_fin
   haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
   -- The key claim: Algebra.adjoin R {β} = ⊤
   -- This follows from Nakayama's lemma: since the image of adjoin R {β} in S/m_S
@@ -40,9 +39,6 @@ lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
   have adjoin_eq_top : S' = ⊤ := by
     -- The intermediate field k_R⟮β₀⟯ = ⊤ means β₀ generates k_S over k_R
     -- Since β₀ is algebraic (k_S is finite over k_R), the subalgebra equals the intermediate field
-    haveI h_alg_ext : Algebra.IsAlgebraic (IsLocalRing.ResidueField R)
-      (IsLocalRing.ResidueField S) :=
-        Algebra.IsAlgebraic.of_finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
     have h_alg_β₀ : IsAlgebraic (IsLocalRing.ResidueField R) β₀ :=
       Algebra.IsAlgebraic.isAlgebraic β₀
     -- Use the fact that IntermediateField.adjoin K {α} has
@@ -54,86 +50,50 @@ lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
 
     -- ... (Initial parts of the proof to define β and S') ...
     let mR := IsLocalRing.maximalIdeal R
-
-    -- 1. Satisfy (hN : N.FG)
+    have h_mS : mR • (⊤ : Submodule R S) = (IsLocalRing.maximalIdeal S).restrictScalars R := by
+      rw [Ideal.smul_top_eq_map, Algebra.FormallyUnramified.map_maximalIdeal]
+    -- Parameters for le_of_le_smul_of_le_jacobson_bot
     have h_fg : (⊤ : Submodule R S).FG := Module.finite_def.mp inferInstance
-
-    -- 2. Satisfy (hIjac : I ≤ jacobson ⊥)
     have h_jac : mR ≤ Ideal.jacobson ⊥ := IsLocalRing.maximalIdeal_le_jacobson ⊥
 
-    -- 3. Satisfy (hmaple : map (I • N).mkQ N = map (I • N).mkQ N')
-    -- We show the image of S' in S / (mR • S) is the same as the image of ⊤ (which is S/(mR • S))
-    have h_map : Submodule.map (mR • ⊤ : Submodule R S).mkQ S'.toSubmodule =
-                Submodule.map (mR • ⊤ : Submodule R S).mkQ ⊤ := by
-      -- aristotle output: i swear this is even less understandable
-      apply le_antisymm _ _;
-      · exact Submodule.map_mono ( by aesop_cat );
-      · intro x hx;
-        obtain ⟨ y, hy, rfl ⟩ := hx;
-        -- tactic state is:
-        -- ⊢ (mR • ⊤).mkQ y ∈ Submodule.map (mR • ⊤).mkQ (Subalgebra.toSubmodule S')
-        -- with y : S and hy : y ∈ ↑⊤
-        -- might be a manual way to do this better?
-
-        -- Since $y \in S$, we can write $y$ as a polynomial in $\beta$ with coefficients in $R$.
-        obtain ⟨ p, hp ⟩ : ∃ p : Polynomial R,
-            y - p.eval₂ (algebraMap R S) β ∈ mR • (⊤ : Submodule R S) := by
-          have h_poly : ∀ y : S, ∃ p : Polynomial R,
-              y - p.eval₂ (algebraMap R S) β ∈ IsLocalRing.maximalIdeal S := by
-            -- Since $S$ is a local ring with maximal ideal $mS$,
-            -- and $\beta$ is a lift of $\beta₀$, which generates the residue field,
-            -- any element in $S$ can be written as a polynomial in $\beta$ plus an element in $mS$.
-            have h_poly : ∀ y : S, ∃ p : Polynomial R,
-                y - p.eval₂ (algebraMap R S) β ∈ IsLocalRing.maximalIdeal S := by
-              intro y
-              have h_res : ∃ p : Polynomial (IsLocalRing.ResidueField R),
-                  (Ideal.Quotient.mk (IsLocalRing.maximalIdeal S) y) = p.eval₂ (algebraMap
-                    (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)) β₀ := by
-                have h_res : ∀ y : IsLocalRing.ResidueField S,
-                    ∃ p : Polynomial (IsLocalRing.ResidueField R),
-                    y = p.eval₂ (algebraMap (IsLocalRing.ResidueField R)
-                      (IsLocalRing.ResidueField S)) β₀ := by
-                  intro y;
-                  have h_res : y ∈ Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} := by
-                    aesop;
-                  rw [ Algebra.adjoin_singleton_eq_range_aeval ] at h_res ; aesop;
-                exact h_res _
-              obtain ⟨ p, hp ⟩ := h_res;
-              -- Let $q$ be the polynomial in $R[X]$ obtained by
-              -- lifting the coefficients of $p$ from the residue field to $R$.
-              obtain ⟨ q, hq ⟩ : ∃ q : Polynomial R,
-                  p = Polynomial.map (algebraMap R (IsLocalRing.ResidueField R)) q := by
-                choose f hf using fun i => IsLocalRing.residue_surjective ( p.coeff i );
-                use ∑ i ∈ p.support, f i • Polynomial.X ^ i;
-                ext i; aesop;
-              use q;
-              rw [ ← Ideal.Quotient.eq_zero_iff_mem ];
-              simp_all +decide only [IntermediateField.adjoin_eq_top_iff,
-                IntermediateField.adjoin_toSubalgebra, Submodule.top_coe, Set.mem_univ,
-                IsLocalRing.ResidueField.algebraMap_eq, eval₂_map, map_sub];
-              simp +decide only [eval₂_eq_sum_range, coe_comp, Function.comp_apply,
-                IsLocalRing.ResidueField.algebraMap_residue, map_sum, map_mul,
-                Ideal.Quotient.mk_algebraMap, map_pow, hβ];
-              exact sub_eq_zero_of_eq <| Finset.sum_congr rfl fun _ _ => by erw [ ← hβ ] ; rfl;
-            exact h_poly;
-          obtain ⟨ p, hp ⟩ := h_poly y;
-          rw [ ← eq_max ] at hp;
-          exact ⟨ p, by simpa [ Ideal.map ] using hp ⟩;
-        refine' ⟨ p.eval₂ ( algebraMap R S ) β, _, _ ⟩
-          <;> simp_all +decide [ Submodule.Quotient.eq ];
-        · rw [ Polynomial.eval₂_eq_sum_range ];
-          exact Subalgebra.sum_mem _ fun i hi => Subalgebra.mul_mem _
-            (Subalgebra.algebraMap_mem _ _)
-            (Subalgebra.pow_mem _ ( Algebra.subset_adjoin <| Set.mem_singleton _) _);
-        · simpa using Submodule.neg_mem _ hp
-    -- Apply the requested lemma
-    have h_final := Submodule.eq_of_map_mkQ_eq_map_mkQ_of_le_jacobson_bot h_fg h_jac h_map.symm
-    -- Conclude
-    -- If h_final is (⊤ : Submodule R S) = S'.toSubmodule
-    have myrw : (⊤ : Subalgebra R S).toSubmodule = (⊤ : Submodule R S) := by rfl
-    rw [← myrw] at h_final
-    let test := Subalgebra.toSubmodule_injective h_final
-    exact test.symm
+    -- S ⊆ S' + mR • S
+    have h_le_sup : (⊤ : Submodule R S) ≤ S'.toSubmodule ⊔ mR • ⊤ := by
+      -- Prove every s is in the sup by lifting from the residue field...
+      intro s _
+      -- 1. Identify s₀ in the residue field k_S
+      let s₀ := IsLocalRing.residue S s
+      -- 2. Use the fact that k_R⟮β₀⟯ = ⊤ implies Algebra.adjoin kR {β₀} = ⊤
+      -- (Since the extension is finite, the intermediate field is the subalgebra)
+      have hs₀ : s₀ ∈ Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} := by
+        rw [h_adjoin_top]; trivial
+      -- aristotle proof:
+      simp +zetaDelta only [IntermediateField.adjoin_eq_top_iff,
+        IntermediateField.adjoin_toSubalgebra, Ideal.smul_top_eq_map, Submodule.restrictScalars_inj,
+        Submodule.mem_top] at *;
+      -- Since $s₀$ is in the adjoin of $\beta₀$ over the residue field,
+      -- there exists some $t \in \text{adjoin } R \{β\}$ such that $s - t \in m_S$.
+      obtain ⟨t, ht⟩ : ∃ t ∈ Algebra.adjoin R {β},
+          s - t ∈ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) := by
+        -- Since $s₀$ is in the adjoin of $β₀$ over the residue field,
+        -- there exists some $t₀ \in \text{adjoin } R \{β\}$ such that $s₀ = \text{residue } S(t₀)$.
+        obtain ⟨t₀, ht₀⟩ : ∃ t₀ ∈ Algebra.adjoin R {β},
+            IsLocalRing.residue S s = IsLocalRing.residue S t₀ := by
+          refine' Algebra.adjoin_induction _ _ _ _ hs₀;
+          · exact fun x hx => ⟨ β, Algebra.subset_adjoin <| Set.mem_singleton _, by aesop ⟩;
+          · intro r;
+            obtain ⟨ r, rfl ⟩ := Ideal.Quotient.mk_surjective r;
+            exact ⟨ algebraMap R S r, Subalgebra.algebraMap_mem _ _, rfl ⟩;
+          · rintro x y hx hy ⟨ t₀, ht₀, rfl ⟩ ⟨ t₁, ht₁, rfl ⟩
+            exact ⟨ t₀ + t₁, Subalgebra.add_mem _ ht₀ ht₁, by simp +decide ⟩ ;
+          · rintro x y hx hy ⟨ t₀, ht₀, rfl ⟩ ⟨ t₁, ht₁, rfl ⟩
+            exact ⟨ t₀ * t₁, Subalgebra.mul_mem _ ht₀ ht₁, by simp +decide ⟩ ;
+        exact ⟨ t₀, ht₀.1, by rw [ h_mS ] ; exact Ideal.Quotient.eq.mp ht₀.2 ⟩;
+      exact Submodule.mem_sup.mpr ⟨ t, ht.1, s - t, ht.2, by simp +decide ⟩
+    -- Apply the lemma directly to get ⊤ ≤ S'
+    have h_top_le : (⊤ : Submodule R S) ≤ S'.toSubmodule :=
+      Submodule.le_of_le_smul_of_le_jacobson_bot h_fg h_jac h_le_sup
+    -- Result: S' = ⊤
+    exact eq_top_iff.mpr h_top_le
   exact ⟨β, adjoin_eq_top⟩
 
 omit [IsLocalRing S]
