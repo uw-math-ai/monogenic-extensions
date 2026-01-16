@@ -14,53 +14,43 @@ variable {R S : Type u} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S
 -- The [IsDomain R] and [IsIntegrallyClosed R] are needed for the minimal polynomial
 -- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
 -- [IsDomain S] follows naturally for étale extensions of domains.
-lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDomain S]
-    (φ : R →+* S) (φ_fin : Finite φ) (φ_inj : Injective φ) (φ_et : Etale φ) :
-    isMonogenicExtension φ := by
-  -- Set up R-algebra structure on S via φ
-  letI : Algebra R S := φ.toAlgebra
+lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
+  [mod_fin : Module.Finite R S] [Algebra.Etale R S] :
+    ∃(β : S), Algebra.adjoin R {β} = ⊤ := by
   -- NoZeroSMulDivisors follows from φ being injective and S being a domain
-  haveI : NoZeroSMulDivisors R S := NoZeroSMulDivisors.iff_algebraMap_injective.mpr
-    (by rw [RingHom.algebraMap_toAlgebra]; exact φ_inj)
-  have φ_eq : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
-
+  let φ := algebraMap R S
+  -- haveI : NoZeroSMulDivisors R S := NoZeroSMulDivisors.iff_algebraMap_injective.mpr
+  --   (by rw [RingHom.algebraMap_toAlgebra]; exact φ_inj)
+  -- have φ_eq : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
   -- Extract formally unramified from étale
-  have h_etale := (RingHom.etale_iff_formallyUnramified_and_smooth φ).mp φ_et
-  have unram_φ : φ.FormallyUnramified := h_etale.1
-  have unram_alg : Algebra.FormallyUnramified R S := by
-    rwa [← φ_eq] at unram_φ
-
+  -- have h_etale := (RingHom.etale_iff_formallyUnramified_and_smooth φ).mp φ_et
+  -- have unram_φ : φ.FormallyUnramified := h_etale.1
+  -- have unram_alg : Algebra.FormallyUnramified R S := inferInstance
+  -- by rwa [← φ_eq] at unram_φ
   -- φ finite and injective implies local homomorphism
-  have local_φ : IsLocalHom (algebraMap R S) := by
-    rw [φ_eq]
-    exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite φ_fin) φ_inj
-
+  -- have local_φ : IsLocalHom (algebraMap R S) := by
+  --   rw [φ_eq]
+  --   exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite φ_fin) φ_inj
   -- φ finite implies essentially finite type
-  have essfin : Algebra.EssFiniteType R S :=
-    RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite φ_fin)
-
+  -- have essfin : Algebra.EssFiniteType R S := inferInstance
+  -- RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite φ_fin)
   -- Key: maximal ideal maps to maximal ideal (from Mathlib's unramified local ring theory)
   have eq_max : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) =
       IsLocalRing.maximalIdeal S :=
     Algebra.FormallyUnramified.map_maximalIdeal
-
   -- Residue field extension is separable and finite (automatic instances from Mathlib)
   haveI sep_res : Algebra.IsSeparable (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) :=
     inferInstance
   haveI fin_res : Module.Finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) :=
     inferInstance
-
   -- Primitive element theorem: ∃ β₀ such that k_R⟮β₀⟯ = k_S
   obtain ⟨β₀, hβ₀⟩ := Field.exists_primitive_element (IsLocalRing.ResidueField R)
     (IsLocalRing.ResidueField S)
-
   -- Lift β₀ to β in S via the quotient map
   obtain ⟨β, hβ⟩ := Ideal.Quotient.mk_surjective β₀
-
   -- φ finite implies S is integral over R
-  haveI : Module.Finite R S := φ_fin
+  -- haveI : Module.Finite R S := φ_fin
   haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
-
   -- The key claim: Algebra.adjoin R {β} = ⊤
   -- This follows from Nakayama's lemma: since the image of adjoin R {β} in S/m_S
   -- equals k_R⟮β₀⟯ = k_S (by primitive element theorem and the lift), and S is
@@ -77,7 +67,6 @@ lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDo
     -- Now k_R⟮β₀⟯ = ⊤ implies Algebra.adjoin k_R {β₀} = ⊤
     have h_adjoin_top : Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} = ⊤ := by
       rw [← h_subalg, hβ₀, IntermediateField.top_toSubalgebra]
-
     -- Key: S'.toSubmodule ⊔ (maximalIdeal S).restrictScalars R = ⊤
     -- because the image of S' in k_S = Algebra.adjoin k_R {β₀} = ⊤
     have h_sup : S'.toSubmodule ⊔ (IsLocalRing.maximalIdeal S).restrictScalars R = ⊤ := by
@@ -187,7 +176,6 @@ lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDo
             · exact Ideal.mul_mem_right _ _ hm_x
             · exact Ideal.mul_mem_left _ m_x hm_y
         · exact Submodule.mem_sup_right h_diff
-
     -- Now apply Nakayama-type argument
     -- We have S'.toSubmodule ⊔ m_S = ⊤
     -- By Nakayama (S finite over R, m_R ⊆ jacobson(0)), S' = ⊤
@@ -198,7 +186,6 @@ lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDo
       IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R)
     -- S is finitely generated over R
     have h_fg : (⊤ : Submodule R S).FG := Module.finite_def.mp inferInstance
-
     -- Key: use the fact that m_S = Ideal.map φ m_R and apply Nakayama
     -- The approach: show S' ⊔ m_S.restrictScalars R = ⊤ implies S' = ⊤
     -- by showing the quotient (⊤ : Submodule R S) / S'.toSubmodule is zero
@@ -212,18 +199,15 @@ lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDo
     -- First, we need ⊤ ≤ S' ⊔ m_R • ⊤
     -- We have h_sup : S' ⊔ m_S.restrictScalars R = ⊤
     -- Since m_S = Ideal.map φ m_R, we have m_S.restrictScalars R ≤ m_R • ⊤
-
     have h_map_le_smul : (IsLocalRing.maximalIdeal S).restrictScalars R ≤
         (IsLocalRing.maximalIdeal R) • (⊤ : Submodule R S) := by
       rw [← eq_max, Ideal.smul_top_eq_map]
-
     have h_le_sup : (⊤ : Submodule R S) ≤
         S'.toSubmodule ⊔ (IsLocalRing.maximalIdeal R) • (⊤ : Submodule R S) := by
       calc (⊤ : Submodule R S)
         = S'.toSubmodule ⊔ (IsLocalRing.maximalIdeal S).restrictScalars R := h_sup.symm
         _ ≤ S'.toSubmodule ⊔ (IsLocalRing.maximalIdeal R) • (⊤ : Submodule R S) :=
             sup_le_sup_left h_map_le_smul _
-
     -- Apply Nakayama: N ⊔ N' = N ⊔ J • N' when N' ≤ N ⊔ I • N' and I ≤ Jac(J)
     have h_nak := Submodule.sup_eq_sup_smul_of_le_smul_of_le_jacobson h_fg h_jac h_le_sup
     -- h_nak : S'.toSubmodule ⊔ ⊤ = S'.toSubmodule ⊔ ⊥ • ⊤
@@ -235,13 +219,21 @@ lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDo
       calc (⊤ : Submodule R S) ≤ S'.toSubmodule ⊔ ⊤ := le_sup_right
         _ = S'.toSubmodule := h_nak
     exact eq_top_iff.mpr h_top_le
+  exact ⟨β, adjoin_eq_top⟩
 
+omit [IsLocalRing S]
+lemma minpolyStuff [Algebra R S] [Module.Finite R S] [FaithfulSMul R S]
+  [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] :
+    (∃ β : S, Algebra.adjoin R {β} = ⊤)
+      → ∃ f : R[X], Nonempty ((R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) := by
+  haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
   -- Since adjoin R {β} = ⊤, the minimal polynomial f of β gives S ≃ R[X]/(f)
   -- by the universal property of AdjoinRoot
+  intro hyp
+  let ⟨β, adjoin_eq_top⟩ := hyp
   let f := minpoly R β
-
   -- Unfold the definition and construct the isomorphism
-  unfold isMonogenicExtension
+  -- unfold isMonogenicExtension
   use f
   -- The isomorphism S ≃ R[X]/(f) follows from:
   -- 1. lift : R[X]/(f) →ₐ[R] S sending [X] to β
@@ -255,10 +247,8 @@ lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDo
     rw [Ideal.mem_span_singleton] at hp
     obtain ⟨q, hq⟩ := hp
     simp only [hq, map_mul, hf_aeval, zero_mul]
-
   let lift_hom : (R[X] ⧸ Ideal.span {f}) →ₐ[R] S :=
     Ideal.Quotient.liftₐ (Ideal.span {f}) (Polynomial.aeval β) hker
-
   -- Prove bijectivity
   have lift_bij : Function.Bijective lift_hom := by
     constructor
@@ -277,8 +267,8 @@ lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDo
       intro s
       -- s ∈ Algebra.adjoin R {β} since adjoin_eq_top
       have hs : s ∈ Algebra.adjoin R {β} := by
-        have : S' = Algebra.adjoin R {β} := rfl
-        rw [← this, adjoin_eq_top]; trivial
+        -- have : S' = Algebra.adjoin R {β} := rfl
+        rw [adjoin_eq_top]; trivial
       -- Induction on the adjoin structure
       induction hs using Algebra.adjoin_induction with
       | mem x hx =>
@@ -304,5 +294,39 @@ lemma FiniteInjectiveEtale_IsMonogenic [IsDomain R] [IsIntegrallyClosed R] [IsDo
         obtain ⟨py, hpy⟩ := ihy
         use px * py
         simp only [map_mul, hpx, hpy]
-
   exact ⟨AlgEquiv.ofBijective lift_hom lift_bij⟩
+
+
+
+#check RingHom.finite_algebraMap
+#check RingHom.etale_algebraMap
+
+#check RingHom.toAlgebra
+#check RingHom.algebraMap_toAlgebra
+
+-- aristotle was able to give this pretty easily
+-- true for all CommRing R and CommRing S.
+omit [IsLocalRing R] [IsLocalRing S]
+theorem faithful_smul_iff_injective [Algebra R S] :
+  Injective (algebraMap R S) ↔ FaithfulSMul R S := by
+  constructor
+  · -- If the algebra map is injective, then the scalar multiplication is faithful.
+    intro h_inj
+    apply FaithfulSMul.mk
+    intro r s h_eq
+    have h_eq' : algebraMap R S r = algebraMap R S s := by
+      -- By definition of scalar multiplication in the algebra, we have $r • 1 = s • 1$.
+      have h_one : r • (1 : S) = s • (1 : S) := by
+        exact h_eq 1;
+      -- Since multiplying by 1 in S is the same as applying the algebra map,
+      -- we have algebraMap R S r = r • 1 and algebraMap R S s = s • 1.
+      simp only [Algebra.smul_def, mul_one] at h_one ⊢;
+      exact h_one
+    have h_eq'' : r = s := by
+      -- Apply the injectivity of the algebra map to conclude that $r = s$.
+      apply h_inj; exact h_eq'
+    exact h_eq''
+  · intro faithful
+    unfold Injective
+    -- Apply the fact that `FaithfulSMul R S` implies injectivity of the algebra map.
+    apply FaithfulSMul.algebraMap_injective R S
