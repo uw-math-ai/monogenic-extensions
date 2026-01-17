@@ -4,8 +4,10 @@ I've updated to the latest version Lean & mathlib.  The current files won't comp
 
 # There are three new files to look at:
 * `Monogenic/Basic.lean` defines monogenic extensions and gives an equivalence, which is formulated close to how `Lemma 3.2` is stated in `Monogenic.lean`
+* `Monogenic/Weak.lean` is an adaptation of Claude with a proof decomposition for the injectivity of $ev_{\beta}$ by using properties of etaleness
 * `Monogenic/WeakMonogenicExtension-claude.lean` proves a version of `Lemma 3.2` called  `FiniteInjectiveEtale_IsMonogenic` with extra hypotheses that Claude added (see below)
 * `Monogenic/WeakMonogenicExtension.lean` has the same version of `Lemma 3.2` with no additional domain or integrally closed hypotheses, but it has one `sorry`, namely the injectivity of $R[x]/(f) \to S$.
+
 
 # Some comments on the mathematics
 * The notion of a `monogenic extension` is closely related to a `standard etale` map.  This is defined in https://stacks.math.columbia.edu/tag/00UB:  $R->S$ is standard etale if there exist an $R$-algebra isomorphism $S \cong R[x]_g/(f)$ where $f$ is monic and the derivative $f'$ is a unit in $R[x]_g/(f)$.  This is proven in this PR https://github.com/leanprover-community/mathlib4/blob/c6f1b19c0e33c7be0155605faba9e84d61299690/Mathlib/CFT/IsStandardEtale.lean#L828, but it doesn't seem to incorporated into Mathlib yet

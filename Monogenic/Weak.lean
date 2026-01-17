@@ -2,13 +2,34 @@ import Mathlib
 import Monogenic.Basic
 universe u
 
+/-!
+
+# Weak Monogenic Extensions
+
+This file proves:
+
+`FiniteInjectiveEtale_IsMonogenic`: An injective, finite, and etale ring homomorphism between local rings is a weak monogenic extension (as defined in `Basic.isMonogenicExtension`)
+
+# TO DO
+
+Fill in remaining sorry. 
+
+# Use of AI 
+The statements was written by a human. 
+
+The proof was generated using Claude Code with some assistance from Gemini CLI.  In this workflow, I both prompted the models and tweaked the generated code.  
+
+I used both Github Copilot and Cursor when manually editing the Lean code. 
+-/
+
+
 open Polynomial
 open Function
 open RingHom
 
 variable {R S : Type u} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
 
-#check isMonogenicExtension
+#check isMonogenicExtension --R S : Type u} → [inst : CommRing R] → [inst_1 : CommRing S] → (R →+* S) → Prop
 
 
 lemma FiniteInjectiveEtale_IsMonogenic
@@ -253,53 +274,77 @@ lemma FiniteInjectiveEtale_IsMonogenic
     obtain ⟨q, hq⟩ := hp
     simp only [hq, map_mul, hf_aeval, zero_mul]
 
-  let lift_hom : (R[X] ⧸ Ideal.span {f}) →ₐ[R] S :=
+  -- define evaluation map ev_β :R[X]/(f) →ₐ[R] S, X ↦ β 
+  let ev_β : (R[X] ⧸ Ideal.span {f}) →ₐ[R] S :=
     Ideal.Quotient.liftₐ (Ideal.span {f}) (Polynomial.aeval β) hker
 
-  -- Prove bijectivity
-  have lift_bij : Function.Bijective lift_hom := by
-    constructor
-    · -- Injectivity: kernel is trivial because f is minimal polynomial
-      rw [injective_iff_map_eq_zero]
-      intro x hx
-      obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
-      simp only [lift_hom, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk] at hx
-      -- aeval β p = 0 implies f ∣ p by minimality (using isIntegrallyClosed_dvd)
-      simp only [Ideal.Quotient.eq_zero_iff_mem]
-      apply Ideal.mem_span_singleton.mpr
-      -- β is integral since S is finite over R
-      have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-      sorry --need to still show that f | p (when R is integrally closed domain, use minpoly.isIntegrallyClosed_dvd)
-    · -- Surjectivity: image contains Algebra.adjoin R {β} = ⊤
-      intro s
-      -- s ∈ Algebra.adjoin R {β} since adjoin_eq_top
-      have hs : s ∈ Algebra.adjoin R {β} := by
-        have : S' = Algebra.adjoin R {β} := rfl
-        rw [← this, adjoin_eq_top]; trivial
-      -- Induction on the adjoin structure
-      induction hs using Algebra.adjoin_induction with
-      | mem x hx =>
-        -- x ∈ {β}, so x = β
-        simp only [Set.mem_singleton_iff] at hx
-        rw [hx]
-        -- β = aeval β X, so use [X]
-        use Ideal.Quotient.mk (Ideal.span {f}) X
-        simp only [lift_hom, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk]
-        exact aeval_X β
-      | algebraMap r =>
-        -- algebraMap R S r = aeval β (C r)
-        use Ideal.Quotient.mk (Ideal.span {f}) (C r)
-        simp only [lift_hom, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk]
-        exact aeval_C β r
-      | add x y _ _ ihx ihy =>
-        obtain ⟨px, hpx⟩ := ihx
-        obtain ⟨py, hpy⟩ := ihy
-        use px + py
-        simp only [map_add, hpx, hpy]
-      | mul x y _ _ ihx ihy =>
-        obtain ⟨px, hpx⟩ := ihx
-        obtain ⟨py, hpy⟩ := ihy
-        use px * py
-        simp only [map_mul, hpx, hpy]
+  -- Surjectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β 
+  -- Reason: image contains Algebra.adjoin R {β} = ⊤
+  have ev_surj : Function.Surjective ev_β := by
+    intro s
+    -- s ∈ Algebra.adjoin R {β} since adjoin_eq_top
+    have hs : s ∈ Algebra.adjoin R {β} := by
+      have : S' = Algebra.adjoin R {β} := rfl
+      rw [← this, adjoin_eq_top]; trivial
+    -- Induction on the adjoin structure
+    induction hs using Algebra.adjoin_induction with
+    | mem x hx =>
+      -- x ∈ {β}, so x = β
+      simp only [Set.mem_singleton_iff] at hx
+      rw [hx]
+      -- β = aeval β X, so use [X]
+      use Ideal.Quotient.mk (Ideal.span {f}) X
+      simp only [ev_β, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk]
+      exact aeval_X β
+    | algebraMap r =>
+      -- algebraMap R S r = aeval β (C r)
+      use Ideal.Quotient.mk (Ideal.span {f}) (C r)
+      simp only [ev_β, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk]
+      exact aeval_C β r
+    | add x y _ _ ihx ihy =>
+      obtain ⟨px, hpx⟩ := ihx
+      obtain ⟨py, hpy⟩ := ihy
+      use px + py
+      simp only [map_add, hpx, hpy]
+    | mul x y _ _ ihx ihy =>
+      obtain ⟨px, hpx⟩ := ihx
+      obtain ⟨py, hpy⟩ := ihy
+      use px * py
+      simp only [map_mul, hpx, hpy]
+  
+  /- f'(β) is a unit in R[X]/(f)
+  Reason: This should follow because the residue f_bar of f in R/m_R[X]
+  is the minimal polynomial of β_0 in k_R⟮β₀⟯ = k_S, so f_bar is a unit in k_R⟮β₀⟯[X] -/
+  have is_unit_minpoly_deriv : IsUnit (Polynomial.eval β (Polynomial.map φ (Polynomial.derivative f))) := by
+    sorry
 
-  exact ⟨AlgEquiv.ofBijective lift_hom lift_bij⟩
+  /- Etaleness of R → R[X]/(f) 
+  Reason: This follows from `is_unit_minpoly_deriv` as R → R[X]/(f) is not
+  a standard etale ring homomorphism. -/
+  have R_etale : R →ₐ[R] (R[X] ⧸ Ideal.span {f}) := by
+    sorry
+
+  /- Etaleness of ev_β :R[X]/(f) →ₐ[R] S
+  Reason: Follows because both R → R[X]/(f) and R[X]/(f) → S are etale. -/
+  have ev_etale : ev_β.Etale := by
+    sorry
+
+  /- Injectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β 
+  Reason: A finite etale ring homomorphisms of local rings is injective.-/
+  have ev_inj : Function.Injective ev_β := by
+    rw [injective_iff_map_eq_zero]
+    intro x hx
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp only [ev_β, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk] at hx
+    -- aeval β p = 0 implies f ∣ p by minimality (using isIntegrallyClosed_dvd)
+    simp only [Ideal.Quotient.eq_zero_iff_mem]
+    apply Ideal.mem_span_singleton.mpr
+    -- β is integral since S is finite over R
+    have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
+    sorry --need to still show that f | p (when R is integrally closed domain, use minpoly.isIntegrallyClosed_dvd)
+
+  -- Bijectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β 
+  have ev_bij : Function.Bijective ev_β := by
+    exact ⟨ev_inj, ev_surj⟩ 
+  -- A bijective algebra homomorphism is an isomorphism
+  exact ⟨AlgEquiv.ofBijective ev_β ev_bij⟩
