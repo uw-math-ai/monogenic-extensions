@@ -17,6 +17,11 @@ We show in `isMonogenicExtension_iff` that this is equivalent to the existence o
 To add
 * definition of strong monogenic extension requiring that $f$ is monic and that $f'(β)$ is a unit
 * analogous equivalence for strong monogenic extension
+
+# Use of AI 
+The definitions and statements were mostly written by me with assistance from Claude 3.5 Sonnet within the Cursor Copilot. 
+
+The proof of `isMonogenicExtension_iff` was generated using Claude Code with some assistance from Gemini CLI.  In this workflow, I both prompted the models and tweaked the generated code. 
 -/
 
 variable {R S : Type u} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
