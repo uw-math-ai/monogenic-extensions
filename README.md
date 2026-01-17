@@ -2,11 +2,11 @@
 
 I've updated to the latest version Lean & mathlib.  The current files won't compile in the Lean version `lean4:v4.25.0-rc2` of the master branch.  You should either run `lake update` in your version, or switch to my branch and run `lake exe cache get`.  It's important to update mathlib for this project because related material is getting added by the day, and in fact there are useful results that have been PRed but not merged.  I think this also explains why Aristotle is not that effective as it uses a fixed older version of Mathlib.
 
-# There are three new files to look at:
+# Files
 * `Monogenic/Basic.lean` defines monogenic extensions and gives an equivalence, which is formulated close to how `Lemma 3.2` is stated in `Monogenic.lean`
 * `Monogenic/Weak.lean` is an adaptation of Claude with a proof decomposition for the injectivity of $ev_{\beta}$ by using properties of etaleness
-* `Monogenic/WeakMonogenicExtension-claude.lean` proves a version of `Lemma 3.2` called  `FiniteInjectiveEtale_IsMonogenic` with extra hypotheses that Claude added (see below)
-* `Monogenic/WeakMonogenicExtension.lean` has the same version of `Lemma 3.2` with no additional domain or integrally closed hypotheses, but it has one `sorry`, namely the injectivity of $R[x]/(f) \to S$.
+* `Monogenic/claude-normal.lean` proves a version of `Lemma 3.2` called  `FiniteInjectiveEtale_IsMonogenic` with extra hypotheses that Claude added (see below)
+* `Monogenic/Strong.lean` formulates a stronger version of monogenic extension with the condition of $f$ being monic and its derivative being invertible. 
 
 
 # Some comments on the mathematics
