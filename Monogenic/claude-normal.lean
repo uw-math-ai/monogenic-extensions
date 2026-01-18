@@ -1,29 +1,42 @@
-import Mathlib
-universe u
+import Mathlib.FieldTheory.PrimitiveElement
+import Mathlib.FieldTheory.IntermediateField.Algebraic
+import Mathlib.FieldTheory.Minpoly.IsIntegrallyClosed
+import Mathlib.RingTheory.Etale.Basic
+import Mathlib.RingTheory.Unramified.LocalRing
+import Mathlib.RingTheory.LocalRing.ResidueField.Defs
+import Mathlib.RingTheory.Nakayama
+import Mathlib.RingTheory.IntegralClosure.IsIntegralClosure.Basic
+import Mathlib.RingTheory.IntegralClosure.IntegrallyClosed
+import Mathlib.RingTheory.AdjoinRoot
 
 open Polynomial
 open Function
 open RingHom
 
-variable {R S : Type u} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
+class Monogenic (R : Type*) (S : Type*) [CommSemiring R] [Semiring S] [Algebra R S] : Prop where
+  exists_adjoin_eq_top : ∃(β : S), Algebra.adjoin R {β} = ⊤
 
--- Note: We add [IsDomain R], [IsIntegrallyClosed R], and [IsDomain S] hypotheses.
--- The [IsDomain R] and [IsIntegrallyClosed R] are needed for the minimal polynomial
--- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
--- [IsDomain S] follows naturally for étale extensions of domains.
-lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
+namespace Monogenic
+
+variable {R S} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
+
+/-
+initial part without the integral domain hypothesis.
+for the statement about the isomorphism with the quotient ring,
+see isIntegrallyClosed_existsPolyQuotIso below
+(idk, cant come up with a name. i think these new names are roughly
+mathlib convention? i tried.)
+
+see FaithfulSMul.iff_algebraMapInjective below for a proof its equivalent
+to asserting that phi is injective.
+-/
+lemma if_finiteInjectiveEtale [Algebra R S] [FaithfulSMul R S]
   [Module.Finite R S] [Algebra.Etale R S] :
-    ∃(β : S), Algebra.adjoin R {β} = ⊤ := by
-  let φ := algebraMap R S
+    Monogenic R S := by
   -- Key: maximal ideal maps to maximal ideal (from Mathlib's unramified local ring theory)
   have eq_max : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) =
       IsLocalRing.maximalIdeal S :=
     Algebra.FormallyUnramified.map_maximalIdeal
-  -- Residue field extension is separable and finite (automatic instances from Mathlib)
-  haveI sep_res : Algebra.IsSeparable (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) :=
-    inferInstance
-  haveI fin_res : Module.Finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) :=
-    inferInstance
   -- Primitive element theorem: ∃ β₀ such that k_R⟮β₀⟯ = k_S
   obtain ⟨β₀, hβ₀⟩ := Field.exists_primitive_element (IsLocalRing.ResidueField R)
     (IsLocalRing.ResidueField S)
@@ -47,15 +60,12 @@ lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
     -- Now k_R⟮β₀⟯ = ⊤ implies Algebra.adjoin k_R {β₀} = ⊤
     have h_adjoin_top : Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} = ⊤ := by
       rw [← h_subalg, hβ₀, IntermediateField.top_toSubalgebra]
-
-    -- ... (Initial parts of the proof to define β and S') ...
     let mR := IsLocalRing.maximalIdeal R
     have h_mS : mR • (⊤ : Submodule R S) = (IsLocalRing.maximalIdeal S).restrictScalars R := by
       rw [Ideal.smul_top_eq_map, Algebra.FormallyUnramified.map_maximalIdeal]
     -- Parameters for le_of_le_smul_of_le_jacobson_bot
     have h_fg : (⊤ : Submodule R S).FG := Module.finite_def.mp inferInstance
     have h_jac : mR ≤ Ideal.jacobson ⊥ := IsLocalRing.maximalIdeal_le_jacobson ⊥
-
     -- S ⊆ S' + mR • S
     have h_le_sup : (⊤ : Submodule R S) ≤ S'.toSubmodule ⊔ mR • ⊤ := by
       -- Prove every s is in the sup by lifting from the residue field...
@@ -78,15 +88,15 @@ lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
         -- there exists some $t₀ \in \text{adjoin } R \{β\}$ such that $s₀ = \text{residue } S(t₀)$.
         obtain ⟨t₀, ht₀⟩ : ∃ t₀ ∈ Algebra.adjoin R {β},
             IsLocalRing.residue S s = IsLocalRing.residue S t₀ := by
-          refine' Algebra.adjoin_induction _ _ _ _ hs₀;
-          · exact fun x hx => ⟨ β, Algebra.subset_adjoin <| Set.mem_singleton _, by aesop ⟩;
-          · intro r;
-            obtain ⟨ r, rfl ⟩ := Ideal.Quotient.mk_surjective r;
-            exact ⟨ algebraMap R S r, Subalgebra.algebraMap_mem _ _, rfl ⟩;
+          refine Algebra.adjoin_induction ?_ ?_ ?_ ?_ hs₀
+          · exact fun x hx => ⟨ β, Algebra.subset_adjoin <| Set.mem_singleton _, by aesop ⟩
+          · intro r
+            obtain ⟨ r, rfl ⟩ := Ideal.Quotient.mk_surjective r
+            exact ⟨ algebraMap R S r, Subalgebra.algebraMap_mem _ _, rfl ⟩
           · rintro x y hx hy ⟨ t₀, ht₀, rfl ⟩ ⟨ t₁, ht₁, rfl ⟩
-            exact ⟨ t₀ + t₁, Subalgebra.add_mem _ ht₀ ht₁, by simp +decide ⟩ ;
+            exact ⟨ t₀ + t₁, Subalgebra.add_mem _ ht₀ ht₁, by simp +decide ⟩
           · rintro x y hx hy ⟨ t₀, ht₀, rfl ⟩ ⟨ t₁, ht₁, rfl ⟩
-            exact ⟨ t₀ * t₁, Subalgebra.mul_mem _ ht₀ ht₁, by simp +decide ⟩ ;
+            exact ⟨ t₀ * t₁, Subalgebra.mul_mem _ ht₀ ht₁, by simp +decide ⟩
         exact ⟨ t₀, ht₀.1, by rw [ h_mS ] ; exact Ideal.Quotient.eq.mp ht₀.2 ⟩;
       exact Submodule.mem_sup.mpr ⟨ t, ht.1, s - t, ht.2, by simp +decide ⟩
     -- Apply the lemma directly to get ⊤ ≤ S'
@@ -96,19 +106,19 @@ lemma FiniteInjectiveEtale_IsMonogenic [Algebra R S] [FaithfulSMul R S]
     exact eq_top_iff.mpr h_top_le
   exact ⟨β, adjoin_eq_top⟩
 
+-- Note: We add [IsDomain R], [IsIntegrallyClosed R], and [IsDomain S] hypotheses.
+-- The [IsDomain R] and [IsIntegrallyClosed R] are needed for the minimal polynomial
+-- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
+-- [IsDomain S] follows naturally for étale extensions of domains.
 omit [IsLocalRing S]
-lemma minpolyStuff [Algebra R S] [Module.Finite R S] [FaithfulSMul R S]
-  [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] :
-    (∃ β : S, Algebra.adjoin R {β} = ⊤)
-      → ∃ f : R[X], Nonempty ((R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) := by
+lemma isIntegrallyClosed_existsPolyQuotIso [Algebra R S] [Module.Finite R S] [FaithfulSMul R S]
+  [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [Monogenic R S] :
+    ∃ f : R[X], Nonempty ((R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) := by
   haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
   -- Since adjoin R {β} = ⊤, the minimal polynomial f of β gives S ≃ R[X]/(f)
   -- by the universal property of AdjoinRoot
-  intro hyp
-  let ⟨β, adjoin_eq_top⟩ := hyp
+  let ⟨β, adjoin_eq_top⟩ := (inferInstance : Monogenic R S)
   let f := minpoly R β
-  -- Unfold the definition and construct the isomorphism
-  -- unfold isMonogenicExtension
   use f
   -- The isomorphism S ≃ R[X]/(f) follows from:
   -- 1. lift : R[X]/(f) →ₐ[R] S sending [X] to β
@@ -171,19 +181,13 @@ lemma minpolyStuff [Algebra R S] [Module.Finite R S] [FaithfulSMul R S]
         simp only [map_mul, hpx, hpy]
   exact ⟨AlgEquiv.ofBijective lift_hom lift_bij⟩
 
+end Monogenic
 
-
-#check RingHom.finite_algebraMap
-#check RingHom.etale_algebraMap
-
-#check RingHom.toAlgebra
-#check RingHom.algebraMap_toAlgebra
 
 -- aristotle was able to give this pretty easily
--- true for all CommRing R and CommRing S.
-omit [IsLocalRing R] [IsLocalRing S]
-theorem faithful_smul_iff_injective [Algebra R S] :
-  Injective (algebraMap R S) ↔ FaithfulSMul R S := by
+namespace FaithfulSMul
+theorem iff_algebraMapInjective {R S} [CommSemiring R] [Semiring S] [Algebra R S] :
+    Injective (algebraMap R S) ↔ FaithfulSMul R S := by
   constructor
   · -- If the algebra map is injective, then the scalar multiplication is faithful.
     intro h_inj
@@ -205,3 +209,4 @@ theorem faithful_smul_iff_injective [Algebra R S] :
     unfold Injective
     -- Apply the fact that `FaithfulSMul R S` implies injectivity of the algebra map.
     apply FaithfulSMul.algebraMap_injective R S
+end FaithfulSMul

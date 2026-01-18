@@ -1,5 +1,12 @@
-import Mathlib
 import Monogenic.Basic
+import Mathlib.FieldTheory.PrimitiveElement
+import Mathlib.FieldTheory.IntermediateField.Algebraic
+import Mathlib.RingTheory.Etale.Basic
+import Mathlib.RingTheory.RingHom.Etale
+import Mathlib.RingTheory.Unramified.LocalRing
+import Mathlib.RingTheory.LocalRing.ResidueField.Defs
+import Mathlib.RingTheory.Nakayama
+import Mathlib.RingTheory.IntegralClosure.IsIntegralClosure.Basic
 universe u
 
 /-!
@@ -8,18 +15,20 @@ universe u
 
 This file proves:
 
-`FiniteInjectiveEtale_IsMonogenic`: An injective, finite, and etale ring homomorphism between local rings is a weak monogenic extension (as defined in `Basic.isMonogenicExtension`)
+`FiniteInjectiveEtale_IsMonogenic`: An injective, finite, and etale ring homomorphism
+between local rings is a weak monogenic extension (as defined in `Basic.isMonogenicExtension`)
 
 # TO DO
 
-Fill in remaining sorry. 
+Fill in remaining sorry.
 
-# Use of AI 
-The statements was written by a human. 
+# Use of AI
+The statements was written by a human.
 
-The proof was generated using Claude Code with some assistance from Gemini CLI.  In this workflow, I both prompted the models and tweaked the generated code.  
+The proof was generated using Claude Code with some assistance from Gemini CLI.
+In this workflow, I both prompted the models and tweaked the generated code.
 
-I used both Github Copilot and Cursor when manually editing the Lean code. 
+I used both Github Copilot and Cursor when manually editing the Lean code.
 -/
 
 
@@ -29,7 +38,8 @@ open RingHom
 
 variable {R S : Type u} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
 
-#check isMonogenicExtension --R S : Type u} → [inst : CommRing R] → [inst_1 : CommRing S] → (R →+* S) → Prop
+-- R S : Type u} → [inst : CommRing R] → [inst_1 : CommRing S] → (R →+* S) → Prop
+-- #check isMonogenicExtension
 
 
 lemma FiniteInjectiveEtale_IsMonogenic
@@ -87,10 +97,13 @@ lemma FiniteInjectiveEtale_IsMonogenic
   have adjoin_eq_top : S' = ⊤ := by
     -- The intermediate field k_R⟮β₀⟯ = ⊤ means β₀ generates k_S over k_R
     -- Since β₀ is algebraic (k_S is finite over k_R), the subalgebra equals the intermediate field
-    haveI h_alg_ext : Algebra.IsAlgebraic (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) :=
+    haveI h_alg_ext : Algebra.IsAlgebraic
+        (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) :=
       Algebra.IsAlgebraic.of_finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
-    have h_alg_β₀ : IsAlgebraic (IsLocalRing.ResidueField R) β₀ := Algebra.IsAlgebraic.isAlgebraic β₀
-    -- Use the fact that IntermediateField.adjoin K {α} has toSubalgebra = Algebra.adjoin K {α} when α is algebraic
+    have h_alg_β₀ : IsAlgebraic (IsLocalRing.ResidueField R) β₀ :=
+      Algebra.IsAlgebraic.isAlgebraic β₀
+    -- Use the fact that IntermediateField.adjoin K {α} has
+    -- toSubalgebra = Algebra.adjoin K {α} when α is algebraic
     have h_subalg := IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic h_alg_β₀
     -- Now k_R⟮β₀⟯ = ⊤ implies Algebra.adjoin k_R {β₀} = ⊤
     have h_adjoin_top : Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} = ⊤ := by
@@ -200,9 +213,9 @@ lemma FiniteInjectiveEtale_IsMonogenic
             apply Submodule.mem_sup_right
             rw [Submodule.restrictScalars_mem] at hm_x hm_y ⊢
             apply Ideal.add_mem
-            apply Ideal.add_mem
-            · exact Ideal.mul_mem_left _ s_x hm_y
-            · exact Ideal.mul_mem_right _ _ hm_x
+            · apply Ideal.add_mem
+              · exact Ideal.mul_mem_left _ s_x hm_y
+              · exact Ideal.mul_mem_right _ _ hm_x
             · exact Ideal.mul_mem_left _ m_x hm_y
         · exact Submodule.mem_sup_right h_diff
 
@@ -274,11 +287,11 @@ lemma FiniteInjectiveEtale_IsMonogenic
     obtain ⟨q, hq⟩ := hp
     simp only [hq, map_mul, hf_aeval, zero_mul]
 
-  -- define evaluation map ev_β :R[X]/(f) →ₐ[R] S, X ↦ β 
+  -- define evaluation map ev_β :R[X]/(f) →ₐ[R] S, X ↦ β
   let ev_β : (R[X] ⧸ Ideal.span {f}) →ₐ[R] S :=
     Ideal.Quotient.liftₐ (Ideal.span {f}) (Polynomial.aeval β) hker
 
-  -- Surjectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β 
+  -- Surjectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β
   -- Reason: image contains Algebra.adjoin R {β} = ⊤
   have ev_surj : Function.Surjective ev_β := by
     intro s
@@ -311,14 +324,15 @@ lemma FiniteInjectiveEtale_IsMonogenic
       obtain ⟨py, hpy⟩ := ihy
       use px * py
       simp only [map_mul, hpx, hpy]
-  
+
   /- f'(β) is a unit in R[X]/(f)
   Reason: This should follow because the residue f_bar of f in R/m_R[X]
   is the minimal polynomial of β_0 in k_R⟮β₀⟯ = k_S, so f_bar is a unit in k_R⟮β₀⟯[X] -/
-  have is_unit_minpoly_deriv : IsUnit (Polynomial.eval β (Polynomial.map φ (Polynomial.derivative f))) := by
+  have is_unit_minpoly_deriv : IsUnit (Polynomial.eval β
+      (Polynomial.map φ (Polynomial.derivative f))) := by
     sorry
 
-  /- Etaleness of R → R[X]/(f) 
+  /- Etaleness of R → R[X]/(f)
   Reason: This follows from `is_unit_minpoly_deriv` as R → R[X]/(f) is not
   a standard etale ring homomorphism. -/
   have R_etale : R →ₐ[R] (R[X] ⧸ Ideal.span {f}) := by
@@ -329,7 +343,7 @@ lemma FiniteInjectiveEtale_IsMonogenic
   have ev_etale : ev_β.Etale := by
     sorry
 
-  /- Injectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β 
+  /- Injectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β
   Reason: A finite etale ring homomorphisms of local rings is injective.-/
   have ev_inj : Function.Injective ev_β := by
     rw [injective_iff_map_eq_zero]
@@ -341,10 +355,11 @@ lemma FiniteInjectiveEtale_IsMonogenic
     apply Ideal.mem_span_singleton.mpr
     -- β is integral since S is finite over R
     have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-    sorry --need to still show that f | p (when R is integrally closed domain, use minpoly.isIntegrallyClosed_dvd)
+    sorry --need to still show that f | p
+          -- (when R is integrally closed domain, use minpoly.isIntegrallyClosed_dvd)
 
-  -- Bijectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β 
+  -- Bijectivity of ev_β :R[X]/(f) →ₐ[R] S, X ↦ β
   have ev_bij : Function.Bijective ev_β := by
-    exact ⟨ev_inj, ev_surj⟩ 
+    exact ⟨ev_inj, ev_surj⟩
   -- A bijective algebra homomorphism is an isomorphism
   exact ⟨AlgEquiv.ofBijective ev_β ev_bij⟩

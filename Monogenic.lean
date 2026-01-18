@@ -1,29 +1,17 @@
+-- Root import file - imports all submodules
+-- Be careful not to create import cycles!
 import Monogenic.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.RingTheory.LocalRing.Defs
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.Degree.Definitions
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import Mathlib.Algebra.Algebra.Subalgebra.Lattice
-import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.RingTheory.RingHom.Etale
-import Mathlib.RingTheory.Etale.Basic
-import Mathlib.RingTheory.Ideal.Span
-import Mathlib.RingTheory.Unramified.LocalRing
-import Mathlib.RingTheory.LocalRing.ResidueField.Defs
-import Mathlib.RingTheory.Kaehler.Basic
-import Mathlib.RingTheory.Ideal.Maps
-import Mathlib.Algebra.Polynomial.Eval.Algebra
-import Mathlib.RingTheory.AdjoinRoot
+import Monogenic.«claude-normal»
+import Monogenic.Strong
+import Monogenic.Weak
 
 
 -- #eval Lean.versionString
 -- #eval 3+4
 
-variable (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
+/- variable (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
 def RingHom.IsSeparable (f : R →+* S) : Prop :=
-      Algebra.IsSeparable R S
+      Algebra.IsSeparable R S -/
 
 lemma Lemma_3_2 (R S : Type)
   [CommRing R] [CommRing S]
@@ -261,8 +249,8 @@ lemma Lemma_3_2 (R S : Type)
 
     -- can we show that R[beta] / mr R[beta] = R/mr [beta_0] ?
 
-    #check Algebra.adjoin (R ⧸ mr) {β_0}
-    #check (R_beta ⧸ mrR_beta)
+    --#check Algebra.adjoin (R ⧸ mr) {β_0}
+    --#check (R_beta ⧸ mrR_beta)
     -- have adjoin_iso : Algebra.adjoin (R ⧸ mr) {β_0} ≃ (R_beta ⧸ mrR_beta) := by
       -- sorry
 
@@ -312,7 +300,8 @@ lemma Lemma_3_2 (R S : Type)
     --   sorry
 
     -- \quot -> ⧸
-    -- have Image_Rbeta : Subalgebra ((Algebra.adjoin R {β}) ⧸ (Algebra.ideal.span R {mr})) (S ⧸ ms) := by
+    -- have Image_Rbeta : Subalgebra ((Algebra.adjoin R {β})
+    -- ⧸ (Algebra.ideal.span R {mr})) (S ⧸ ms) := by
       -- sorry
     -- have quotient_iso_adjoin_beta : (Image_Rmr) ≃ (Image_Rbeta) := by
       -- sorry
@@ -373,7 +362,7 @@ lemma Lemma_3_2 (R S : Type)
         rw [← hb2] at ct
         rw [Polynomial.derivative_map] at ct
         rw[Polynomial.eval₂_map ϕ (Ideal.Quotient.mk ms) β] at ct
-        simp[hb2] at ct
+        simp only [hb2] at ct
         have minpoly_minpoly : Polynomial.eval₂ ((Ideal.Quotient.mk ms).comp ϕ)
           β_0 (Polynomial.derivative f) = Polynomial.eval β_0 (Polynomial.map
           (algebraMap (R ⧸ mr) (S ⧸ ms)) (Polynomial.derivative f_0)) := by
@@ -390,7 +379,7 @@ lemma Lemma_3_2 (R S : Type)
               exact RingHom.finite_algebraMap.1 hfin
             apply Module.Free.ChooseBasisIndex.fintype
           rcases finite_of_basis with ⟨basis, h_bas⟩
-          #check Module.Free.chooseBasis R S
+          -- #check Module.Free.chooseBasis R S
           have minpoly_nonzero : f_0 ≠ 0 := minpoly.ne_zero_iff.mpr
             (Algebra.IsSeparable.isIntegral (R ⧸ mr) β_0)
           let h_adjoin_PowerBasis := AdjoinRoot.powerBasis minpoly_nonzero

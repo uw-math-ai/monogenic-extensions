@@ -1,4 +1,8 @@
-import Mathlib
+import Mathlib.RingTheory.AdjoinRoot
+import Mathlib.RingTheory.LocalRing.Basic
+import Mathlib.Algebra.Algebra.Subalgebra.Basic
+import Mathlib.RingTheory.Ideal.Quotient.Operations
+
 
 universe u
 
@@ -10,18 +14,25 @@ open RingHom
 
 # Monogenic Extensions
 
-We say that a ring homomorphism φ : R →+* S is a monogenic extension if there exists a polynomial f ∈ R[X] and an R-algebra isomorphism S ≃ R[X]/(f).
+We say that a ring homomorphism φ : R →+* S is a monogenic extension
+if there exists a polynomial f ∈ R[X] and an R-algebra isomorphism S ≃ R[X]/(f).
 
-We show in `isMonogenicExtension_iff` that this is equivalent to the existence of f ∈ R[X] and β ∈ S such that the map R[X] → S, X ↦ β is surjective with kernel (f) with the formulation matching `Lemma_3_2` in `Mongenic.lean`.
+We show in `isMonogenicExtension_iff` that this is equivalent to the existence of
+f ∈ R[X] and β ∈ S such that the map R[X] → S, X ↦ β is surjective with
+kernel (f) with the formulation matching `Lemma_3_2` in `Mongenic.lean`.
 
 To add
-* definition of strong monogenic extension requiring that $f$ is monic and that $f'(β)$ is a unit
+* definition of strong monogenic extension requiring that $f$ is monic
+  and that $f'(β)$ is a unit
 * analogous equivalence for strong monogenic extension
 
-# Use of AI 
-The definitions and statements were mostly written by me with assistance from Claude 3.5 Sonnet within the Cursor Copilot. 
+# Use of AI
+The definitions and statements were mostly written by me with assistance
+from Claude 3.5 Sonnet within the Cursor Copilot.
 
-The proof of `isMonogenicExtension_iff` was generated using Claude Code with some assistance from Gemini CLI.  In this workflow, I both prompted the models and tweaked the generated code. 
+The proof of `isMonogenicExtension_iff` was generated using Claude Code with some
+assistance from Gemini CLI.  In this workflow, I both prompted the models
+and tweaked the generated code.
 -/
 
 variable {R S : Type u} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
@@ -36,9 +47,11 @@ def isMonogenicExtension (φ : R →+* S) : Prop :=
 /-An equivalent defintion of isMonogenicExtension:
   ∃ β ∈ S such that R[X] → S, X ↦ β is surjective with kernel (f)
 -/
-lemma isMonogenicExtension_iff (φ : R →+* S) : isMonogenicExtension φ ↔ ∃ β : S, (Algebra.adjoin φ.range {β} = ⊤) ∧
-  ∃ (f : R[X]), Polynomial.eval β (Polynomial.map φ f) =
-  0 ∧ (∀ (g : Polynomial R), Polynomial.eval β (Polynomial.map φ g) = 0 → f ∣ g) := by
+omit [IsLocalRing R] [IsLocalRing S]
+lemma isMonogenicExtension_iff (φ : R →+* S) :
+  isMonogenicExtension φ ↔ ∃ β : S, (Algebra.adjoin φ.range {β} = ⊤)
+    ∧ ∃ (f : R[X]), Polynomial.eval β (Polynomial.map φ f) = 0
+    ∧ (∀ (g : Polynomial R), Polynomial.eval β (Polynomial.map φ g) = 0 → f ∣ g) := by
   letI : Algebra R S := RingHom.toAlgebra φ
   have halg : algebraMap R S = φ := rfl
   -- Key observation: eval β (map φ g) = aeval β g when algebraMap R S = φ
@@ -207,7 +220,7 @@ lemma isMonogenicExtension_iff (φ : R →+* S) : isMonogenicExtension φ ↔ �
           -- Goal: (aeval β) (C r') = (algebraMap φ.range S) r
           -- aeval β (C r') = algebraMap R S r' = φ r' (by aeval_C and halg)
           -- (algebraMap φ.range S) r = ↑r = φ r' (by hr')
-          show (aeval β) (C r') = (algebraMap φ.range S) r
+          change (aeval β) (C r') = (algebraMap φ.range S) r
           have h1 : (aeval β) (C r') = algebraMap R S r' := aeval_C β r'
           have h2 : algebraMap R S r' = φ r' := halg ▸ rfl
           have h3 : (algebraMap φ.range S) r = ↑r := by
