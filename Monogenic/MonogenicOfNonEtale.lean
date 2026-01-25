@@ -28,7 +28,6 @@ open Polynomial
 open Function
 open RingHom
 
-#check isMonogenicExtension
 variable {R S : Type u} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
 
 /-!
@@ -60,24 +59,25 @@ height one prime ideal q ⊆ S such that the induced map R/(q ∩ R) → S/q is 
 then S is a monogenic extension of R.
 
 Here:
-- `φ : R →+* S` is the structure map making S an extension of R
-- `hφ_fin` asserts that S is a finite R-module via φ
-- `hφ_inj` asserts that φ is injective (so R embeds into S)
+- `[Algebra R S]` provides the R-algebra structure on S
+- `[Module.Finite R S]` asserts that S is a finite R-module
+- `[FaithfulSMul R S]` asserts that the algebra map is injective
+  (equivalent to `Injective (algebraMap R S)`)
 - `q` is a prime ideal of S with height 1
-- The "intersection" q ∩ R is formalized as `q.comap φ` (the preimage of q under φ)
-- The induced quotient map is `Ideal.quotientMap q φ` which gives `R/(q ∩ R) →+* S/q`
-- `hétale` asserts this quotient map is étale
+- The "intersection" q ∩ R is formalized as `q.comap (algebraMap R S)` (the preimage of q)
+- The induced quotient map `R/(q ∩ R) →+* S/q` is assumed to be étale
 -/
 theorem monogenic_of_etale_height_one_quotient
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [UniqueFactorizationMonoid S]
+    [Algebra R S] [Module.Finite R S] [FaithfulSMul R S]
     (hR_reg : IsRegularLocalRing R) (hS_reg : IsRegularLocalRing S)
-    (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
     (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1)
-    (hétale : Etale (Ideal.quotientMap q φ (le_refl (q.comap φ)))) :
-    isMonogenicExtension φ := by
-  -- Set up algebra structure
-  letI : Algebra R S := φ.toAlgebra
-  have φ_eq : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
+    (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
+    isMonogenicExtension (algebraMap R S) := by
+  -- Abbreviations for the algebra map
+  let φ := algebraMap R S
+  have hφ_fin : φ.Finite := RingHom.finite_algebraMap.mpr inferInstance
+  have hφ_inj : Injective φ := FaithfulSMul.algebraMap_injective R S
 
   -- Step 1: If φ is already étale, apply FiniteInjectiveEtale_IsMonogenic directly
   by_cases hφ_etale : Etale φ
@@ -100,13 +100,9 @@ theorem monogenic_of_etale_height_one_quotient
   -- Step 3: Show φ₀ is finite and injective, then apply FiniteInjectiveEtale_IsMonogenic
 
   -- φ₀ is finite (quotient of finite extension)
-  --If Not in Mathlib, Useful Lemma R/q -> S/q finiteness from finiteness of Module Extension
   have hφ₀_fin : φ₀.Finite := by
-    -- Set up algebra structures - hφ_fin becomes Module.Finite R S after this
-    letI : Algebra R S := φ.toAlgebra
-    haveI h_mod_fin : Module.Finite R S := hφ_fin
+    haveI h_mod_fin : Module.Finite R S := inferInstance
     letI : Algebra R₀ S₀ := φ₀.toAlgebra
-    -- Need decidable equality for Finset.image
     classical
     -- Get finite generating set for S over R
     have h_fg : (⊤ : Submodule R S).FG := Module.finite_def.mp h_mod_fin
@@ -125,14 +121,9 @@ theorem monogenic_of_etale_height_one_quotient
     · intro r _ _ hy
       -- r • x' in S maps to (mk p r) • (mk q x') in S₀
       rw [Algebra.smul_def, map_mul]
-      -- algebraMap R S = φ under our algebra instance
-      have h_alg : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
-      rw [h_alg]
       -- Use quotientMap_mk: φ₀ (mk p r) = mk q (φ r)
       rw [← Ideal.quotientMap_mk (f := φ) (H := le_refl p)]
       -- Convert to smul form and apply smul_mem
-      -- The goal is: φ₀ (mk p r) * (mk q x✝) ∈ span R₀ ...
-      -- which equals: (mk p r) • (mk q x✝) under the R₀-algebra structure
       change (Ideal.Quotient.mk p r) • (Ideal.Quotient.mk q _) ∈ _
       exact Submodule.smul_mem _ _ hy
 
@@ -203,7 +194,7 @@ theorem monogenic_of_etale_height_one_quotient
   let mr := IsLocalRing.maximalIdeal R
   let ms := IsLocalRing.maximalIdeal S
 
-  have h_ms_eq : ms = q ⊔ Ideal.map φ mr := by
+  have h_ms_eq : ms = q ⊔ Ideal.map (algebraMap R S) mr := by
     sorry -- Follows from étale condition on quotient
 
   -- Step 7: Two cases based on whether f₁(B) generates the right ideal
@@ -221,50 +212,50 @@ theorem monogenic_of_etale_height_one_quotient
       rw [h, Ideal.height_bot] at hq_height
       exact zero_ne_one hq_height
     -- Step 2: By UFD property, every nonzero prime ideal contains a prime element
-    obtain ⟨p, hp_mem, hp_prime⟩ := Ideal.IsPrime.exists_mem_prime_of_ne_bot hq_prime hq_ne_bot
-    -- Step 3: span {p} is a prime ideal since p is prime
-    have h_span_prime : (Ideal.span {p}).IsPrime := by
-      rw [Ideal.span_singleton_prime hp_prime.ne_zero]
-      exact hp_prime
-    -- Step 4: span {p} ⊆ q
-    have h_span_le : Ideal.span {p} ≤ q := (Ideal.span_singleton_le_iff_mem (I := q)).mpr hp_mem
-    -- Step 5: span {p} ≠ ⊥
-    have h_span_ne_bot : Ideal.span {p} ≠ ⊥ := by
+    obtain ⟨π, hπ_mem, hπ_prime⟩ := Ideal.IsPrime.exists_mem_prime_of_ne_bot hq_prime hq_ne_bot
+    -- Step 3: span {π} is a prime ideal since π is prime
+    have h_span_prime : (Ideal.span {π}).IsPrime := by
+      rw [Ideal.span_singleton_prime hπ_prime.ne_zero]
+      exact hπ_prime
+    -- Step 4: span {π} ⊆ q
+    have h_span_le : Ideal.span {π} ≤ q := (Ideal.span_singleton_le_iff_mem (I := q)).mpr hπ_mem
+    -- Step 5: span {π} ≠ ⊥
+    have h_span_ne_bot : Ideal.span {π} ≠ ⊥ := by
       simp only [ne_eq, Ideal.span_singleton_eq_bot]
-      exact hp_prime.ne_zero
-    -- Step 6: Since height q = 1, if span {p} < q, then span {p} has height 0
-    -- In a domain, height 0 primes are just ⊥, but span {p} ≠ ⊥, contradiction.
-    -- So span {p} = q.
-    have h_eq : Ideal.span {p} = q := by
+      exact hπ_prime.ne_zero
+    -- Step 6: Since height q = 1, if span {π} < q, then span {π} has height 0
+    -- In a domain, height 0 primes are just ⊥, but span {π} ≠ ⊥, contradiction.
+    -- So span {π} = q.
+    have h_eq : Ideal.span {π} = q := by
       by_contra h_ne
-      have h_lt : Ideal.span {p} < q := lt_of_le_of_ne h_span_le h_ne
-      -- height (span {p}) < height q = 1, so height (span {p}) = 0
-      haveI : (Ideal.span {p}).IsPrime := h_span_prime
+      have h_lt : Ideal.span {π} < q := lt_of_le_of_ne h_span_le h_ne
+      -- height (span {π}) < height q = 1, so height (span {π}) = 0
+      haveI : (Ideal.span {π}).IsPrime := h_span_prime
       have hq_ht_ne_top : q.height ≠ ⊤ := by
         rw [hq_height]
         exact ENat.one_ne_top
       haveI : q.FiniteHeight := ⟨Or.inr hq_ht_ne_top⟩
-      haveI : (Ideal.span {p}).FiniteHeight := Ideal.finiteHeight_of_le h_span_le hq_prime.ne_top
+      haveI : (Ideal.span {π}).FiniteHeight := Ideal.finiteHeight_of_le h_span_le hq_prime.ne_top
       have h_ht_lt := Ideal.height_strict_mono_of_is_prime h_lt
       rw [hq_height] at h_ht_lt
-      -- height (span {p}) < 1 means height (span {p}) = 0
-      have h_ht_zero : (Ideal.span {p}).height = 0 := ENat.lt_one_iff_eq_zero.mp h_ht_lt
-      -- span {p} is a minimal prime of S (height 0 prime)
+      -- height (span {π}) < 1 means height (span {π}) = 0
+      have h_ht_zero : (Ideal.span {π}).height = 0 := ENat.lt_one_iff_eq_zero.mp h_ht_lt
+      -- span {π} is a minimal prime of S (height 0 prime)
       rw [Ideal.height_eq_primeHeight, Ideal.primeHeight_eq_zero_iff] at h_ht_zero
       -- In a domain, minimalPrimes of (⊥ : Ideal S) is just {⊥}
-      have h_span_eq_bot : Ideal.span {p} = ⊥ := by
-        have h_mem : Ideal.span {p} ∈ (⊥ : Ideal S).minimalPrimes := h_ht_zero
+      have h_span_eq_bot : Ideal.span {π} = ⊥ := by
+        have h_mem : Ideal.span {π} ∈ (⊥ : Ideal S).minimalPrimes := h_ht_zero
         -- (⊥ : Ideal S).minimalPrimes = minimalPrimes S by definition
         have : (⊥ : Ideal S).minimalPrimes = minimalPrimes S := rfl
         rw [this, IsDomain.minimalPrimes_eq_singleton_bot] at h_mem
         exact Set.mem_singleton_iff.mp h_mem
       exact h_span_ne_bot h_span_eq_bot
-    exact ⟨p, h_eq.symm⟩
+    exact ⟨π, h_eq.symm⟩
 
   obtain ⟨q₀, hq₀⟩ := h_q_principal
 
   -- Check if f₁(B) generates the right structure
-  by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
+  by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map (algebraMap R S) mr • ⊤ = ms
   · -- Case 1: f₁(B) generates ms/(mr·S), so R[B] = S
     -- The proof follows the standard monogenic extension construction
     use f₁
@@ -292,7 +283,8 @@ theorem monogenic_of_etale_height_one_quotient
     -- f₁(B') = f₁(B) + f₁'(B) * q₀ + q₀² * (higher order terms)
     -- = q₀ * a + f₁'(B) * q₀ + q₀² * b
     -- = q₀ * (a + f₁'(B) + q₀ * b)
-    have h_f₁B'_factorization : ∃ b : S, Polynomial.aeval B' f₁ = q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
+    have h_f₁B'_factorization :
+        ∃ b : S, Polynomial.aeval B' f₁ = q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
       sorry -- Taylor expansion
 
     obtain ⟨b, hb⟩ := h_f₁B'_factorization
@@ -324,14 +316,18 @@ theorem monogenic_of_etale_height_one_quotient
     use f₁
     sorry -- Construct the isomorphism using B' and the properties established
 
--- Alternative formulation using Algebra structure
-/-- Variant of the above theorem using the Algebra typeclass instead of explicit ring homomorphism.
-This may be more convenient when S is already set up as an R-algebra. -/
+/-- Variant using explicit ring homomorphism for backwards compatibility.
+This deduces the algebra structure from the given ring homomorphism. -/
 theorem monogenic_of_etale_height_one_quotient'
-    [IsDomain R] [IsDomain S] [Algebra R S]
+    [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [UniqueFactorizationMonoid S]
     (hR_reg : IsRegularLocalRing R) (hS_reg : IsRegularLocalRing S)
-    (hfin : Module.Finite R S) (hinj : Injective (algebraMap R S))
+    (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
     (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1)
-    (hétale : Etale (Ideal.quotientMap q (algebraMap R S) (le_refl (q.comap (algebraMap R S))))) :
-    isMonogenicExtension (algebraMap R S) := by
-  sorry
+    (hétale : (Ideal.quotientMap q φ le_rfl).Etale) :
+    isMonogenicExtension φ := by
+  letI : Algebra R S := φ.toAlgebra
+  haveI : Module.Finite R S := hφ_fin
+  have h_eq : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
+  haveI : FaithfulSMul R S := (faithfulSMul_iff_algebraMap_injective R S).mpr (h_eq ▸ hφ_inj)
+  rw [← h_eq]
+  exact monogenic_of_etale_height_one_quotient hR_reg hS_reg q hq_height hétale

@@ -4,6 +4,7 @@ import Monogenic.Basic
 import Monogenic.«claude-normal»
 import Monogenic.Strong
 import Monogenic.Weak
+import Monogenic.MonogenicOfNonEtale
 
 
 -- #eval Lean.versionString

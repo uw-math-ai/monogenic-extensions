@@ -16,6 +16,16 @@ open RingHom
 class Monogenic (R : Type*) (S : Type*) [CommSemiring R] [Semiring S] [Algebra R S] : Prop where
   exists_adjoin_eq_top : ∃(β : S), Algebra.adjoin R {β} = ⊤
 
+structure GeneratesUnivQuot (R : Type*) (S : Type*) (β : S)
+    [CommRing R] [Ring S] [Algebra R S] : Prop where
+  integral : IsIntegral R β
+  iso : Nonempty ((R[X] ⧸ Ideal.span {minpoly R β}) ≃ₐ[R] S)
+  derivUnit : IsUnit (aeval β (minpoly R β).derivative)
+
+class UnivQuotient (R : Type*) (S : Type*)
+    [CommRing R] [Ring S] [Algebra R S] : Prop where
+  minpoly_iso : ∃(β : S), GeneratesUnivQuot R S β
+
 namespace Monogenic
 
 variable {R S} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
@@ -111,15 +121,16 @@ lemma if_finiteInjectiveEtale [Algebra R S] [FaithfulSMul R S]
 -- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
 -- [IsDomain S] follows naturally for étale extensions of domains.
 omit [IsLocalRing S]
-lemma isIntegrallyClosed_existsPolyQuotIso [Algebra R S] [Module.Finite R S] [FaithfulSMul R S]
+lemma isIntegrallyClosed_univQuot [Algebra R S] [Module.Finite R S] [FaithfulSMul R S]
   [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [Monogenic R S] :
-    ∃ f : R[X], Nonempty ((R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) := by
+    UnivQuotient R S := by
   haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
   -- Since adjoin R {β} = ⊤, the minimal polynomial f of β gives S ≃ R[X]/(f)
   -- by the universal property of AdjoinRoot
   let ⟨β, adjoin_eq_top⟩ := (inferInstance : Monogenic R S)
+  have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
   let f := minpoly R β
-  use f
+  use β
   -- The isomorphism S ≃ R[X]/(f) follows from:
   -- 1. lift : R[X]/(f) →ₐ[R] S sending [X] to β
   -- 2. This is surjective since adjoin R {β} = ⊤
@@ -146,7 +157,6 @@ lemma isIntegrallyClosed_existsPolyQuotIso [Algebra R S] [Module.Finite R S] [Fa
       simp only [Ideal.Quotient.eq_zero_iff_mem]
       apply Ideal.mem_span_singleton.mpr
       -- β is integral since S is finite over R
-      have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
       exact minpoly.isIntegrallyClosed_dvd hβ_int hx
     · -- Surjectivity: image contains Algebra.adjoin R {β} = ⊤
       intro s
@@ -179,34 +189,10 @@ lemma isIntegrallyClosed_existsPolyQuotIso [Algebra R S] [Module.Finite R S] [Fa
         obtain ⟨py, hpy⟩ := ihy
         use px * py
         simp only [map_mul, hpx, hpy]
-  exact ⟨AlgEquiv.ofBijective lift_hom lift_bij⟩
+
+  exact ⟨hβ_int, ⟨AlgEquiv.ofBijective lift_hom lift_bij⟩, sorry⟩
 
 end Monogenic
 
-
--- aristotle was able to give this pretty easily
-namespace FaithfulSMul
-theorem iff_algebraMapInjective {R S} [CommSemiring R] [Semiring S] [Algebra R S] :
-    Injective (algebraMap R S) ↔ FaithfulSMul R S := by
-  constructor
-  · -- If the algebra map is injective, then the scalar multiplication is faithful.
-    intro h_inj
-    apply FaithfulSMul.mk
-    intro r s h_eq
-    have h_eq' : algebraMap R S r = algebraMap R S s := by
-      -- By definition of scalar multiplication in the algebra, we have $r • 1 = s • 1$.
-      have h_one : r • (1 : S) = s • (1 : S) := by
-        exact h_eq 1;
-      -- Since multiplying by 1 in S is the same as applying the algebra map,
-      -- we have algebraMap R S r = r • 1 and algebraMap R S s = s • 1.
-      simp only [Algebra.smul_def, mul_one] at h_one ⊢;
-      exact h_one
-    have h_eq'' : r = s := by
-      -- Apply the injectivity of the algebra map to conclude that $r = s$.
-      apply h_inj; exact h_eq'
-    exact h_eq''
-  · intro faithful
-    unfold Injective
-    -- Apply the fact that `FaithfulSMul R S` implies injectivity of the algebra map.
-    apply FaithfulSMul.algebraMap_injective R S
-end FaithfulSMul
+-- note: the old thing was already in mathlib oops
+-- #check faithfulSMul_iff_algebraMap_injective
