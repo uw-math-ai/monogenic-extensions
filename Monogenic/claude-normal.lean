@@ -46,9 +46,10 @@ mathlib convention? i tried.)
 see FaithfulSMul.iff_algebraMapInjective below for a proof its equivalent
 to asserting that phi is injective.
 -/
-lemma if_finiteInjectiveEtale [Algebra R S] [FaithfulSMul R S]
+lemma rawMonogenic [Algebra R S] [FaithfulSMul R S]
   [Module.Finite R S] [Algebra.Etale R S] :
-    Monogenic R S := by
+    ∃(β : S), Algebra.adjoin R {β} = ⊤
+    ∧ IntermediateField.adjoin (IsLocalRing.ResidueField R) {IsLocalRing.residue S β} = ⊤ := by
   -- Key: maximal ideal maps to maximal ideal (from Mathlib's unramified local ring theory)
   have eq_max : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) =
       IsLocalRing.maximalIdeal S :=
@@ -120,7 +121,9 @@ lemma if_finiteInjectiveEtale [Algebra R S] [FaithfulSMul R S]
       Submodule.le_of_le_smul_of_le_jacobson_bot h_fg h_jac h_le_sup
     -- Result: S' = ⊤
     exact eq_top_iff.mpr h_top_le
-  exact ⟨β, adjoin_eq_top⟩
+  rw [← hβ] at hβ₀
+  unfold IsLocalRing.residue
+  exact ⟨β, ⟨adjoin_eq_top, hβ₀⟩⟩
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -148,8 +151,7 @@ variable [Algebra R S]
 theorem residue_aeval_eq (β : S) (p : R[X]) :
     IsLocalRing.residue S (aeval β p) =
     p.eval₂ ((IsLocalRing.residue S).comp (algebraMap R S)) (IsLocalRing.residue S β) := by
-  rw [aeval_def]
-  exact hom_eval₂ p (algebraMap R S) (IsLocalRing.residue S) β
+  simp only [aeval_def, hom_eval₂]
 
 /-- The reduction of (minpoly R β) via the residue map has β₀ as a root. -/
 lemma minpoly_map_residue_aeval_eq_zero (β : S) :
@@ -168,19 +170,14 @@ lemma isUnit_of_residue_ne_zero {s : S} (h : IsLocalRing.residue S s ≠ 0) : Is
     This is an instance in Mathlib: `Algebra.FormallyUnramified R S` implies
     `Algebra.IsSeparable (ResidueField R) (ResidueField S)`. -/
 lemma residueField_isSeparable_of_etale [Algebra.Etale R S] :
-    Algebra.IsSeparable (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) := by
-  haveI : Algebra.FormallyUnramified R S := inferInstance
-  exact inferInstance
+    Algebra.IsSeparable (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) :=
+  inferInstance
 
 /-- The residue field map from R to k_S factors as R → k_R → k_S. -/
 lemma residue_algebraMap_eq :
     (IsLocalRing.residue S).comp (algebraMap R S) =
     (algebraMap (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)).comp
-      (IsLocalRing.residue R) := by
-  ext r
-  simp only [RingHom.comp_apply]
-  -- This follows from the fact that algebraMap R S is a local hom,
-  -- so it induces a map on residue fields
+      (IsLocalRing.residue R) :=
   rfl
 
 /-- When β generates S over R, the residue β₀ generates k_S over k_R.
@@ -271,7 +268,8 @@ lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
 -/
 lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S] [IsDomain R] [IsDomain S]
     [IsIntegrallyClosed R]
-    (β : S) (hβ_int : IsIntegral R β) (hβ_gen : Algebra.adjoin R {β} = ⊤)
+    (β : S) (hβ_int : IsIntegral R β)
+    (hf_gen : IntermediateField.adjoin (IsLocalRing.ResidueField R) {IsLocalRing.residue S β} = ⊤)
     (hiso : Nonempty ((R[X] ⧸ Ideal.span {minpoly R β}) ≃ₐ[R] S)) :
     (minpoly R β).map (IsLocalRing.residue R) = minpoly (IsLocalRing.ResidueField R)
       (IsLocalRing.residue S β) := by
@@ -290,34 +288,25 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S] [IsDomain R] [IsDomain 
   have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
   -- β₀ is a root of f_bar
   have hf_bar_root : aeval β₀ f_bar = 0 := by
-    have h1 : aeval β f = 0 := minpoly.aeval R β
-    rw [aeval_def] at h1 ⊢
-    rw [eval₂_map, ← residue_algebraMap_eq, ← hom_eval₂, h1, map_zero]
+    rw [aeval_def, eval₂_map, ← residue_algebraMap_eq, ← hom_eval₂, ← aeval_def, minpoly.aeval,
+      map_zero]
   -- minpoly kR β₀ divides f_bar (since β₀ is a root)
   have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ hf_bar_root
   have h_minpoly_ne_zero : minpoly kR β₀ ≠ 0 := minpoly.ne_zero hβ₀_int
-  -- Now β₀ generates kS over kR
-  have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := residue_generates_of_generates β hβ_gen
   -- For equality of f_bar and minpoly kR β₀, we use that both are monic and have the same degree
   have hdeg_map : f_bar.natDegree = f.natDegree := by
     simp only [f_bar, natDegree_map_eq_iff]
     left
     simp only [hf_monic.leadingCoeff, map_one, ne_eq, one_ne_zero, not_false_eq_true]
-  have hβ₀_alg : IsAlgebraic kR β₀ := Algebra.IsAlgebraic.isAlgebraic β₀
-  have hβ₀_field_gen : IntermediateField.adjoin kR {β₀} = ⊤ := by
-    rw [← IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic hβ₀_alg] at hβ₀_gen
-    exact IntermediateField.toSubalgebra_injective hβ₀_gen
   have hdeg_minpoly_β₀ : (minpoly kR β₀).natDegree = Module.finrank kR kS := by
-    rw [← IntermediateField.finrank_top', ← hβ₀_field_gen]
+    rw [← IntermediateField.finrank_top', ← hf_gen]
     exact (IntermediateField.adjoin.finrank hβ₀_int).symm
   -- Key: use the isomorphism to get finrank R S = f.natDegree
   obtain ⟨φ⟩ := hiso
   have hfinrank_S : Module.finrank R S = f.natDegree := by
-    have h1 : Module.finrank R (R[X] ⧸ Ideal.span {f}) = f.natDegree :=
-      finrank_quotient_span_eq_natDegree' hf_monic
     calc Module.finrank R S
         = Module.finrank R (R[X] ⧸ Ideal.span {f}) := (φ.toLinearEquiv.finrank_eq).symm
-      _ = f.natDegree := h1
+      _ = f.natDegree := finrank_quotient_span_eq_natDegree' hf_monic
   -- For étale extensions: finrank R S = finrank kR kS
   -- This follows from: S ⊗_R kR ≃ kS (since m_R · S = m_S for étale)
   -- and for free modules over local rings, rank = rank after tensoring with residue field
@@ -342,33 +331,29 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S] [IsDomain R] [IsDomain 
     have h1 : f_bar.natDegree = (minpoly kR β₀).natDegree + q.natDegree := by
       rw [hq, natDegree_mul h_minpoly_ne_zero hq_ne_zero]
     omega
-  have hq_eq_one : q = 1 := Polynomial.eq_one_of_monic_natDegree_zero hq_monic hdeg_q
-  calc (minpoly R β).map (IsLocalRing.residue R)
-      = f_bar := rfl
-    _ = minpoly kR β₀ * q := hq
-    _ = minpoly kR β₀ * 1 := by rw [hq_eq_one]
-    _ = minpoly kR β₀ := mul_one _
+  change f_bar = _
+  rw [hq, Polynomial.eq_one_of_monic_natDegree_zero hq_monic hdeg_q, mul_one]
 
-/-- The key technical fact: if β generates S over R (as an algebra) and the extension is étale,
-    then the minimal polynomial of β has derivative that is a unit when evaluated at β.
+/-- The key technical fact: if β₀ generates kS over kR (as an intermediate field) and the
+    extension is étale, then the minimal polynomial of β has derivative that is a unit when
+    evaluated at β.
 
     The proof uses:
-    1. β generates S ⟹ β₀ generates kS over kR
-    2. (minpoly R β).map(residue) = minpoly kR β₀ (degree equality from generation)
-    3. Separability gives aeval β₀ (minpoly kR β₀).derivative ≠ 0
-    4. Therefore aeval β (minpoly R β).derivative ∉ m_S, hence is a unit
+    1. (minpoly R β).map(residue) = minpoly kR β₀ (degree equality from generation)
+    2. Separability gives aeval β₀ (minpoly kR β₀).derivative ≠ 0
+    3. Therefore aeval β (minpoly R β).derivative ∉ m_S, hence is a unit
 -/
 lemma isUnit_aeval_derivative_of_generates [Algebra.Etale R S] [IsDomain R] [IsDomain S]
     [IsIntegrallyClosed R]
-    (β : S) (hβ_int : IsIntegral R β) (hβ_gen : Algebra.adjoin R {β} = ⊤)
+    (β : S) (hβ_int : IsIntegral R β)
+    (hf_gen : IntermediateField.adjoin (IsLocalRing.ResidueField R) {IsLocalRing.residue S β} = ⊤)
     (hiso : Nonempty ((R[X] ⧸ Ideal.span {minpoly R β}) ≃ₐ[R] S)) :
     IsUnit (aeval β (minpoly R β).derivative) := by
   -- Strategy: show residue of (aeval β f') is non-zero, hence aeval β f' is a unit
   apply isUnit_of_residue_ne_zero
-  -- Let β₀ = residue(β) in the residue field k_S
-  let β₀ := IsLocalRing.residue S β
   let kR := IsLocalRing.ResidueField R
   let kS := IsLocalRing.ResidueField S
+  let β₀ := IsLocalRing.residue S β
   -- The residue field extension is separable (from étale)
   haveI : Algebra.IsSeparable kR kS := inferInstance
   -- β₀ is integral over k_R (since k_S is finite over k_R)
@@ -382,13 +367,10 @@ lemma isUnit_aeval_derivative_of_generates [Algebra.Etale R S] [IsDomain R] [IsD
     hβ₀_sep.aeval_derivative_ne_zero (minpoly.aeval kR β₀)
   -- The key fact: (minpoly R β).map(residue R) = minpoly kR β₀
   have hminpoly_eq : (minpoly R β).map (IsLocalRing.residue R) = minpoly kR β₀ :=
-    minpoly_map_eq_minpoly_residue β hβ_int hβ_gen hiso
+    minpoly_map_eq_minpoly_residue β hβ_int hf_gen hiso
   -- Now connect the derivatives
-  rw [residue_aeval_eq, residue_algebraMap_eq]
-  rw [← eval₂_map]
-  rw [← derivative_map]
-  rw [hminpoly_eq]
-  rw [← aeval_def]
+  rw [residue_aeval_eq, residue_algebraMap_eq, ← eval₂_map, ← derivative_map, hminpoly_eq,
+    ← aeval_def]
   exact hderiv_ne_zero
 
 end DerivativeUnit
@@ -400,12 +382,12 @@ end DerivativeUnit
 -- We also add étale hypothesis to prove the derivative is a unit via separability.
 lemma isIntegrallyClosed_univQuot [Algebra R S] [Module.Finite R S] [FaithfulSMul R S]
   [Algebra.Etale R S] -- refractor this probably.
-  [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [Monogenic R S] :
+  [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] :
     UnivQuotient R S := by
   haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
   -- Since adjoin R {β} = ⊤, the minimal polynomial f of β gives S ≃ R[X]/(f)
   -- by the universal property of AdjoinRoot
-  let ⟨β, adjoin_eq_top⟩ := (inferInstance : Monogenic R S)
+  let ⟨β, ⟨adjoin_top, int_adjoin_top⟩⟩ := @rawMonogenic R S _ _ _ _ _ _ _ _
   have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
   let f := minpoly R β
   use β
@@ -416,11 +398,9 @@ lemma isIntegrallyClosed_univQuot [Algebra R S] [Module.Finite R S] [FaithfulSMu
 
   -- Define the lift: R[X]/(f) →ₐ[R] S
   have hf_aeval : aeval β f = 0 := minpoly.aeval R β
-  have hker : ∀ p ∈ Ideal.span {f}, aeval β p = 0 := by
-    intro p hp
-    rw [Ideal.mem_span_singleton] at hp
-    obtain ⟨q, hq⟩ := hp
-    simp only [hq, map_mul, hf_aeval, zero_mul]
+  have hker : ∀ p ∈ Ideal.span {f}, aeval β p = 0 := fun p hp => by
+    obtain ⟨q, rfl⟩ := Ideal.mem_span_singleton.mp hp
+    simp [hf_aeval]
   let lift_hom : (R[X] ⧸ Ideal.span {f}) →ₐ[R] S :=
     Ideal.Quotient.liftₐ (Ideal.span {f}) (Polynomial.aeval β) hker
   -- Prove bijectivity
@@ -431,44 +411,27 @@ lemma isIntegrallyClosed_univQuot [Algebra R S] [Module.Finite R S] [FaithfulSMu
       intro x hx
       obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
       simp only [lift_hom, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk] at hx
-      -- aeval β p = 0 implies f ∣ p by minimality (using isIntegrallyClosed_dvd)
-      simp only [Ideal.Quotient.eq_zero_iff_mem]
-      apply Ideal.mem_span_singleton.mpr
-      -- β is integral since S is finite over R
-      exact minpoly.isIntegrallyClosed_dvd hβ_int hx
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr
+        (Ideal.mem_span_singleton.mpr (minpoly.isIntegrallyClosed_dvd hβ_int hx))
     · -- Surjectivity: image contains Algebra.adjoin R {β} = ⊤
       intro s
-      -- s ∈ Algebra.adjoin R {β} since adjoin_eq_top
-      have hs : s ∈ Algebra.adjoin R {β} := by
-        -- have : S' = Algebra.adjoin R {β} := rfl
-        rw [adjoin_eq_top]; trivial
+      have hs : s ∈ Algebra.adjoin R {β} := adjoin_top ▸ trivial
       -- Induction on the adjoin structure
       induction hs using Algebra.adjoin_induction with
       | mem x hx =>
-        -- x ∈ {β}, so x = β
         simp only [Set.mem_singleton_iff] at hx
-        rw [hx]
-        -- β = aeval β X, so use [X]
-        use Ideal.Quotient.mk (Ideal.span {f}) X
-        simp only [lift_hom, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk]
-        exact aeval_X β
+        exact ⟨Ideal.Quotient.mk _ X, by simp [lift_hom, hx, aeval_X]⟩
       | algebraMap r =>
-        -- algebraMap R S r = aeval β (C r)
-        use Ideal.Quotient.mk (Ideal.span {f}) (C r)
-        simp only [lift_hom, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk]
-        exact aeval_C β r
+        exact ⟨Ideal.Quotient.mk _ (C r), by simp [lift_hom, aeval_C]⟩
       | add x y _ _ ihx ihy =>
-        obtain ⟨px, hpx⟩ := ihx
-        obtain ⟨py, hpy⟩ := ihy
-        use px + py
-        simp only [map_add, hpx, hpy]
+        obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
+        exact ⟨px + py, by simp [hpx, hpy]⟩
       | mul x y _ _ ihx ihy =>
-        obtain ⟨px, hpx⟩ := ihx
-        obtain ⟨py, hpy⟩ := ihy
-        use px * py
-        simp only [map_mul, hpx, hpy]
+        obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
+        exact ⟨px * py, by simp [hpx, hpy]⟩
   let iso := AlgEquiv.ofBijective lift_hom lift_bij
-  exact ⟨hβ_int, ⟨iso⟩, isUnit_aeval_derivative_of_generates β hβ_int adjoin_eq_top ⟨iso⟩⟩
+  exact ⟨hβ_int, ⟨iso⟩,
+    isUnit_aeval_derivative_of_generates β hβ_int int_adjoin_top ⟨iso⟩⟩
 
 end Monogenic
 
