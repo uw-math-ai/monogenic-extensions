@@ -468,12 +468,72 @@ theorem monogenic_of_etale_height_one_quotient
     -- Since f₁'(B) ∉ ms and a + f₁'(B) + q₀ * b has f₁'(B) as the "main term",
     -- (a + f₁'(B) + q₀ * b) is a unit (not in ms)
     have h_cofactor_unit : IsUnit (a + f₁.derivative.aeval B + q₀ * b) := by
-      sorry -- Follows from h_deriv_unit and properties of local rings
+      -- In a local ring, x is a unit iff x ∉ maximalIdeal
+      -- Strategy: show (a + q₀ * b) ∈ ms, then use that unit + ms element = unit
+
+      -- First, q₀ ∈ ms (since q ⊆ ms and q₀ generates q)
+      have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
+      have hq₀_in_ms : q₀ ∈ ms := by
+        apply hq_le_ms
+        rw [hq₀]
+        exact Ideal.mem_span_singleton_self q₀
+
+      -- q₀ * b ∈ ms (product with element in maximal ideal)
+      have hq₀b_in_ms : q₀ * b ∈ ms := by
+        rw [mul_comm]
+        exact Ideal.mul_mem_left ms b hq₀_in_ms
+
+      -- a ∈ ms: If a were a unit, then span {q₀ * a} = span {q₀} = q,
+      -- contradicting Case 2 (h_gen)
+      have ha_in_ms : a ∈ ms := by
+        by_contra ha_not_in_ms
+        have ha_unit : IsUnit a := IsLocalRing.notMem_maximalIdeal.mp ha_not_in_ms
+        -- If a is a unit, then span {f₁_B} = span {q₀ * a} = span {q₀} = q
+        have h_span_eq' : Ideal.span {f₁_B} = q := by
+          rw [show f₁_B = q₀ * a from ha, hq₀]
+          exact Ideal.span_singleton_mul_right_unit ha_unit q₀
+        -- f₁_B ∈ ms since f₁_B ∈ q ⊆ ms
+        have h_f₁B_in_ms' : f₁_B ∈ ms := hq_le_ms h_f₁B_in_q
+        -- span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = q ⊔ Ideal.map φ mr • ⊤ = ms
+        have h_contains : Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms := by
+          rw [h_span_eq', h_ms_eq]
+          -- Need: q ⊔ Ideal.map φ mr • ⊤ = q ⊔ Ideal.map φ mr
+          -- For ideals: I • ⊤ = I * ⊤ = I (by Ideal.smul_eq_mul and Ideal.mul_top)
+          have h_smul_eq : Ideal.map φ mr • (⊤ : Ideal S) = Ideal.map φ mr := by
+            rw [Ideal.smul_eq_mul, Ideal.mul_top]
+          rw [h_smul_eq]
+        -- This contradicts h_gen
+        exact h_gen ⟨h_f₁B_in_ms', h_contains⟩
+
+      -- a + q₀ * b ∈ ms
+      have h_sum_in_ms : a + q₀ * b ∈ ms := Ideal.add_mem ms ha_in_ms hq₀b_in_ms
+
+      -- Now: if u ∉ ms and x ∈ ms, then u + x ∉ ms
+      -- The goal is: IsUnit (a + f₁.derivative.aeval B + q₀ * b)
+      -- Rewrite using associativity: a + f₁'(B) + q₀*b = f₁'(B) + (a + q₀*b)
+      have h_eq : a + f₁.derivative.aeval B + q₀ * b = f₁.derivative.aeval B + (a + q₀ * b) := by
+        ring
+      rw [h_eq]
+      -- Goal: IsUnit (f₁.derivative.aeval B + (a + q₀ * b))
+      -- In a local ring, IsUnit x ↔ x ∉ maximalIdeal
+      rw [← IsLocalRing.notMem_maximalIdeal]
+      -- Goal: f₁.derivative.aeval B + (a + q₀ * b) ∉ ms
+      intro h_sum_in_ms'
+      -- If (f₁'(B) + (a + q₀*b)) ∈ ms, then f₁'(B) = (f₁'(B) + (a + q₀*b)) - (a + q₀*b) ∈ ms
+      have h_deriv_in_ms : f₁.derivative.aeval B ∈ ms := by
+        have h_sub : f₁.derivative.aeval B =
+            (f₁.derivative.aeval B + (a + q₀ * b)) - (a + q₀ * b) := by ring
+        rw [h_sub]
+        exact Ideal.sub_mem ms h_sum_in_ms' h_sum_in_ms
+      -- This contradicts h_deriv_unit
+      exact h_deriv_unit h_deriv_in_ms
 
     -- Therefore, Ideal.span {f₁(B')} = Ideal.span {q₀} = q
     have h_span_eq : Ideal.span {Polynomial.aeval B' f₁} = q := by
       rw [hb, hq₀]
-      sorry -- Use that multiplication by unit preserves span
+      -- Goal: Ideal.span {q₀ * (a + f₁.derivative.aeval B + q₀ * b)} = Ideal.span {q₀}
+      -- Use that multiplication by unit preserves span
+      exact Ideal.span_singleton_mul_right_unit h_cofactor_unit q₀
 
     -- Now we can show R[B'] = S using B' = B + q₀
     -- The key is that B' still lifts B₀ (since q₀ ∈ q, it maps to 0 in S₀)
