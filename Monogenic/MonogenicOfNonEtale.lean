@@ -374,7 +374,41 @@ theorem monogenic_of_etale_height_one_quotient
   · -- Case 2: f₁(B) does not generate the right ideal
     -- Then f₁(B) = q₀ * a for some a ∈ ms (since f₁(B) ∈ q but doesn't generate q alone)
     have h_f₁B_in_q : f₁_B ∈ q := by
-      sorry -- f₀(B₀) = 0 in S₀, so f₁(B) ∈ q
+      -- Suffices to show mk q (aeval B f₁) = 0 in S₀
+      rw [← Ideal.Quotient.eq_zero_iff_mem]
+      change Ideal.Quotient.mk q (Polynomial.aeval B f₁) = 0
+      -- Push mk q through eval₂: σ(p.eval₂ f x) = p.eval₂ (σ∘f) (σ x)
+      simp only [Polynomial.aeval_def]
+      rw [Polynomial.hom_eval₂]
+      -- Replace mk q B = B₀
+      rw [hB]
+      -- Replace composite ring hom using the commutative square
+      have hcomp : (Ideal.Quotient.mk q).comp (algebraMap R S) =
+          φ₀.comp (Ideal.Quotient.mk p) := by
+        ext r
+        change Ideal.Quotient.mk q (φ r) = φ₀ (Ideal.Quotient.mk p r)
+        exact Ideal.quotientMap_mk.symm
+      rw [hcomp]
+      -- Use eval₂_map: (f.map g).eval₂ h x = f.eval₂ (h.comp g) x
+      rw [← Polynomial.eval₂_map]
+      rw [hf₁_map]
+      -- Goal: f₀.eval₂ φ₀ B₀ = 0
+      -- Convert to aeval (requires algebraMap R₀ S₀ = φ₀)
+      change Polynomial.aeval B₀ f₀ = 0
+      -- B₀ = iso₀(mk X) is a root of f₀ via the AlgEquiv iso₀
+      -- iso₀ ∘ mkₐ = aeval B₀ (both R₀-algebra homs R₀[X] → S₀ sending X to B₀)
+      have h_eq : iso₀.toAlgHom.comp (Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀})) =
+          Polynomial.aeval B₀ := by
+        apply Polynomial.algHom_ext
+        simp only [AlgHom.comp_apply, Polynomial.aeval_X]
+        rfl
+      -- Apply to f₀ and simplify: aeval B₀ f₀ = iso₀(mkₐ f₀) = iso₀ 0 = 0
+      rw [← AlgHom.congr_fun h_eq f₀, AlgHom.comp_apply]
+      -- Goal: iso₀.toAlgHom ((mkₐ R₀ (span {f₀})) f₀) = 0
+      -- mkₐ f₀ = mk f₀ = 0 (definitionally + mem_span_singleton_self)
+      have : (Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀})) f₀ = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.mem_span_singleton_self f₀)
+      rw [this, map_zero]
 
     have h_f₁B_factorization : ∃ a : S, f₁_B = q₀ * a := by
       rw [hq₀] at h_f₁B_in_q
@@ -384,7 +418,113 @@ theorem monogenic_of_etale_height_one_quotient
 
     -- Key: f₁'(B) is not in ms (derivative is a unit modulo ms)
     have h_deriv_unit : f₁.derivative.aeval B ∉ ms := by
-      sorry -- This follows from the étale condition (unramified implies derivative is unit)
+      -- Step 1: Show B₀ generates S₀ over R₀
+      -- iso₀.toAlgHom ∘ mkₐ = aeval B₀ (both R₀-algebra homs sending X to B₀)
+      have h_alg_eq : iso₀.toAlgHom.comp (Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀})) =
+          Polynomial.aeval B₀ := by
+        apply Polynomial.algHom_ext
+        simp only [AlgHom.comp_apply, Polynomial.aeval_X]
+        rfl
+      -- Since aeval B₀ = iso₀ ∘ mkₐ is surjective, B₀ generates S₀
+      have h_aeval_surj : Surjective (Polynomial.aeval B₀ : R₀[X] →ₐ[R₀] S₀) := by
+        intro x
+        obtain ⟨y, hy⟩ := iso₀.surjective x
+        obtain ⟨g, hg⟩ := Ideal.Quotient.mk_surjective y
+        refine ⟨g, ?_⟩
+        rw [show (Polynomial.aeval B₀ : R₀[X] →ₐ[R₀] S₀) g =
+            iso₀.toAlgHom ((Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀})) g) from
+          by rw [← AlgHom.comp_apply, h_alg_eq]]
+        show iso₀ ((Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀})) g) = x
+        rw [show (Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀}) : R₀[X] →ₐ[R₀] _) g =
+            (Ideal.Quotient.mk (Ideal.span {f₀}) g : R₀[X] ⧸ Ideal.span {f₀}) from rfl]
+        rw [hg, hy]
+      have h_B₀_gen : Algebra.adjoin R₀ {B₀} = ⊤ := by
+        rw [Algebra.adjoin_singleton_eq_range_aeval, eq_top_iff]
+        intro x _
+        obtain ⟨g, hg⟩ := h_aeval_surj x
+        exact ⟨g, hg⟩
+
+      -- Step 2: Show f₀ = minpoly R₀ B₀
+      haveI : Algebra.IsIntegral R₀ S₀ := Algebra.IsIntegral.of_finite R₀ S₀
+      -- B₀ is a root of f₀
+      have h_root : Polynomial.aeval B₀ f₀ = 0 := by
+        rw [← AlgHom.congr_fun h_alg_eq f₀, AlgHom.comp_apply]
+        have : (Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀})) f₀ = 0 :=
+          Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.mem_span_singleton_self f₀)
+        rw [this, map_zero]
+      -- f₀ is monic
+      have h_f₀_monic : f₀.Monic := by
+        show (minpoly R₀ β₀).Monic
+        exact minpoly.monic (Algebra.IsIntegral.isIntegral β₀)
+      -- If aeval B₀ Q = 0, then Q ∈ span {f₀}, so f₀ ∣ Q, hence deg f₀ ≤ deg Q
+      have h_deg_min : ∀ Q : R₀[X], Q.Monic → Polynomial.aeval B₀ Q = 0 →
+          f₀.degree ≤ Q.degree := by
+        intro Q hQ_monic hQ_root
+        -- aeval B₀ Q = iso₀ (mkₐ Q) = 0 implies mkₐ Q = 0 (iso₀ injective)
+        have h_aeval_eq : iso₀.toAlgHom ((Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀})) Q) = 0 := by
+          have := AlgHom.congr_fun h_alg_eq Q
+          simp only [AlgHom.comp_apply] at this
+          rw [this, hQ_root]
+        have h_mkₐ_zero : (Ideal.Quotient.mkₐ R₀ (Ideal.span {f₀})) Q = 0 := by
+          have := iso₀.injective
+          rw [← map_zero iso₀] at h_aeval_eq
+          exact this h_aeval_eq
+        have h_in_span : Q ∈ Ideal.span {f₀} := Ideal.Quotient.eq_zero_iff_mem.mp h_mkₐ_zero
+        obtain ⟨c, hc⟩ := Ideal.mem_span_singleton.mp h_in_span
+        -- Q = f₀ * c, so deg Q ≥ deg f₀
+        rw [hc]
+        apply Polynomial.degree_le_mul_left
+        intro hc_zero
+        simp [hc_zero] at hc
+        exact hQ_monic.ne_zero hc
+      have h_minpoly_eq : f₀ = minpoly R₀ B₀ :=
+        IsIntegrallyClosed.minpoly.unique h_f₀_monic h_root h_deg_min
+
+      -- Step 3: Get FaithfulSMul R₀ S₀ from injectivity of φ₀
+      haveI : FaithfulSMul R₀ S₀ := by
+        rw [faithfulSMul_iff_algebraMap_injective]
+        exact hφ₀_inj
+
+      -- Step 4: Apply deriv_isUnit_of_monogenic to B₀
+      have h_unit_B₀ : IsUnit (Polynomial.aeval B₀ (minpoly R₀ B₀).derivative) :=
+        deriv_isUnit_of_monogenic B₀ h_B₀_gen
+      -- Rewrite with h_minpoly_eq to get IsUnit (aeval B₀ f₀.derivative)
+      rw [← h_minpoly_eq] at h_unit_B₀
+
+      -- Step 5: Commutative diagram - mk q (f₁'.aeval B) = f₀'.aeval B₀
+      have h_deriv_comm : Ideal.Quotient.mk q (f₁.derivative.aeval B) =
+          (f₀.derivative).aeval B₀ := by
+        -- Push mk q through aeval using hom_eval₂
+        simp only [Polynomial.aeval_def]
+        rw [Polynomial.hom_eval₂]
+        rw [hB]
+        -- Replace composite ring hom
+        have hcomp : (Ideal.Quotient.mk q).comp (algebraMap R S) =
+            φ₀.comp (Ideal.Quotient.mk p) := by
+          ext r
+          change Ideal.Quotient.mk q (φ r) = φ₀ (Ideal.Quotient.mk p r)
+          exact Ideal.quotientMap_mk.symm
+        rw [hcomp]
+        -- Use eval₂_map
+        rw [← Polynomial.eval₂_map]
+        -- Need: f₁.derivative.map (mk p) = f₀.derivative
+        congr 1
+        rw [← Polynomial.derivative_map, hf₁_map]
+
+      -- Step 6: Conclude f₁'(B) ∉ ms
+      intro h_in_ms
+      -- f₁'.aeval B ∈ ms means it's not a unit
+      have h_not_unit : ¬ IsUnit (f₁.derivative.aeval B) :=
+        (IsLocalRing.mem_maximalIdeal _).mp h_in_ms
+      -- For a local hom, non-units map to non-units; for surjective local hom, units
+      -- lift to units. So non-unit maps to non-unit.
+      haveI : IsLocalHom (Ideal.Quotient.mk q) :=
+        IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
+      have h_nonunit_image : ¬ IsUnit (Ideal.Quotient.mk q (f₁.derivative.aeval B)) :=
+        fun h_unit => h_not_unit (isUnit_of_map_unit (Ideal.Quotient.mk q) _ h_unit)
+      -- But h_deriv_comm says the image equals aeval B₀ f₀', which is a unit
+      rw [h_deriv_comm] at h_nonunit_image
+      exact h_nonunit_image h_unit_B₀
 
     -- Consider B' = B + q₀
     let B' := B + q₀
@@ -548,9 +688,34 @@ theorem monogenic_of_etale_height_one_quotient
         _ = Ideal.Quotient.mk q B := by rw [add_zero]
         _ = B₀ := hB
 
-    -- Complete the proof: R[B'] ≃ S
-    use f₁
-    sorry -- Construct the isomorphism using B' and the properties established
+    -- Step 8: Show Algebra.adjoin R {B'} = ⊤ and derive the isomorphism
+    -- The correct witness polynomial is minpoly R B', not f₁.
+    -- (f₁(B') = q₀ · unit ≠ 0, so eval at B' doesn't factor through R[X]/(f₁))
+    --
+    -- Proof that Algebra.adjoin R {B'} = ⊤:
+    -- (1) adj + hB'_lifts ⟹ Algebra.adjoin R {B'} + q = S (as R-submodules),
+    --     since every element of S₀ = S/q is a polynomial in β₀ = mk q B' over R₀.
+    -- (2) aeval B' f₁ ∈ Algebra.adjoin R {B'} generates q (by h_span_eq),
+    --     so S = A + (aeval B' f₁)·S, and iterating: S = A + qⁿ for all n ≥ 1.
+    -- (3) The subalgebra A is local: S is integral over A (since S is integral
+    --     over R ⊆ A), so by lying-over/going-up, A has unique maximal ideal
+    --     ms ∩ A, and (aeval B' f₁) ∈ ms ∩ A is in the Jacobson radical of A.
+    -- (4) S is finitely generated as an A-module (since f.g. over R ⊆ A).
+    --     By Nakayama over A: the A-module S/A satisfies q·(S/A) = S/A with q
+    --     in the Jacobson radical, so S/A = 0, i.e., A = S.
+    have h_adjoin_top : Algebra.adjoin R {B'} = ⊤ := by
+      -- The proof proceeds in three stages:
+      -- (A) B₀ generates S₀ over R₀: since iso₀ : R₀[X]/(f₀) ≃ₐ S₀ sends
+      --     mk X to B₀, every element of S₀ is a polynomial in B₀.
+      -- (B) Lifting: for any s ∈ S, adjoin_induction on mk q s ∈ Algebra.adjoin R₀ {B₀}
+      --     gives t ∈ Algebra.adjoin R {B'} with s ≡ t (mod q).
+      --     So Algebra.adjoin R {B'} + q = S as R-submodules.
+      -- (C) Since aeval B' f₁ ∈ Algebra.adjoin R {B'} generates q (h_span_eq),
+      --     we get S = A + (aeval B' f₁)·S. Iterating: S = A + qⁿ for all n.
+      --     The subalgebra A is local (S integral over A with S local) and
+      --     (aeval B' f₁) ∈ Jacobson radical of A, so Nakayama gives A = S.
+      sorry
+    exact ⟨minpoly R B', gensUnivQuot_of_monogenic B' h_adjoin_top⟩
 
 -- Alternative formulation using explicit ring homomorphism
 theorem monogenic_of_etale_height_one_quotient'
