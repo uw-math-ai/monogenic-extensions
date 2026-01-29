@@ -86,18 +86,19 @@ height one prime ideal q ⊆ S such that the induced map R/(q ∩ R) → S/q is 
 then S is a monogenic extension of R.
 
 Here:
-- `[Algebra R S]` provides the R-algebra structure on S
-- `[Module.Finite R S]` asserts that S is a finite R-module
-- `[FaithfulSMul R S]` asserts that the algebra map is injective
-  (equivalent to `Injective (algebraMap R S)`)
+- `φ : R →+* S` is the structure map making S an extension of R
+- `hφ_fin` asserts that S is a finite R-module via φ
+- `hφ_inj` asserts that φ is injective (so R embeds into S)
 - `q` is a prime ideal of S with height 1
-- The "intersection" q ∩ R is formalized as `q.comap (algebraMap R S)` (the preimage of q)
-- The induced quotient map `R/(q ∩ R) →+* S/q` is assumed to be étale
+- The "intersection" q ∩ R is formalized as `q.comap φ` (the preimage of q under φ)
+- The induced quotient map is `Ideal.quotientMap q φ` which gives `R/(q ∩ R) →+* S/q`
+- `hétale` asserts this quotient map is étale
 -/
 theorem monogenic_of_etale_height_one_quotient
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [UniqueFactorizationMonoid S] [Algebra R S]
     [FaithfulSMul R S] [Module.Finite R S]
     (hR_reg : IsRegularLocalRing R) (hS_reg : IsRegularLocalRing S)
+    (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
     (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1)
     (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
     ∃ f : R[X], Nonempty ((R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) := by
@@ -291,50 +292,50 @@ theorem monogenic_of_etale_height_one_quotient
       rw [h, Ideal.height_bot] at hq_height
       exact zero_ne_one hq_height
     -- Step 2: By UFD property, every nonzero prime ideal contains a prime element
-    obtain ⟨π, hπ_mem, hπ_prime⟩ := Ideal.IsPrime.exists_mem_prime_of_ne_bot hq_prime hq_ne_bot
-    -- Step 3: span {π} is a prime ideal since π is prime
-    have h_span_prime : (Ideal.span {π}).IsPrime := by
-      rw [Ideal.span_singleton_prime hπ_prime.ne_zero]
-      exact hπ_prime
-    -- Step 4: span {π} ⊆ q
-    have h_span_le : Ideal.span {π} ≤ q := (Ideal.span_singleton_le_iff_mem (I := q)).mpr hπ_mem
-    -- Step 5: span {π} ≠ ⊥
-    have h_span_ne_bot : Ideal.span {π} ≠ ⊥ := by
+    obtain ⟨p, hp_mem, hp_prime⟩ := Ideal.IsPrime.exists_mem_prime_of_ne_bot hq_prime hq_ne_bot
+    -- Step 3: span {p} is a prime ideal since p is prime
+    have h_span_prime : (Ideal.span {p}).IsPrime := by
+      rw [Ideal.span_singleton_prime hp_prime.ne_zero]
+      exact hp_prime
+    -- Step 4: span {p} ⊆ q
+    have h_span_le : Ideal.span {p} ≤ q := (Ideal.span_singleton_le_iff_mem (I := q)).mpr hp_mem
+    -- Step 5: span {p} ≠ ⊥
+    have h_span_ne_bot : Ideal.span {p} ≠ ⊥ := by
       simp only [ne_eq, Ideal.span_singleton_eq_bot]
-      exact hπ_prime.ne_zero
-    -- Step 6: Since height q = 1, if span {π} < q, then span {π} has height 0
-    -- In a domain, height 0 primes are just ⊥, but span {π} ≠ ⊥, contradiction.
-    -- So span {π} = q.
-    have h_eq : Ideal.span {π} = q := by
+      exact hp_prime.ne_zero
+    -- Step 6: Since height q = 1, if span {p} < q, then span {p} has height 0
+    -- In a domain, height 0 primes are just ⊥, but span {p} ≠ ⊥, contradiction.
+    -- So span {p} = q.
+    have h_eq : Ideal.span {p} = q := by
       by_contra h_ne
-      have h_lt : Ideal.span {π} < q := lt_of_le_of_ne h_span_le h_ne
-      -- height (span {π}) < height q = 1, so height (span {π}) = 0
-      haveI : (Ideal.span {π}).IsPrime := h_span_prime
+      have h_lt : Ideal.span {p} < q := lt_of_le_of_ne h_span_le h_ne
+      -- height (span {p}) < height q = 1, so height (span {p}) = 0
+      haveI : (Ideal.span {p}).IsPrime := h_span_prime
       have hq_ht_ne_top : q.height ≠ ⊤ := by
         rw [hq_height]
         exact ENat.one_ne_top
       haveI : q.FiniteHeight := ⟨Or.inr hq_ht_ne_top⟩
-      haveI : (Ideal.span {π}).FiniteHeight := Ideal.finiteHeight_of_le h_span_le hq_prime.ne_top
+      haveI : (Ideal.span {p}).FiniteHeight := Ideal.finiteHeight_of_le h_span_le hq_prime.ne_top
       have h_ht_lt := Ideal.height_strict_mono_of_is_prime h_lt
       rw [hq_height] at h_ht_lt
-      -- height (span {π}) < 1 means height (span {π}) = 0
-      have h_ht_zero : (Ideal.span {π}).height = 0 := ENat.lt_one_iff_eq_zero.mp h_ht_lt
-      -- span {π} is a minimal prime of S (height 0 prime)
+      -- height (span {p}) < 1 means height (span {p}) = 0
+      have h_ht_zero : (Ideal.span {p}).height = 0 := ENat.lt_one_iff_eq_zero.mp h_ht_lt
+      -- span {p} is a minimal prime of S (height 0 prime)
       rw [Ideal.height_eq_primeHeight, Ideal.primeHeight_eq_zero_iff] at h_ht_zero
       -- In a domain, minimalPrimes of (⊥ : Ideal S) is just {⊥}
-      have h_span_eq_bot : Ideal.span {π} = ⊥ := by
-        have h_mem : Ideal.span {π} ∈ (⊥ : Ideal S).minimalPrimes := h_ht_zero
+      have h_span_eq_bot : Ideal.span {p} = ⊥ := by
+        have h_mem : Ideal.span {p} ∈ (⊥ : Ideal S).minimalPrimes := h_ht_zero
         -- (⊥ : Ideal S).minimalPrimes = minimalPrimes S by definition
         have : (⊥ : Ideal S).minimalPrimes = minimalPrimes S := rfl
         rw [this, IsDomain.minimalPrimes_eq_singleton_bot] at h_mem
         exact Set.mem_singleton_iff.mp h_mem
       exact h_span_ne_bot h_span_eq_bot
-    exact ⟨π, h_eq.symm⟩
+    exact ⟨p, h_eq.symm⟩
 
   obtain ⟨q₀, hq₀⟩ := h_q_principal
 
   -- Check if f₁(B) generates the right structure
-  by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map (algebraMap R S) mr • ⊤ = ms
+  by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
   · -- Case 1: f₁(B) generates ms/(mr·S), so R[B] = S
     -- The proof follows the standard monogenic extension construction
     use f₁
@@ -620,7 +621,7 @@ theorem monogenic_of_etale_height_one_quotient'
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
     [UniqueFactorizationMonoid S]
     (hR_reg : IsRegularLocalRing R) (hS_reg : IsRegularLocalRing S)
-    (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
+    (hfin : Module.Finite R S) (hinj : Injective (algebraMap R S))
     (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1)
     (hétale : Etale (Ideal.quotientMap q φ (le_refl (q.comap φ)))) :
     ∃(β : S), Algebra.adjoin φ.range {β} = ⊤ := by
