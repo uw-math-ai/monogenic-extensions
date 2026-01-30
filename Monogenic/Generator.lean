@@ -22,11 +22,8 @@ namespace Monogenic
 
 variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 
--- Note: We add [IsDomain R], [IsIntegrallyClosed R], and [IsDomain S] hypotheses.
--- The [IsDomain R] and [IsIntegrallyClosed R] are needed for the minimal polynomial
--- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
--- [IsDomain S] follows naturally for étale extensions of domains.
--- We also add étale hypothesis to prove the derivative is a unit via separability.
+-- This might be redundant: IsAdjoinRootMonic.mkOfAdjoinEqTop
+-- does basically the same job in Mathlib.
 lemma gensUnivQuot_of_monogenic
   [Module.Finite R S] [FaithfulSMul R S]
   [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
@@ -78,6 +75,47 @@ lemma gensUnivQuot_of_monogenic
         exact ⟨px * py, by simp [hpx, hpy]⟩
   let iso := AlgEquiv.ofBijective lift_hom lift_bij
   exact ⟨iso⟩
+
+#check IsAdjoinRootMonic.mkOfAdjoinEqTop
+lemma isAdjoinRootMonic_of_monogenic
+  [Module.Finite R S] [FaithfulSMul R S]
+  (β : S)
+  (adjoin_top : Algebra.adjoin R {β} = ⊤) :
+    Nonempty (IsAdjoinRootMonic S (minpoly R β)) := by
+  haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
+  have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
+  let f := minpoly R β
+  let map := Polynomial.aeval (R:=R) β
+  have hf_aeval : aeval β f = 0 := minpoly.aeval R β
+  have surj : Surjective map := by
+    intro s
+    have hs : s ∈ Algebra.adjoin R {β} := adjoin_top ▸ trivial
+    -- Induction on the adjoin structure
+    unfold map
+    induction hs using Algebra.adjoin_induction with
+    | mem x hx =>
+      simp only [Set.mem_singleton_iff] at hx
+      exact ⟨X, by rw [hx]; simp only [aeval_X]⟩
+    | algebraMap r =>
+      exact ⟨(C r), by simp only [aeval_C]⟩
+    | add x y _ _ ihx ihy =>
+      obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
+      exact ⟨px + py, by simp [hpx, hpy]⟩
+    | mul x y _ _ ihx ihy =>
+      obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
+      exact ⟨px * py, by simp [hpx, hpy]⟩
+  have hkerspec : ker map = Ideal.span {f} := by
+    ext x
+    constructor
+    · intro hx
+      simp only [mem_ker, map] at hx
+      sorry
+    · intro hx
+      simp only [mem_ker]
+      unfold map
+      obtain ⟨q, rfl⟩ := Ideal.mem_span_singleton.mp hx
+      simp [hf_aeval]
+  exact ⟨⟨⟨map, surj, hkerspec⟩, minpoly.monic hβ_int⟩⟩
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -250,11 +288,9 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
     rw [← IntermediateField.finrank_top', ← hβ₀_field_gen]
     exact (IntermediateField.adjoin.finrank hβ₀_int).symm
   -- Key: use the isomorphism to get finrank R S = f.natDegree
-  obtain ⟨φ⟩ := gensUnivQuot_of_monogenic β adjoin_eq_top
-  have hfinrank_S : Module.finrank R S = f.natDegree := by
-    calc Module.finrank R S
-        = Module.finrank R (R[X] ⧸ Ideal.span {f}) := (φ.toLinearEquiv.finrank_eq).symm
-      _ = f.natDegree := finrank_quotient_span_eq_natDegree' hf_monic
+  let adjoin := IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_eq_top
+  let pb := IsAdjoinRootMonic.powerBasis adjoin
+  have hfinrank_S : Module.finrank R S = f.natDegree := pb.finrank
   -- For étale extensions: finrank R S = finrank kR kS
   -- This follows from: S ⊗_R kR ≃ kS (since m_R · S = m_S for étale)
   -- and for free modules over local rings, rank = rank after tensoring with residue field
