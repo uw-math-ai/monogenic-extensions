@@ -30,92 +30,9 @@ lemma gensUnivQuot_of_monogenic
   (β : S)
   (adjoin_top : Algebra.adjoin R {β} = ⊤) :
     Nonempty ((R[X] ⧸ Ideal.span {minpoly R β}) ≃ₐ[R] S) := by
-  haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
-  -- Since adjoin R {β} = ⊤, the minimal polynomial f of β gives S ≃ R[X]/(f)
-  -- by the universal property of AdjoinRoot
   have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  let f := minpoly R β
-  -- The isomorphism S ≃ R[X]/(f) follows from:
-  -- 1. lift : R[X]/(f) →ₐ[R] S sending [X] to β
-  -- 2. This is surjective since adjoin R {β} = ⊤
-  -- 3. This is injective because f = minpoly (kernel is exactly (f))
-
-  -- Define the lift: R[X]/(f) →ₐ[R] S
-  have hf_aeval : aeval β f = 0 := minpoly.aeval R β
-  have hker : ∀ p ∈ Ideal.span {f}, aeval β p = 0 := fun p hp => by
-    obtain ⟨q, rfl⟩ := Ideal.mem_span_singleton.mp hp
-    simp [hf_aeval]
-  let lift_hom : (R[X] ⧸ Ideal.span {f}) →ₐ[R] S :=
-    Ideal.Quotient.liftₐ (Ideal.span {f}) (Polynomial.aeval β) hker
-  -- Prove bijectivity
-  have lift_bij : Function.Bijective lift_hom := by
-    constructor
-    · -- Injectivity: kernel is trivial because f is minimal polynomial
-      rw [injective_iff_map_eq_zero]
-      intro x hx
-      obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
-      simp only [lift_hom, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk] at hx
-      exact Ideal.Quotient.eq_zero_iff_mem.mpr
-        (Ideal.mem_span_singleton.mpr (minpoly.isIntegrallyClosed_dvd hβ_int hx))
-    · -- Surjectivity: image contains Algebra.adjoin R {β} = ⊤
-      intro s
-      have hs : s ∈ Algebra.adjoin R {β} := adjoin_top ▸ trivial
-      -- Induction on the adjoin structure
-      induction hs using Algebra.adjoin_induction with
-      | mem x hx =>
-        simp only [Set.mem_singleton_iff] at hx
-        exact ⟨Ideal.Quotient.mk _ X, by simp [lift_hom, hx, aeval_X]⟩
-      | algebraMap r =>
-        exact ⟨Ideal.Quotient.mk _ (C r), by simp [lift_hom, aeval_C]⟩
-      | add x y _ _ ihx ihy =>
-        obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
-        exact ⟨px + py, by simp [hpx, hpy]⟩
-      | mul x y _ _ ihx ihy =>
-        obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
-        exact ⟨px * py, by simp [hpx, hpy]⟩
-  let iso := AlgEquiv.ofBijective lift_hom lift_bij
-  exact ⟨iso⟩
-
-#check IsAdjoinRootMonic.mkOfAdjoinEqTop
-lemma isAdjoinRootMonic_of_monogenic
-  [Module.Finite R S] [FaithfulSMul R S]
-  (β : S)
-  (adjoin_top : Algebra.adjoin R {β} = ⊤) :
-    Nonempty (IsAdjoinRootMonic S (minpoly R β)) := by
-  haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
-  have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  let f := minpoly R β
-  let map := Polynomial.aeval (R:=R) β
-  have hf_aeval : aeval β f = 0 := minpoly.aeval R β
-  have surj : Surjective map := by
-    intro s
-    have hs : s ∈ Algebra.adjoin R {β} := adjoin_top ▸ trivial
-    -- Induction on the adjoin structure
-    unfold map
-    induction hs using Algebra.adjoin_induction with
-    | mem x hx =>
-      simp only [Set.mem_singleton_iff] at hx
-      exact ⟨X, by rw [hx]; simp only [aeval_X]⟩
-    | algebraMap r =>
-      exact ⟨(C r), by simp only [aeval_C]⟩
-    | add x y _ _ ihx ihy =>
-      obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
-      exact ⟨px + py, by simp [hpx, hpy]⟩
-    | mul x y _ _ ihx ihy =>
-      obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
-      exact ⟨px * py, by simp [hpx, hpy]⟩
-  have hkerspec : ker map = Ideal.span {f} := by
-    ext x
-    constructor
-    · intro hx
-      simp only [mem_ker, map] at hx
-      sorry
-    · intro hx
-      simp only [mem_ker]
-      unfold map
-      obtain ⟨q, rfl⟩ := Ideal.mem_span_singleton.mp hx
-      simp [hf_aeval]
-  exact ⟨⟨⟨map, surj, hkerspec⟩, minpoly.monic hβ_int⟩⟩
+  let isAdjoin := IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_top
+  exact ⟨isAdjoin.adjoinRootAlgEquiv (R:=R) (S:=S)⟩
 
 /-!
 ## Helper lemmas for the derivative unit condition
