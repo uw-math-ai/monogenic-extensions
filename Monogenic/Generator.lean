@@ -22,8 +22,11 @@ namespace Monogenic
 
 variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 
--- This might be redundant: IsAdjoinRootMonic.mkOfAdjoinEqTop
--- does basically the same job in Mathlib.
+-- Note: We add [IsDomain R], [IsIntegrallyClosed R], and [IsDomain S] hypotheses.
+-- The [IsDomain R] and [IsIntegrallyClosed R] are needed for the minimal polynomial
+-- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
+-- [IsDomain S] follows naturally for étale extensions of domains.
+-- We also add étale hypothesis to prove the derivative is a unit via separability.
 lemma gensUnivQuot_of_monogenic
   [Module.Finite R S] [FaithfulSMul R S]
   [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
@@ -31,8 +34,8 @@ lemma gensUnivQuot_of_monogenic
   (adjoin_top : Algebra.adjoin R {β} = ⊤) :
     Nonempty ((R[X] ⧸ Ideal.span {minpoly R β}) ≃ₐ[R] S) := by
   have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  let isAdjoin := IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_top
-  exact ⟨isAdjoin.adjoinRootAlgEquiv (R:=R) (S:=S)⟩
+  have adjoin := IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_top
+  exact ⟨adjoin.adjoinRootAlgEquiv⟩
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -57,12 +60,6 @@ theorem residue_aeval_eq (β : S) (p : R[X]) :
     IsLocalRing.residue S (aeval β p) =
     p.eval₂ ((IsLocalRing.residue S).comp (algebraMap R S)) (IsLocalRing.residue S β) := by
   simp only [aeval_def, hom_eval₂]
-
-/-- The reduction of (minpoly R β) via the residue map has β₀ as a root. -/
-lemma minpoly_map_residue_aeval_eq_zero (β : S) :
-    (minpoly R β).eval₂ ((IsLocalRing.residue S).comp (algebraMap R S))
-      (IsLocalRing.residue S β) = 0 := by
-  rw [← residue_aeval_eq, minpoly.aeval, map_zero]
 
 
 /-- In a local ring, an element is a unit iff its residue is non-zero. -/
@@ -105,7 +102,8 @@ lemma residue_generates_of_generates
     -- which is in any subalgebra
     have : (IsLocalRing.residue S) (algebraMap R S r)
         = algebraMap kR kS (IsLocalRing.residue R r) := by
-      rw [← RingHom.comp_apply, ← RingHom.comp_apply, residue_algebraMap_eq]
+      rw [← RingHom.comp_apply, ← RingHom.comp_apply]
+      rfl
     rw [this]
     exact Subalgebra.algebraMap_mem (Algebra.adjoin kR {β₀}) _
   | add x y _ _ hx hy =>
@@ -179,61 +177,29 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
   -- f_bar is monic
   have hf_monic : f.Monic := minpoly.monic hβ_int
   have hf_bar_monic : f_bar.Monic := hf_monic.map (IsLocalRing.residue R)
-  have hf_bar_ne_zero : f_bar ≠ 0 := Polynomial.map_monic_ne_zero hf_monic
   -- β₀ is integral (finite extension)
   haveI : Module.Finite kR kS := inferInstance
   haveI : Algebra.IsIntegral kR kS := Algebra.IsIntegral.of_finite kR kS
   have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
-  -- β₀ is a root of f_bar
-  have hf_bar_root : aeval β₀ f_bar = 0 := by
+  -- β₀ is a root of f_bar, so minpoly kR β₀ divides f_bar
+  have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ (by
     rw [aeval_def, eval₂_map, ← residue_algebraMap_eq, ← hom_eval₂, ← aeval_def, minpoly.aeval,
-      map_zero]
-  -- minpoly kR β₀ divides f_bar (since β₀ is a root)
-  have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ hf_bar_root
-  have h_minpoly_ne_zero : minpoly kR β₀ ≠ 0 := minpoly.ne_zero hβ₀_int
+      map_zero])
   have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := residue_generates_of_generates β adjoin_eq_top
-  -- For equality of f_bar and minpoly kR β₀, we use that both are monic and have the same degree
-  have hdeg_map : f_bar.natDegree = f.natDegree := by
-    simp only [f_bar, natDegree_map_eq_iff]
-    left
-    simp only [hf_monic.leadingCoeff, map_one, ne_eq, one_ne_zero, not_false_eq_true]
-  have hβ₀_alg : IsAlgebraic kR β₀ := Algebra.IsAlgebraic.isAlgebraic β₀
+  -- Degree chain: natDegree f_bar = natDegree f = finrank R S
+  --             = finrank kR kS = natDegree (minpoly kR β₀)
   have hβ₀_field_gen : IntermediateField.adjoin kR {β₀} = ⊤ := by
-    rw [← IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic hβ₀_alg] at hβ₀_gen
+    rw [← IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic
+      (Algebra.IsAlgebraic.isAlgebraic β₀)] at hβ₀_gen
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
-  have hdeg_minpoly_β₀ : (minpoly kR β₀).natDegree = Module.finrank kR kS := by
-    rw [← IntermediateField.finrank_top', ← hβ₀_field_gen]
-    exact (IntermediateField.adjoin.finrank hβ₀_int).symm
-  -- Key: use the isomorphism to get finrank R S = f.natDegree
-  let adjoin := IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_eq_top
-  let pb := IsAdjoinRootMonic.powerBasis adjoin
-  have hfinrank_S : Module.finrank R S = f.natDegree := pb.finrank
-  -- For étale extensions: finrank R S = finrank kR kS
-  -- This follows from: S ⊗_R kR ≃ kS (since m_R · S = m_S for étale)
-  -- and for free modules over local rings, rank = rank after tensoring with residue field
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
-    rw [hdeg_map, hdeg_minpoly_β₀]
-    -- Goal: f.natDegree = finrank kR kS
-    -- We have: finrank R S = f.natDegree (from hfinrank_S)
-    -- Need: finrank R S = finrank kR kS (flat base change)
-    rw [← hfinrank_S]
-    exact finrank_eq_finrank_residueField
-  -- Since minpoly kR β₀ ∣ f_bar, both monic, and same degree, they're equal
-  obtain ⟨q, hq⟩ := hdvd
-  have hq_ne_zero : q ≠ 0 := by
-    intro hq_zero
-    rw [hq, hq_zero, mul_zero] at hf_bar_ne_zero
-    exact hf_bar_ne_zero rfl
-  have hq_monic : q.Monic := by
-    have := hf_bar_monic
-    rw [hq] at this
-    exact (minpoly.monic hβ₀_int).of_mul_monic_left this
-  have hdeg_q : q.natDegree = 0 := by
-    have h1 : f_bar.natDegree = (minpoly kR β₀).natDegree + q.natDegree := by
-      rw [hq, natDegree_mul h_minpoly_ne_zero hq_ne_zero]
-    omega
-  change f_bar = _
-  rw [hq, Polynomial.eq_one_of_monic_natDegree_zero hq_monic hdeg_q, mul_one]
+    rw [show f_bar.natDegree = f.natDegree from hf_monic.natDegree_map _,
+      ← (IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_eq_top).finrank,
+      finrank_eq_finrank_residueField, ← IntermediateField.finrank_top', ← hβ₀_field_gen,
+      IntermediateField.adjoin.finrank hβ₀_int]
+  -- Both monic, same degree, divisibility ⟹ equal
+  exact eq_of_monic_of_dvd_of_natDegree_le (minpoly.monic hβ₀_int) hf_bar_monic
+    hdvd hdeg_eq.le
 
 /-- The key technical fact: if β₀ generates kS over kR (as an intermediate field) and the
     extension is étale, then the minimal polynomial of β has derivative that is a unit when
@@ -272,6 +238,166 @@ lemma deriv_isUnit_of_monogenic [Algebra.Etale R S] [IsDomain R] [IsDomain S]
   rw [residue_aeval_eq, residue_algebraMap_eq, ← eval₂_map, ← derivative_map, hminpoly_eq,
     ← aeval_def]
   exact hderiv_ne_zero
+
+/-!
+## Nakayama helpers for the quotient-lifting argument
+
+These lemmas support the proof that `Algebra.adjoin R {β} = ⊤` when β generates
+the quotient `S/q` over `R/(q ∩ R)`, and a suitable element π ∈ Algebra.adjoin R {β}
+generates the maximal ideal modulo `mR · S`.
+-/
+
+omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
+/-- If β generates `S/q` over `R/p` (where `p = q.comap (algebraMap R S)`), then every
+    element of `S` is congruent to an element of `Algebra.adjoin R {β}` modulo `q`. -/
+lemma exists_adjoin_sub_mem
+    (β : S) (q : Ideal S)
+    (h_gen : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
+      {Ideal.Quotient.mk q β} = ⊤) (s : S) :
+    ∃ t ∈ Algebra.adjoin R {β}, s - t ∈ q := by
+  let p := q.comap (algebraMap R S)
+  let R₀ := R ⧸ p
+  let S₀ := S ⧸ q
+  let β₀ := Ideal.Quotient.mk q β
+  have hs₀ : Ideal.Quotient.mk q s ∈ Algebra.adjoin R₀ {β₀} := by
+    rw [h_gen]; trivial
+  -- Induct on membership in Algebra.adjoin R₀ {β₀}
+  obtain ⟨t, ht_mem, ht_eq⟩ : ∃ t ∈ Algebra.adjoin R {β},
+      Ideal.Quotient.mk q s = Ideal.Quotient.mk q t := by
+    refine Algebra.adjoin_induction ?_ ?_ ?_ ?_ hs₀
+    · intro x hx
+      simp only [Set.mem_singleton_iff] at hx
+      exact ⟨β, Algebra.subset_adjoin (Set.mem_singleton _), by rw [hx]⟩
+    · intro r
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
+      exact ⟨algebraMap R S r, Subalgebra.algebraMap_mem _ _,
+        (Ideal.quotientMap_mk (I := q) (f := algebraMap R S) (H := le_rfl)).symm⟩
+    · rintro x y _ _ ⟨t₀, ht₀, rfl⟩ ⟨t₁, ht₁, rfl⟩
+      exact ⟨t₀ + t₁, Subalgebra.add_mem _ ht₀ ht₁, by simp [map_add]⟩
+    · rintro x y _ _ ⟨t₀, ht₀, rfl⟩ ⟨t₁, ht₁, rfl⟩
+      exact ⟨t₀ * t₁, Subalgebra.mul_mem _ ht₀ ht₁, by simp [map_mul]⟩
+  exact ⟨t, ht_mem, Ideal.Quotient.eq.mp ht_eq⟩
+
+omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
+/-- Nakayama argument: if β generates `S/q` over `R/p`, and the maximal ideal of S
+    is generated by some π ∈ Algebra.adjoin R {β} together with `mR · S`, then
+    `Algebra.adjoin R {β} = ⊤`.
+
+    The proof combines:
+    1. Quotient lifting: S = A + q (from `h_gen`)
+    2. Artinian descent: ms^n ⊆ mR·S for some n
+    3. Iterative reduction: q ⊆ A + mR·S (using π ∈ A and ms = ⟨π⟩ + mR·S)
+    4. Nakayama's lemma: S ⊆ A + mR·S implies A = S -/
+lemma adjoin_eq_top_of_quotient_gen
+    [IsLocalRing R] [IsLocalRing S] [Module.Finite R S]
+    (β : S) (q : Ideal S) [q.IsPrime]
+    (h_gen : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
+      {Ideal.Quotient.mk q β} = ⊤)
+    (π : S) (hπ_mem : π ∈ Algebra.adjoin R {β})
+    (h_ms : IsLocalRing.maximalIdeal S =
+      Ideal.span {π} ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R)) :
+    Algebra.adjoin R {β} = ⊤ := by
+  set A := Algebra.adjoin R {β}
+  set mR := IsLocalRing.maximalIdeal R
+  set ms := IsLocalRing.maximalIdeal S with ms_def
+  set mR_S := Ideal.map (algebraMap R S) mR
+  -- Step 1: Show ms^n ≤ mR_S for some n, via Artinian quotient
+  -- S ⧸ mR_S is a finite module over the field R ⧸ mR, hence Artinian
+  haveI : IsArtinianRing (S ⧸ mR_S) := by
+    letI : Field (R ⧸ mR) := Ideal.Quotient.field mR
+    haveI : IsArtinianRing (R ⧸ mR) := DivisionRing.instIsArtinianRing
+    haveI : Module.Finite (R ⧸ mR) (S ⧸ mR_S) :=
+      Module.Finite.of_restrictScalars_finite R (R ⧸ mR) (S ⧸ mR_S)
+    exact IsArtinianRing.of_finite (R ⧸ mR) (S ⧸ mR_S)
+  obtain ⟨n, hn⟩ := IsLocalRing.exists_maximalIdeal_pow_le_of_isArtinianRing_quotient mR_S
+  -- Step 2: Quotient lifting - every s ∈ S is in A + q
+  have h_lift : ∀ s : S, ∃ t ∈ A, s - t ∈ q :=
+    exists_adjoin_sub_mem β q h_gen
+  -- Step 3: Key structural fact - ms^k ≤ Ideal.span {π ^ k} ⊔ mR_S
+  have hπ_ms : π ∈ ms :=
+    h_ms ▸ Ideal.mem_sup_left (Ideal.mem_span_singleton_self π)
+  have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal (Ideal.IsPrime.ne_top ‹_›)
+  have h_ms_pow : ∀ k : ℕ, ms ^ k ≤ Ideal.span {π ^ k} ⊔ mR_S := by
+    intro k
+    induction k with
+    | zero => simp [Ideal.span_singleton_one]
+    | succ k ih =>
+      intro x hx
+      rw [pow_succ] at hx
+      refine Submodule.smul_induction_on hx (fun a ha b hb => ?_) (fun _ _ hx hy => ?_)
+      · -- a ∈ ms^k ≤ ⟨π^k⟩ ⊔ mR_S, b ∈ ms = ⟨π⟩ ⊔ mR_S
+        obtain ⟨a₁, ha₁, a₂, ha₂, rfl⟩ := Submodule.mem_sup.mp (ih ha)
+        obtain ⟨b₁, hb₁, b₂, hb₂, rfl⟩ := Submodule.mem_sup.mp (h_ms ▸ hb)
+        obtain ⟨ca, rfl⟩ := Ideal.mem_span_singleton.mp ha₁
+        obtain ⟨cb, rfl⟩ := Ideal.mem_span_singleton.mp hb₁
+        -- (π^k * ca + a₂) • (π * cb + b₂) lands in ⟨π^(k+1)⟩ ⊔ mR_S
+        have h1 : π ^ k * ca * (π * cb) ∈ Ideal.span {π ^ (k + 1)} :=
+          Ideal.mem_span_singleton.mpr ⟨ca * cb, by ring⟩
+        have h_rest : π ^ k * ca * b₂ + a₂ * (π * cb) + a₂ * b₂ ∈ mR_S :=
+          Ideal.add_mem _ (Ideal.add_mem _ (Ideal.mul_mem_left _ _ hb₂)
+            (Ideal.mul_mem_right _ _ ha₂)) (Ideal.mul_mem_left _ _ hb₂)
+        change (π ^ k * ca + a₂) • (π * cb + b₂) ∈ _
+        have : (π ^ k * ca + a₂) • (π * cb + b₂) =
+            π ^ k * ca * (π * cb) + (π ^ k * ca * b₂ + a₂ * (π * cb) + a₂ * b₂) := by
+          simp only [smul_eq_mul]; ring
+        rw [this]
+        exact Submodule.add_mem_sup h1 h_rest
+      · exact Ideal.add_mem _ hx hy
+  -- Step 4: For x ∈ q, iterate to show x ∈ A + mR_S
+  have h_iterate : ∀ (k : ℕ) (x : S), x ∈ q →
+      ∃ a ∈ A.toSubmodule, x - a ∈ (Ideal.span {π ^ k} ⊔ mR_S : Ideal S) := by
+    intro k
+    induction k with
+    | zero =>
+      intro x _
+      exact ⟨0, Subalgebra.zero_mem A, by simp [Ideal.span_singleton_one]⟩
+    | succ k ih =>
+      intro x hx
+      obtain ⟨a₀, ha₀, hz⟩ := ih x hx
+      -- Decompose x - a₀ ∈ ⟨π^k⟩ ⊔ mR_S as π^k * c + r
+      obtain ⟨y, hy, r, hr, hzyr⟩ := Submodule.mem_sup.mp hz
+      obtain ⟨c, rfl⟩ := Ideal.mem_span_singleton.mp hy
+      -- c = a₁ + (c - a₁), with c - a₁ ∈ q
+      obtain ⟨a₁, ha₁, hc⟩ := h_lift c
+      have hπk_A : π ^ k ∈ A := Subalgebra.pow_mem A hπ_mem k
+      have ha' : a₀ + a₁ * π ^ k ∈ A :=
+        Subalgebra.add_mem A ha₀ (Subalgebra.mul_mem A ha₁ hπk_A)
+      refine ⟨a₀ + a₁ * π ^ k, ha', ?_⟩
+      have hcma₁_ms : c - a₁ ∈ ms := hq_le_ms hc
+      -- π^k * (c - a₁) ∈ ms^k * ms = ms^(k+1)
+      have hπk_cma₁ : π ^ k * (c - a₁) ∈ ms ^ (k + 1) := by
+        rw [pow_succ]
+        exact Ideal.mul_mem_mul (Ideal.pow_mem_pow hπ_ms k) hcma₁_ms
+      -- x - (a₀ + a₁ * π^k) = π^k * (c - a₁) + r
+      have h_eq : x - (a₀ + a₁ * π ^ k) = π ^ k * (c - a₁) + r := by
+        have h1 : x - a₀ = π ^ k * c + r := hzyr.symm
+        calc x - (a₀ + a₁ * π ^ k)
+            = (x - a₀) - a₁ * π ^ k := by ring
+          _ = (π ^ k * c + r) - a₁ * π ^ k := by rw [h1]
+          _ = π ^ k * (c - a₁) + r := by ring
+      rw [h_eq]
+      exact Ideal.add_mem _ (h_ms_pow (k + 1) hπk_cma₁) (Ideal.mem_sup_right hr)
+  -- Step 5: At k = n, ⟨π^n⟩ + mR_S ≤ mR_S (since π^n ∈ ms^n ⊆ mR_S)
+  have h_πn_le : Ideal.span {π ^ n} ⊔ mR_S ≤ mR_S :=
+    sup_le (Ideal.span_le.mpr (Set.singleton_subset_iff.mpr (hn (Ideal.pow_mem_pow hπ_ms n))))
+      le_rfl
+  have h_q_le : (q.restrictScalars R : Submodule R S) ≤ A.toSubmodule ⊔ mR • ⊤ := by
+    intro x hx
+    obtain ⟨a, ha, hxa⟩ := h_iterate n x hx
+    rw [Ideal.smul_top_eq_map]
+    exact Submodule.mem_sup.mpr ⟨a, ha, x - a,
+      show x - a ∈ mR_S.restrictScalars R from h_πn_le hxa, by ring⟩
+  -- Step 6: Combine to get ⊤ ≤ A.toSubmodule ⊔ mR • ⊤
+  have h_le_sup : (⊤ : Submodule R S) ≤ A.toSubmodule ⊔ mR • ⊤ := by
+    intro s _
+    obtain ⟨t, ht, hst⟩ := h_lift s
+    have h_diff := h_q_le (show s - t ∈ q.restrictScalars R from hst)
+    exact (show s = t + (s - t) by ring) ▸
+      Submodule.add_mem _ (Submodule.mem_sup_left ht) h_diff
+  -- Step 7: Apply Nakayama's lemma
+  have h_fg : (⊤ : Submodule R S).FG := Module.finite_def.mp inferInstance
+  have h_jac : mR ≤ Ideal.jacobson ⊥ := IsLocalRing.maximalIdeal_le_jacobson ⊥
+  exact eq_top_iff.mpr (Submodule.le_of_le_smul_of_le_jacobson_bot h_fg h_jac h_le_sup)
 
 /-
 initial part without the integral domain hypothesis.

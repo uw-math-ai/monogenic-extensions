@@ -19,6 +19,7 @@ import Mathlib.RingTheory.AdjoinRoot
 import Mathlib.RingTheory.Ideal.Height
 import Mathlib.RingTheory.Regular.RegularSequence
 import Mathlib.RingTheory.IntegralClosure.IntegrallyClosed
+import Mathlib.Algebra.Star.Subalgebra
 
 
 open Polynomial
@@ -52,6 +53,7 @@ class IsRegularLocalRing (R : Type*) [CommRing R] [IsLocalRing R] : Prop where
     rs.length = n ∧
     IsLocalRing.maximalIdeal R = Ideal.ofList rs
 
+omit [IsLocalRing R] [IsLocalRing S] in
 /-- If `S` is a finite `R`-module and `q` is an ideal of `S`, then the induced quotient map
     `R/(q ∩ R) →+* S/q` is finite. -/
 lemma quotientMap_finite [Algebra R S] [Module.Finite R S] (q : Ideal S) :
@@ -97,52 +99,40 @@ Here:
 theorem monogenic_of_etale_height_one_quotient
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [UniqueFactorizationMonoid S] [Algebra R S]
     [FaithfulSMul R S] [Module.Finite R S]
-    (hR_reg : IsRegularLocalRing R) (hS_reg : IsRegularLocalRing S)
-    (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
-    (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1)
+    (q : Ideal S) [IsIntegrallyClosed <| R ⧸ (q.comap <| algebraMap R S)]
+    [hq_prime : q.IsPrime] (hq_height : q.height = 1)
     (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
-    ∃ f : R[X], Nonempty ((R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) := by
+    ∃ f : R[X], Nonempty (IsAdjoinRootMonic S f) := by
   -- Set up algebra structure
   let φ := algebraMap R S
   have φ_eq : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
-
   -- Step 1: If φ is already étale, apply FiniteInjectiveEtale_IsMonogenic directly
   by_cases hφ_etale : Algebra.Etale R S
   · let ⟨β, adj⟩ := monogenic_of_finiteInjectiveEtale (R:=R) (S:=S)
-    exact ⟨minpoly R β, gensUnivQuot_of_monogenic (R:=R) (S := S) β adj⟩
-
+    have hβ_int := Algebra.IsIntegral.isIntegral (R:=R) β
+    exact ⟨minpoly R β, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adj⟩⟩
   -- Step 2: Define the quotient structures
   -- p = q ∩ R (preimage of q under φ)
   let p : Ideal R := q.comap φ
-
   -- R₀ = R/p, S₀ = S/q
   let R₀ := R ⧸ p
   let S₀ := S ⧸ q
-
   -- The quotient map φ₀ : R₀ → S₀
   let φ₀ : R₀ →+* S₀ := Ideal.quotientMap q φ (le_refl p)
-
   -- φ₀ is étale by hypothesis
   have hφ₀_etale : Etale φ₀ := hétale
-
   -- Step 3: Show φ₀ is finite and injective, then apply FiniteInjectiveEtale_IsMonogenic
-
   -- φ₀ is finite (quotient of finite extension)
   have hφ₀_fin : φ₀.Finite := quotientMap_finite q
-
   -- φ₀ is injective (since p = q.comap φ, quotientMap is automatically injective)
   have hφ₀_inj : Injective φ₀ := Ideal.quotientMap_injective
-
   -- R₀ is a domain (quotient by prime ideal)
   haveI : IsDomain R₀ := Ideal.Quotient.isDomain p
-
   -- S₀ is a domain (quotient by prime ideal)
   haveI : IsDomain S₀ := Ideal.Quotient.isDomain q
-
   -- Note: IsIntegrallyClosed R₀ is not needed for FiniteInjectiveEtale_IsMonogenic
   -- The general claim "quotient of integrally closed by prime is integrally closed" is false
   -- (counterexample: k[x,y]/(y²-x³) is not integrally closed)
-
   -- R₀ and S₀ are local rings (quotient of local ring by proper ideal is local)
   -- p is prime (comap of prime ideal is prime)
   haveI hp_prime : p.IsPrime := Ideal.IsPrime.comap φ
@@ -150,22 +140,18 @@ theorem monogenic_of_etale_height_one_quotient
   haveI : Nontrivial R₀ := Ideal.Quotient.nontrivial_iff.mpr hp_prime.ne_top
   haveI : IsLocalRing R₀ :=
     IsLocalRing.of_surjective' (Ideal.Quotient.mk p) Ideal.Quotient.mk_surjective
-
   -- S₀ is nontrivial (quotient by prime ideal is a domain, hence nontrivial)
   haveI : Nontrivial S₀ := Ideal.Quotient.nontrivial_iff.mpr hq_prime.ne_top
   haveI : IsLocalRing S₀ :=
     IsLocalRing.of_surjective' (Ideal.Quotient.mk q) Ideal.Quotient.mk_surjective
-
   -- Apply FiniteInjectiveEtale_IsMonogenic to get B₀ such that R₀[B₀] = S₀
   haveI : Module.Finite R₀ S₀ := RingHom.finite_algebraMap.mp hφ₀_fin
   haveI : Algebra.Etale R₀ S₀ := RingHom.etale_algebraMap.mp hφ₀_etale
   obtain ⟨B₀, adj⟩ :=
     monogenic_of_finiteInjectiveEtale (R:=R₀) (S:=S₀)
   let f₀ := minpoly R₀ B₀
-
   -- Lift B₀ to B ∈ S
   obtain ⟨B, hB⟩ := Ideal.Quotient.mk_surjective B₀
-
   -- Step 5: Lift f₀ to a monic polynomial f₁ over R
   -- First, we need to lift the coefficients of f₀ from R₀ to R
   have h_f₀_exists : ∃ f₁ : R[X], (f₁.map (Ideal.Quotient.mk p)) = f₀ ∧ f₁.Monic := by
@@ -180,19 +166,16 @@ theorem monogenic_of_etale_height_one_quotient
     obtain ⟨f₁, hf₁_eq, _, hf₁_monic⟩ :=
       Polynomial.lifts_and_degree_eq_and_monic h_lifts h_f₀_monic
     exact ⟨f₁, hf₁_eq, hf₁_monic⟩
-
   obtain ⟨f₁, hf₁_map, hf₁_monic⟩ := h_f₀_exists
-
   -- Step 6: Key relation - since R₀ → S₀ is étale, we have ms₀ = mr₀·S₀
   -- This means ms = q + mr·S in S
   let mr := IsLocalRing.maximalIdeal R
   let ms := IsLocalRing.maximalIdeal S
-
+  have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
   have h_ms_eq : ms = q ⊔ Ideal.map φ mr := by
     /-
     Strategy: Use the étale condition on φ₀ : R/p → S/q to show maximal ideals are related,
     then use the lattice correspondence for quotient rings.
-
     Key steps:
     1. For étale (hence formally unramified) φ₀, we have:
        Ideal.map φ₀ (maximalIdeal R₀) = maximalIdeal S₀
@@ -201,29 +184,23 @@ theorem monogenic_of_etale_height_one_quotient
     4. Using composition: φ₀ ∘ (mk p) = (mk q) ∘ φ
     5. Apply correspondence theorem for surjective maps
     -/
-
     -- Set up algebra structure on φ₀
     letI : Algebra R₀ S₀ := φ₀.toAlgebra
     have hφ₀_eq : algebraMap R₀ S₀ = φ₀ := RingHom.algebraMap_toAlgebra φ₀
-
     -- Extract formally unramified from étale
     have h_etale := (RingHom.etale_iff_formallyUnramified_and_smooth φ₀).mp hφ₀_etale
     have unram_φ₀ : φ₀.FormallyUnramified := h_etale.1
     haveI : Algebra.FormallyUnramified R₀ S₀ := by rwa [← hφ₀_eq] at unram_φ₀
-
     -- φ₀ finite and injective implies local homomorphism
     haveI : IsLocalHom (algebraMap R₀ S₀) := by
       rw [hφ₀_eq]
       exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite hφ₀_fin) hφ₀_inj
-
     -- EssFiniteType needed for map_maximalIdeal
     haveI : Algebra.EssFiniteType R₀ S₀ :=
       RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hφ₀_fin)
-
     -- Key lemma: for formally unramified local maps, maximal ideals match
     have h_max_eq : Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) = IsLocalRing.maximalIdeal S₀ := by
       rw [← hφ₀_eq]; exact Algebra.FormallyUnramified.map_maximalIdeal
-
     -- Maximal ideal of R/p = image of mr (using that local hom preserves nonunits)
     have hp_le_mr : p ≤ mr := IsLocalRing.le_maximalIdeal hp_prime.ne_top
     haveI : IsLocalHom (Ideal.Quotient.mk p) :=
@@ -234,7 +211,6 @@ theorem monogenic_of_etale_height_one_quotient
         IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
       exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
              fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
-
     -- Maximal ideal of S/q = image of ms (similarly)
     have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
     haveI : IsLocalHom (Ideal.Quotient.mk q) :=
@@ -245,13 +221,11 @@ theorem monogenic_of_etale_height_one_quotient
         IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
       exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
              fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
-
     -- Composition property: φ₀ ∘ (mk p) = (mk q) ∘ φ
     have h_comp : φ₀.comp (Ideal.Quotient.mk p) = (Ideal.Quotient.mk q).comp φ := by
       ext r
       change φ₀ (Ideal.Quotient.mk p r) = Ideal.Quotient.mk q (φ r)
       exact Ideal.quotientMap_mk
-
     -- Chain of equalities: map (mk q) ms = map (mk q) (map φ mr)
     have h_images_eq : Ideal.map (Ideal.Quotient.mk q) ms =
         Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) :=
@@ -261,12 +235,10 @@ theorem monogenic_of_etale_height_one_quotient
         _ = Ideal.map φ₀ (Ideal.map (Ideal.Quotient.mk p) mr) := by rw [h_max_R₀]
         _ = Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) := by
             rw [Ideal.map_map, Ideal.map_map, h_comp]
-
     -- Since map (mk q) (q ⊔ X) = map (mk q) X (q maps to 0)
     have h_sup_image : Ideal.map (Ideal.Quotient.mk q) (q ⊔ Ideal.map φ mr) =
         Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) := by
       rw [Ideal.map_sup, Ideal.map_quotient_self]; simp
-
     -- Apply correspondence theorem: map f I = map f J ↔ I ⊔ ker f = J ⊔ ker f
     rw [← h_sup_image, Ideal.map_eq_iff_sup_ker_eq_of_surjective _ Ideal.Quotient.mk_surjective,
         Ideal.mk_ker, sup_eq_left.mpr hq_le_ms] at h_images_eq
@@ -276,13 +248,10 @@ theorem monogenic_of_etale_height_one_quotient
       _ = q ⊔ (q ⊔ Ideal.map φ mr) := by rw [sup_comm (Ideal.map φ mr) q]
       _ = (q ⊔ q) ⊔ Ideal.map φ mr := by rw [← sup_assoc]
       _ = q ⊔ Ideal.map φ mr := by rw [sup_idem]
-
   -- Step 7: Two cases based on whether f₁(B) generates the right ideal
   -- Case analysis: does f₁(B) generate q modulo mr·S?
-
   -- The element f₁(B) ∈ S
   let f₁_B := Polynomial.aeval B f₁
-
   -- Since S is a UFD and q has height 1, q is principal
   -- Let q₀ be a generator of q
   have h_q_principal : ∃ q₀ : S, q = Ideal.span {q₀} := by
@@ -331,16 +300,30 @@ theorem monogenic_of_etale_height_one_quotient
         exact Set.mem_singleton_iff.mp h_mem
       exact h_span_ne_bot h_span_eq_bot
     exact ⟨p, h_eq.symm⟩
-
   obtain ⟨q₀, hq₀⟩ := h_q_principal
-
   -- Check if f₁(B) generates the right structure
   by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
   · -- Case 1: f₁(B) generates ms/(mr·S), so R[B] = S
-    -- The proof follows the standard monogenic extension construction
-    use f₁
-    sorry -- Complete the isomorphism construction
-
+    -- TODO: Fill in this proof using Nakayama's lemma
+    have h_adjoin_top : Algebra.adjoin R {B} = ⊤ := by
+      -- Convert `adj : Algebra.adjoin R₀ {B₀} = ⊤` to the form needed by the helper
+      have h_gen' : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
+          {Ideal.Quotient.mk q B} = ⊤ := by
+        convert adj using 2
+        simp [hB]
+      -- aeval B f₁ ∈ Algebra.adjoin R {B}
+      have hπ_mem : f₁_B ∈ Algebra.adjoin R {B} := by
+        rw [Algebra.adjoin_singleton_eq_range_aeval]
+        exact ⟨f₁, rfl⟩
+      -- Convert h_gen.2 to the right form: ms = span {f₁_B} ⊔ map φ mr
+      have h_ms' : IsLocalRing.maximalIdeal S =
+          Ideal.span {f₁_B} ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) := by
+        have h := h_gen.2
+        simp only [Ideal.smul_eq_mul, Ideal.mul_top] at h
+        exact h.symm
+      exact adjoin_eq_top_of_quotient_gen B q h_gen' f₁_B hπ_mem h_ms'
+    have hB_int := Algebra.IsIntegral.isIntegral (R:=R) B
+    exact ⟨minpoly R B, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop hB_int h_adjoin_top⟩⟩
   · -- Case 2: f₁(B) does not generate the right ideal
     -- Then f₁(B) = q₀ * a for some a ∈ ms (since f₁(B) ∈ q but doesn't generate q alone)
     have h_f₁B_in_q : f₁_B ∈ q := by
@@ -366,28 +349,18 @@ theorem monogenic_of_etale_height_one_quotient
       -- Convert to aeval (requires algebraMap R₀ S₀ = φ₀)
       change Polynomial.aeval B₀ f₀ = 0
       exact minpoly.aeval (A:=R₀) (B:=S₀) B₀
-
     have h_f₁B_factorization : ∃ a : S, f₁_B = q₀ * a := by
       rw [hq₀] at h_f₁B_in_q
       exact Ideal.mem_span_singleton.mp h_f₁B_in_q
-
     obtain ⟨a, ha⟩ := h_f₁B_factorization
-
     -- Key: f₁'(B) is not in ms (derivative is a unit modulo ms)
     have h_deriv_unit : f₁.derivative.aeval B ∉ ms := by
       -- Step 3: Get FaithfulSMul R₀ S₀ from injectivity of φ₀
       haveI : FaithfulSMul R₀ S₀ := by
         rw [faithfulSMul_iff_algebraMap_injective]
         exact hφ₀_inj
-
-      -- Step 4: Apply deriv_isUnit_of_monogenic to B₀
-      haveI : IsIntegrallyClosed R₀ := by
-        sorry -- DO NOT try to fill this. We probably need to prove
-              -- deriv_isUnit_of_monogenic from etaleness instead of
-              -- IntegrallyClosed, if that's possible.
       have h_unit_B₀ : IsUnit (Polynomial.aeval B₀ (minpoly R₀ B₀).derivative) :=
         deriv_isUnit_of_monogenic B₀ adj
-
       -- Step 5: Commutative diagram - mk q (f₁'.aeval B) = f₀'.aeval B₀
       have h_deriv_comm : Ideal.Quotient.mk q (f₁.derivative.aeval B) =
           (f₀.derivative).aeval B₀ := by
@@ -407,7 +380,6 @@ theorem monogenic_of_etale_height_one_quotient
         -- Need: f₁.derivative.map (mk p) = f₀.derivative
         congr 1
         rw [← Polynomial.derivative_map, hf₁_map]
-
       -- Step 6: Conclude f₁'(B) ∉ ms
       intro h_in_ms
       -- f₁'.aeval B ∈ ms means it's not a unit
@@ -422,10 +394,8 @@ theorem monogenic_of_etale_height_one_quotient
       -- But h_deriv_comm says the image equals aeval B₀ f₀', which is a unit
       rw [h_deriv_comm] at h_nonunit_image
       exact h_nonunit_image h_unit_B₀
-
     -- Consider B' = B + q₀
     let B' := B + q₀
-
     -- Compute f₁(B') using Taylor expansion
     -- f₁(B') = f₁(B) + f₁'(B) * q₀ + q₀² * (higher order terms)
     -- = q₀ * a + f₁'(B) * q₀ + q₀² * b
@@ -501,25 +471,21 @@ theorem monogenic_of_etale_height_one_quotient
       --       q₀ * (a + f₁.derivative.aeval B + q₀ * c)
       ring
     obtain ⟨b, hb⟩ := h_f₁B'_factorization
-
     -- Since f₁'(B) ∉ ms and a + f₁'(B) + q₀ * b has f₁'(B) as the "main term",
     -- (a + f₁'(B) + q₀ * b) is a unit (not in ms)
     have h_cofactor_unit : IsUnit (a + f₁.derivative.aeval B + q₀ * b) := by
       -- In a local ring, x is a unit iff x ∉ maximalIdeal
       -- Strategy: show (a + q₀ * b) ∈ ms, then use that unit + ms element = unit
-
       -- First, q₀ ∈ ms (since q ⊆ ms and q₀ generates q)
       have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
       have hq₀_in_ms : q₀ ∈ ms := by
         apply hq_le_ms
         rw [hq₀]
         exact Ideal.mem_span_singleton_self q₀
-
       -- q₀ * b ∈ ms (product with element in maximal ideal)
       have hq₀b_in_ms : q₀ * b ∈ ms := by
         rw [mul_comm]
         exact Ideal.mul_mem_left ms b hq₀_in_ms
-
       -- a ∈ ms: If a were a unit, then span {q₀ * a} = span {q₀} = q,
       -- contradicting Case 2 (h_gen)
       have ha_in_ms : a ∈ ms := by
@@ -541,10 +507,8 @@ theorem monogenic_of_etale_height_one_quotient
           rw [h_smul_eq]
         -- This contradicts h_gen
         exact h_gen ⟨h_f₁B_in_ms', h_contains⟩
-
       -- a + q₀ * b ∈ ms
       have h_sum_in_ms : a + q₀ * b ∈ ms := Ideal.add_mem ms ha_in_ms hq₀b_in_ms
-
       -- Now: if u ∉ ms and x ∈ ms, then u + x ∉ ms
       -- The goal is: IsUnit (a + f₁.derivative.aeval B + q₀ * b)
       -- Rewrite using associativity: a + f₁'(B) + q₀*b = f₁'(B) + (a + q₀*b)
@@ -564,14 +528,12 @@ theorem monogenic_of_etale_height_one_quotient
         exact Ideal.sub_mem ms h_sum_in_ms' h_sum_in_ms
       -- This contradicts h_deriv_unit
       exact h_deriv_unit h_deriv_in_ms
-
     -- Therefore, Ideal.span {f₁(B')} = Ideal.span {q₀} = q
     have h_span_eq : Ideal.span {Polynomial.aeval B' f₁} = q := by
       rw [hb, hq₀]
       -- Goal: Ideal.span {q₀ * (a + f₁.derivative.aeval B + q₀ * b)} = Ideal.span {q₀}
       -- Use that multiplication by unit preserves span
       exact Ideal.span_singleton_mul_right_unit h_cofactor_unit q₀
-
     -- Now we can show R[B'] = S using B' = B + q₀
     -- The key is that B' still lifts B₀ (since q₀ ∈ q, it maps to 0 in S₀)
     have hB'_lifts : Ideal.Quotient.mk q B' = B₀ := by
@@ -584,7 +546,6 @@ theorem monogenic_of_etale_height_one_quotient
         _ = Ideal.Quotient.mk q B + 0 := by rw [Ideal.Quotient.eq_zero_iff_mem.mpr hq₀_in_q]
         _ = Ideal.Quotient.mk q B := by rw [add_zero]
         _ = B₀ := hB
-
     -- Step 8: Show Algebra.adjoin R {B'} = ⊤ and derive the isomorphism
     -- The correct witness polynomial is minpoly R B', not f₁.
     -- (f₁(B') = q₀ · unit ≠ 0, so eval at B' doesn't factor through R[X]/(f₁))
@@ -601,30 +562,84 @@ theorem monogenic_of_etale_height_one_quotient
     --     By Nakayama over A: the A-module S/A satisfies q·(S/A) = S/A with q
     --     in the Jacobson radical, so S/A = 0, i.e., A = S.
     have h_adjoin_top : Algebra.adjoin R {B'} = ⊤ := by
-      -- The proof proceeds in three stages:
-      -- (A) B₀ generates S₀ over R₀ by `adj`.
-      -- (B) Lifting: for any s ∈ S, adjoin_induction on mk q s ∈ Algebra.adjoin R₀ {B₀}
-      --     gives t ∈ Algebra.adjoin R {B'} with s ≡ t (mod q).
-      --     So Algebra.adjoin R {B'} + q = S as R-submodules.
-      -- (C) Since aeval B' f₁ ∈ Algebra.adjoin R {B'} generates q (h_span_eq),
-      --     we get S = A + (aeval B' f₁)·S. Iterating: S = A + qⁿ for all n.
-      --     The subalgebra A is local (S integral over A with S local) and
-      --     (aeval B' f₁) ∈ Jacobson radical of A, so Nakayama gives A = S.
-      sorry -- NOTE: before trying to fill this, consider instead refractoring
-            -- so that we can reuse some of the code for S' = ⊤
-            -- from monogenic_of_finiteInjectiveEtale in Generator.lean.
-            -- might be possible?
-    exact ⟨minpoly R B', gensUnivQuot_of_monogenic B' h_adjoin_top⟩
+      -- Convert `adj : Algebra.adjoin R₀ {B₀} = ⊤` using `hB'_lifts : mk q B' = B₀`
+      have h_gen' : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
+          {Ideal.Quotient.mk q B'} = ⊤ := by
+        convert adj using 2
+        simp [hB'_lifts]
+      -- aeval B' f₁ ∈ Algebra.adjoin R {B'}
+      have hπ_mem : Polynomial.aeval B' f₁ ∈ Algebra.adjoin R {B'} := by
+        rw [Algebra.adjoin_singleton_eq_range_aeval]
+        exact ⟨f₁, rfl⟩
+      -- ms = span {aeval B' f₁} ⊔ map φ mr (from h_span_eq and h_ms_eq)
+      have h_ms' : IsLocalRing.maximalIdeal S =
+          Ideal.span {Polynomial.aeval B' f₁} ⊔
+            Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) := by
+        have h := h_ms_eq
+        rw [← h_span_eq] at h
+        exact h
+      exact adjoin_eq_top_of_quotient_gen B' q h_gen' (Polynomial.aeval B' f₁) hπ_mem h_ms'
+    have hB'_int := Algebra.IsIntegral.isIntegral (R:=R) B'
+    exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop hB'_int h_adjoin_top⟩⟩
 
 -- Alternative formulation using explicit ring homomorphism
 theorem monogenic_of_etale_height_one_quotient'
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
     [UniqueFactorizationMonoid S]
-    (hR_reg : IsRegularLocalRing R) (hS_reg : IsRegularLocalRing S)
-    (hfin : Module.Finite R S) (hinj : Injective (algebraMap R S))
-    (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1)
+    (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
+    (q : Ideal S) [ic : IsIntegrallyClosed <| R ⧸ (q.comap <| φ)]
+    [hq_prime : q.IsPrime] (hq_height : q.height = 1)
     (hétale : Etale (Ideal.quotientMap q φ (le_refl (q.comap φ)))) :
     ∃(β : S), Algebra.adjoin φ.range {β} = ⊤ := by
-  sorry
+  letI : Algebra R S := φ.toAlgebra
+  have eq : φ = algebraMap R S := (algebraMap_toAlgebra φ).symm
+  rw [eq] at hφ_inj
+  rw [eq] at ic
+  rw [eq]
+  haveI : FaithfulSMul R S := (faithfulSMul_iff_algebraMap_injective R S).mpr hφ_inj
+  haveI : Module.Finite R S := finite_algebraMap.mp hφ_fin
+  have ⟨f, ⟨adj_monic⟩⟩ := monogenic_of_etale_height_one_quotient (R:=R) (S:=S) q hq_height hétale
+  use adj_monic.root
+  -- adj_monic.adjoin_root_eq_top gives: Algebra.adjoin R {adj_monic.root} = ⊤
+  -- Goal: Algebra.adjoin φ.range {adj_monic.root} = ⊤
+  -- Key: algebraMap R S = φ (by `eq`), so (algebraMap R S).range = φ.range
+  -- Since φ is injective, R ≃ φ.range, and the R-subalgebra equals the φ.range-subalgebra
+  have h_adjoin_R : Algebra.adjoin R {adj_monic.root} = ⊤ := adj_monic.adjoin_root_eq_top
+  -- Show: for any s ∈ S, s ∈ Algebra.adjoin φ.range {adj_monic.root}
+  -- From h_adjoin_R, s can be written as a polynomial in adj_monic.root with R-coefficients
+  -- Since algebraMap R S = φ, these coefficients land in φ.range
+  ext s
+  constructor
+  · -- mp: s ∈ Algebra.adjoin φ.range {β} → s ∈ ⊤ (trivial)
+    intro _; trivial
+  · -- mpr: s ∈ ⊤ → s ∈ Algebra.adjoin φ.range {β}
+    intro _
+    -- From h_adjoin_R, s ∈ Algebra.adjoin R {adj_monic.root}
+    have hs : s ∈ Algebra.adjoin R {adj_monic.root} := by rw [h_adjoin_R]; trivial
+    -- Use that Algebra.adjoin R {x} = (aeval x).range
+    rw [Algebra.adjoin_singleton_eq_range_aeval] at hs ⊢
+    -- hs : s ∈ (Polynomial.aeval adj_monic.root).range (as R-alg hom)
+    -- Goal: s ∈ (Polynomial.aeval adj_monic.root).range (as φ.range-alg hom)
+    obtain ⟨p, hp⟩ := hs
+    -- hp : (aeval adj_monic.root) p = s (where aeval is the R-algebra hom)
+    -- Construct the corresponding polynomial over φ.range
+    -- Map p : R[X] to p' : φ.range[X] using the isomorphism R ≃ φ.range
+    let equiv_R_range : R ≃+* φ.range := RingEquiv.ofBijective
+      (φ.rangeRestrict) ⟨fun _ _ h => hφ_inj (Subtype.ext_iff.mp h), φ.rangeRestrict_surjective⟩
+    let p' : Polynomial φ.range := p.map equiv_R_range.toRingHom
+    use p'
+    -- Show: aeval adj_monic.root p' = aeval adj_monic.root p = s
+    -- Both aevals evaluate to the same thing because:
+    -- - The polynomial maps p.coeff i ↦ equiv_R_range (p.coeff i) = ⟨φ (p.coeff i), _⟩
+    -- - algebraMap φ.range S is the subtype inclusion, so it maps ⟨x, _⟩ ↦ x
+    -- - Therefore algebraMap φ.range S (equiv_R_range r) = φ r = algebraMap R S r
+    -- hp : (aeval adj_monic.root) p = s definitionally equals Polynomial.eval₂ ... p = s
+    -- Goal is also in terms of aeval, need to unfold to eval₂
+    change Polynomial.eval₂ (algebraMap φ.range S) adj_monic.root p' = s
+    rw [Polynomial.eval₂_map]
+    -- Goal: eval₂ ((Subtype.val).comp equiv_R_range) adj_monic.root p = s
+    -- hp: eval₂ (algebraMap R S) adj_monic.root p = s
+    -- Need to show the ring homs are equal; convert handles this by definitional equality
+    convert hp using 2
 
 end Monogenic

@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "lean4-theorem-proving@lean4-skills": true,
+    "lean4-subagents@lean4-skills": true,
+    "lean4-memories@lean4-skills": true
+  }
+}
