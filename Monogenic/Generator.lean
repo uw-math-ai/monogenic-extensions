@@ -33,51 +33,9 @@ lemma gensUnivQuot_of_monogenic
   (β : S)
   (adjoin_top : Algebra.adjoin R {β} = ⊤) :
     Nonempty ((R[X] ⧸ Ideal.span {minpoly R β}) ≃ₐ[R] S) := by
-  haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
-  -- Since adjoin R {β} = ⊤, the minimal polynomial f of β gives S ≃ R[X]/(f)
-  -- by the universal property of AdjoinRoot
   have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  let f := minpoly R β
-  -- The isomorphism S ≃ R[X]/(f) follows from:
-  -- 1. lift : R[X]/(f) →ₐ[R] S sending [X] to β
-  -- 2. This is surjective since adjoin R {β} = ⊤
-  -- 3. This is injective because f = minpoly (kernel is exactly (f))
-
-  -- Define the lift: R[X]/(f) →ₐ[R] S
-  have hf_aeval : aeval β f = 0 := minpoly.aeval R β
-  have hker : ∀ p ∈ Ideal.span {f}, aeval β p = 0 := fun p hp => by
-    obtain ⟨q, rfl⟩ := Ideal.mem_span_singleton.mp hp
-    simp [hf_aeval]
-  let lift_hom : (R[X] ⧸ Ideal.span {f}) →ₐ[R] S :=
-    Ideal.Quotient.liftₐ (Ideal.span {f}) (Polynomial.aeval β) hker
-  -- Prove bijectivity
-  have lift_bij : Function.Bijective lift_hom := by
-    constructor
-    · -- Injectivity: kernel is trivial because f is minimal polynomial
-      rw [injective_iff_map_eq_zero]
-      intro x hx
-      obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
-      simp only [lift_hom, Ideal.Quotient.liftₐ_apply, Ideal.Quotient.lift_mk] at hx
-      exact Ideal.Quotient.eq_zero_iff_mem.mpr
-        (Ideal.mem_span_singleton.mpr (minpoly.isIntegrallyClosed_dvd hβ_int hx))
-    · -- Surjectivity: image contains Algebra.adjoin R {β} = ⊤
-      intro s
-      have hs : s ∈ Algebra.adjoin R {β} := adjoin_top ▸ trivial
-      -- Induction on the adjoin structure
-      induction hs using Algebra.adjoin_induction with
-      | mem x hx =>
-        simp only [Set.mem_singleton_iff] at hx
-        exact ⟨Ideal.Quotient.mk _ X, by simp [lift_hom, hx, aeval_X]⟩
-      | algebraMap r =>
-        exact ⟨Ideal.Quotient.mk _ (C r), by simp [lift_hom, aeval_C]⟩
-      | add x y _ _ ihx ihy =>
-        obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
-        exact ⟨px + py, by simp [hpx, hpy]⟩
-      | mul x y _ _ ihx ihy =>
-        obtain ⟨px, hpx⟩ := ihx; obtain ⟨py, hpy⟩ := ihy
-        exact ⟨px * py, by simp [hpx, hpy]⟩
-  let iso := AlgEquiv.ofBijective lift_hom lift_bij
-  exact ⟨iso⟩
+  have adjoin := IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_top
+  exact ⟨adjoin.adjoinRootAlgEquiv⟩
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -224,63 +182,29 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
   -- f_bar is monic
   have hf_monic : f.Monic := minpoly.monic hβ_int
   have hf_bar_monic : f_bar.Monic := hf_monic.map (IsLocalRing.residue R)
-  have hf_bar_ne_zero : f_bar ≠ 0 := Polynomial.map_monic_ne_zero hf_monic
   -- β₀ is integral (finite extension)
   haveI : Module.Finite kR kS := inferInstance
   haveI : Algebra.IsIntegral kR kS := Algebra.IsIntegral.of_finite kR kS
   have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
-  -- β₀ is a root of f_bar
-  have hf_bar_root : aeval β₀ f_bar = 0 := by
+  -- β₀ is a root of f_bar, so minpoly kR β₀ divides f_bar
+  have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ (by
     rw [aeval_def, eval₂_map, ← residue_algebraMap_eq, ← hom_eval₂, ← aeval_def, minpoly.aeval,
-      map_zero]
-  -- minpoly kR β₀ divides f_bar (since β₀ is a root)
-  have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ hf_bar_root
-  have h_minpoly_ne_zero : minpoly kR β₀ ≠ 0 := minpoly.ne_zero hβ₀_int
+      map_zero])
   have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := residue_generates_of_generates β adjoin_eq_top
-  -- For equality of f_bar and minpoly kR β₀, we use that both are monic and have the same degree
-  have hdeg_map : f_bar.natDegree = f.natDegree := by
-    simp only [f_bar, natDegree_map_eq_iff]
-    left
-    simp only [hf_monic.leadingCoeff, map_one, ne_eq, one_ne_zero, not_false_eq_true]
-  have hβ₀_alg : IsAlgebraic kR β₀ := Algebra.IsAlgebraic.isAlgebraic β₀
+  -- Degree chain: natDegree f_bar = natDegree f = finrank R S
+  --             = finrank kR kS = natDegree (minpoly kR β₀)
   have hβ₀_field_gen : IntermediateField.adjoin kR {β₀} = ⊤ := by
-    rw [← IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic hβ₀_alg] at hβ₀_gen
+    rw [← IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic
+      (Algebra.IsAlgebraic.isAlgebraic β₀)] at hβ₀_gen
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
-  have hdeg_minpoly_β₀ : (minpoly kR β₀).natDegree = Module.finrank kR kS := by
-    rw [← IntermediateField.finrank_top', ← hβ₀_field_gen]
-    exact (IntermediateField.adjoin.finrank hβ₀_int).symm
-  -- Key: use the isomorphism to get finrank R S = f.natDegree
-  obtain ⟨φ⟩ := gensUnivQuot_of_monogenic β adjoin_eq_top
-  have hfinrank_S : Module.finrank R S = f.natDegree := by
-    calc Module.finrank R S
-        = Module.finrank R (R[X] ⧸ Ideal.span {f}) := (φ.toLinearEquiv.finrank_eq).symm
-      _ = f.natDegree := finrank_quotient_span_eq_natDegree' hf_monic
-  -- For étale extensions: finrank R S = finrank kR kS
-  -- This follows from: S ⊗_R kR ≃ kS (since m_R · S = m_S for étale)
-  -- and for free modules over local rings, rank = rank after tensoring with residue field
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
-    rw [hdeg_map, hdeg_minpoly_β₀]
-    -- Goal: f.natDegree = finrank kR kS
-    -- We have: finrank R S = f.natDegree (from hfinrank_S)
-    -- Need: finrank R S = finrank kR kS (flat base change)
-    rw [← hfinrank_S]
-    exact finrank_eq_finrank_residueField
-  -- Since minpoly kR β₀ ∣ f_bar, both monic, and same degree, they're equal
-  obtain ⟨q, hq⟩ := hdvd
-  have hq_ne_zero : q ≠ 0 := by
-    intro hq_zero
-    rw [hq, hq_zero, mul_zero] at hf_bar_ne_zero
-    exact hf_bar_ne_zero rfl
-  have hq_monic : q.Monic := by
-    have := hf_bar_monic
-    rw [hq] at this
-    exact (minpoly.monic hβ₀_int).of_mul_monic_left this
-  have hdeg_q : q.natDegree = 0 := by
-    have h1 : f_bar.natDegree = (minpoly kR β₀).natDegree + q.natDegree := by
-      rw [hq, natDegree_mul h_minpoly_ne_zero hq_ne_zero]
-    omega
-  change f_bar = _
-  rw [hq, Polynomial.eq_one_of_monic_natDegree_zero hq_monic hdeg_q, mul_one]
+    rw [show f_bar.natDegree = f.natDegree from hf_monic.natDegree_map _,
+      ← (IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_eq_top).finrank,
+      finrank_eq_finrank_residueField, ← IntermediateField.finrank_top', ← hβ₀_field_gen,
+      IntermediateField.adjoin.finrank hβ₀_int]
+  -- Both monic, same degree, divisibility ⟹ equal
+  exact eq_of_monic_of_dvd_of_natDegree_le (minpoly.monic hβ₀_int) hf_bar_monic
+    hdvd hdeg_eq.le
 
 /-- The key technical fact: if β₀ generates kS over kR (as an intermediate field) and the
     extension is étale, then the minimal polynomial of β has derivative that is a unit when
