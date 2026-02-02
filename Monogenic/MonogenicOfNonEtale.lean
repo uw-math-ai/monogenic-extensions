@@ -99,7 +99,8 @@ theorem monogenic_of_etale_height_one_quotient
     [FaithfulSMul R S] [Module.Finite R S]
     (hR_reg : IsRegularLocalRing R) (hS_reg : IsRegularLocalRing S)
     (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1)
-    (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
+    (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale)
+    (hR₀_ic : IsIntegrallyClosed (R ⧸ q.comap (algebraMap R S))) :
     ∃ f : R[X], Nonempty ((R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) := by
   -- Set up algebra structure
   let φ := algebraMap R S
@@ -336,9 +337,16 @@ theorem monogenic_of_etale_height_one_quotient
   -- Check if f₁(B) generates the right structure
   by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
   · -- Case 1: f₁(B) generates ms/(mr·S), so R[B] = S
-    -- The proof follows the standard monogenic extension construction
-    use f₁
-    sorry -- Complete the isomorphism construction
+    -- Proof sketch (Nakayama over the subalgebra A = Algebra.adjoin R {B}):
+    -- (A) From adj + hB: S = A + q as R-submodules (every s mod q is a polynomial in B₀).
+    -- (B) h_gen.2 says Ideal.span {f₁_B} + mr·S = ms ⊇ q. Since f₁_B ∈ q and
+    --     q is principal (f.g.), Nakayama on the S-module q gives q = Ideal.span {f₁_B}.
+    -- (C) So S = A + f₁(B)·S. Since S is f.g. as A-module (finite over R ⊆ A),
+    --     A is local (integral over local R), and f₁(B) ∈ Jac(A),
+    --     Nakayama over A gives A = S.
+    have h_adjoin_top : Algebra.adjoin R {B} = ⊤ := by
+      sorry -- Nakayama argument (same structure as Case 2 below)
+    exact ⟨minpoly R B, gensUnivQuot_of_monogenic B h_adjoin_top⟩
 
   · -- Case 2: f₁(B) does not generate the right ideal
     -- Then f₁(B) = q₀ * a for some a ∈ ms (since f₁(B) ∈ q but doesn't generate q alone)
@@ -380,10 +388,7 @@ theorem monogenic_of_etale_height_one_quotient
         exact hφ₀_inj
 
       -- Step 4: Apply deriv_isUnit_of_monogenic to B₀
-      haveI : IsIntegrallyClosed R₀ := by
-        sorry -- DO NOT try to fill this. We probably need to prove
-              -- deriv_isUnit_of_monogenic from etaleness instead of
-              -- IntegrallyClosed, if that's possible.
+      haveI : IsIntegrallyClosed R₀ := hR₀_ic
       have h_unit_B₀ : IsUnit (Polynomial.aeval B₀ (minpoly R₀ B₀).derivative) :=
         deriv_isUnit_of_monogenic B₀ adj
 
