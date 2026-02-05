@@ -298,30 +298,6 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
     _ = q ⊔ Ideal.map φ mr := by rw [sup_idem]
 
 
-/-- In a local ring, if x is a unit and y is in the maximal ideal, then x + y is a unit. -/
-lemma isUnit_add_of_isUnit_of_mem_maximalIdeal {S : Type*} [CommRing S] [IsLocalRing S]
-    {x y : S} (hx : IsUnit x) (hy : y ∈ IsLocalRing.maximalIdeal S) :
-    IsUnit (x + y) := by
-  rw [← IsLocalRing.notMem_maximalIdeal] at hx ⊢
-  intro h
-  apply hx
-  have : x = (x + y) - y := by ring
-  rw [this]
-  exact Ideal.sub_mem _ h hy
-
-/-- In a local ring, if x ∉ maximalIdeal and y ∈ maximalIdeal, then x + y ∉ maximalIdeal. -/
-lemma notMem_maximalIdeal_add_of_notMem_of_mem {S : Type*} [CommRing S] [IsLocalRing S]
-    {x y : S} (hx : x ∉ IsLocalRing.maximalIdeal S) (hy : y ∈ IsLocalRing.maximalIdeal S) :
-    x + y ∉ IsLocalRing.maximalIdeal S := by
-  rw [IsLocalRing.notMem_maximalIdeal] at hx ⊢
-  exact isUnit_add_of_isUnit_of_mem_maximalIdeal hx hy
-
-/-- If B lifts B₀ (i.e., mk q B = B₀) and q₀ ∈ q, then B + q₀ also lifts B₀. -/
-lemma lift_add_mem_ideal {S : Type*} [CommRing S] (q : Ideal S) (B q₀ : S)
-    (B₀ : S ⧸ q) (hB : Ideal.Quotient.mk q B = B₀) (hq₀ : q₀ ∈ q) :
-    Ideal.Quotient.mk q (B + q₀) = B₀ := by
-  simp only [map_add, Ideal.Quotient.eq_zero_iff_mem.mpr hq₀, add_zero, hB]
-
 end SubLemmas
 
 /-- Given regular local rings R and S with S a finite extension of R, if there exists a
@@ -559,7 +535,11 @@ theorem monogenic_of_etale_height_one_quotient
       have h_eq : a + f₁.derivative.aeval B + q₀ * b = f₁.derivative.aeval B + (a + q₀ * b) := by
         ring
       rw [h_eq, ← IsLocalRing.notMem_maximalIdeal]
-      exact notMem_maximalIdeal_add_of_notMem_of_mem h_deriv_unit h_sum_in_ms
+      -- If x ∉ ms and y ∈ ms, then x + y ∉ ms (since x = (x+y) - y)
+      intro h
+      have : f₁.derivative.aeval B ∈ ms := by
+        convert Ideal.sub_mem ms h h_sum_in_ms using 1; ring
+      exact h_deriv_unit this
     -- Therefore, Ideal.span {f₁(B')} = Ideal.span {q₀} = q
     have h_span_eq : Ideal.span {Polynomial.aeval B' f₁} = q := by
       rw [hb, hq₀]
@@ -569,8 +549,9 @@ theorem monogenic_of_etale_height_one_quotient
     -- Now we can show R[B'] = S using B' = B + q₀
     -- The key is that B' still lifts B₀ (since q₀ ∈ q, it maps to 0 in S₀)
     have hB'_lifts : Ideal.Quotient.mk q B' = B₀ := by
-      have hq₀_in_q : q₀ ∈ q := by rw [hq₀]; exact Ideal.mem_span_singleton_self q₀
-      exact lift_add_mem_ideal q B q₀ B₀ hB hq₀_in_q
+      have hq₀_in_q : q₀ ∈ q := hq₀ ▸ Ideal.mem_span_singleton_self q₀
+      change Ideal.Quotient.mk q (B + q₀) = B₀
+      simp only [map_add, Ideal.Quotient.eq_zero_iff_mem.mpr hq₀_in_q, add_zero, hB]
     -- Step 8: Show Algebra.adjoin R {B'} = ⊤ and derive the isomorphism
     -- The correct witness polynomial is minpoly R B', not f₁.
     -- (f₁(B') = q₀ · unit ≠ 0, so eval at B' doesn't factor through R[X]/(f₁))
