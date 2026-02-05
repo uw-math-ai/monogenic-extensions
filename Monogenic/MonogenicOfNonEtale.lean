@@ -1,3 +1,7 @@
+/-
+Copyright (c) 2026 University of Washington Math AI Lab. All rights reserved.
+Authors: Bianca Viray, Bryan Boehnke, Grant Yang, George Peykanu, Tianshuo Wang
+-/
 import Monogenic.Generator
 import Mathlib.Data.Real.Basic
 import Mathlib.RingTheory.LocalRing.Defs
@@ -53,6 +57,14 @@ class IsRegularLocalRing (R : Type*) [CommRing R] [IsLocalRing R] : Prop where
     rs.length = n ∧
     IsLocalRing.maximalIdeal R = Ideal.ofList rs
 
+/-!
+## Extracted Sub-lemmas
+
+The following lemmas are extracted from the main theorem to improve modularity.
+-/
+
+section SubLemmas
+
 omit [IsLocalRing R] [IsLocalRing S] in
 /-- If `S` is a finite `R`-module and `q` is an ideal of `S`, then the induced quotient map
     `R/(q ∩ R) →+* S/q` is finite. -/
@@ -82,6 +94,235 @@ lemma quotientMap_finite [Algebra R S] [Module.Finite R S] (q : Ideal S) :
     rw [← Ideal.quotientMap_mk (f := φ) (H := le_refl p)]
     change (Ideal.Quotient.mk p r) • (Ideal.Quotient.mk q _) ∈ _
     exact Submodule.smul_mem _ _ hy
+
+omit [IsLocalRing R] [IsLocalRing S] in
+/-- In a UFD, a height one prime ideal is principal. -/
+lemma height_one_prime_principal_of_UFD {S : Type*} [CommRing S] [IsDomain S]
+    [UniqueFactorizationMonoid S]
+    (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1) :
+    ∃ q₀ : S, q = Ideal.span {q₀} := by
+  -- Step 1: q ≠ ⊥ because height q = 1 > 0
+  have hq_ne_bot : q ≠ ⊥ := by
+    intro h
+    rw [h, Ideal.height_bot] at hq_height
+    exact zero_ne_one hq_height
+  -- Step 2: By UFD property, every nonzero prime ideal contains a prime element
+  obtain ⟨p, hp_mem, hp_prime⟩ := Ideal.IsPrime.exists_mem_prime_of_ne_bot hq_prime hq_ne_bot
+  -- Step 3: span {p} is a prime ideal since p is prime
+  have h_span_prime : (Ideal.span {p}).IsPrime := by
+    rw [Ideal.span_singleton_prime hp_prime.ne_zero]
+    exact hp_prime
+  -- Step 4: span {p} ⊆ q
+  have h_span_le : Ideal.span {p} ≤ q := (Ideal.span_singleton_le_iff_mem (I := q)).mpr hp_mem
+  -- Step 5: span {p} ≠ ⊥
+  have h_span_ne_bot : Ideal.span {p} ≠ ⊥ := by
+    simp only [ne_eq, Ideal.span_singleton_eq_bot]
+    exact hp_prime.ne_zero
+  -- Step 6: Since height q = 1, if span {p} < q, then span {p} has height 0
+  -- In a domain, height 0 primes are just ⊥, but span {p} ≠ ⊥, contradiction.
+  -- So span {p} = q.
+  have h_eq : Ideal.span {p} = q := by
+    by_contra h_ne
+    have h_lt : Ideal.span {p} < q := lt_of_le_of_ne h_span_le h_ne
+    -- height (span {p}) < height q = 1, so height (span {p}) = 0
+    haveI : (Ideal.span {p}).IsPrime := h_span_prime
+    have hq_ht_ne_top : q.height ≠ ⊤ := by
+      rw [hq_height]
+      exact ENat.one_ne_top
+    haveI : q.FiniteHeight := ⟨Or.inr hq_ht_ne_top⟩
+    haveI : (Ideal.span {p}).FiniteHeight := Ideal.finiteHeight_of_le h_span_le hq_prime.ne_top
+    have h_ht_lt := Ideal.height_strict_mono_of_is_prime h_lt
+    rw [hq_height] at h_ht_lt
+    -- height (span {p}) < 1 means height (span {p}) = 0
+    have h_ht_zero : (Ideal.span {p}).height = 0 := ENat.lt_one_iff_eq_zero.mp h_ht_lt
+    -- span {p} is a minimal prime of S (height 0 prime)
+    rw [Ideal.height_eq_primeHeight, Ideal.primeHeight_eq_zero_iff] at h_ht_zero
+    -- In a domain, minimalPrimes of (⊥ : Ideal S) is just {⊥}
+    have h_span_eq_bot : Ideal.span {p} = ⊥ := by
+      have h_mem : Ideal.span {p} ∈ (⊥ : Ideal S).minimalPrimes := h_ht_zero
+      -- (⊥ : Ideal S).minimalPrimes = minimalPrimes S by definition
+      have : (⊥ : Ideal S).minimalPrimes = minimalPrimes S := rfl
+      rw [this, IsDomain.minimalPrimes_eq_singleton_bot] at h_mem
+      exact Set.mem_singleton_iff.mp h_mem
+    exact h_span_ne_bot h_span_eq_bot
+  exact ⟨p, h_eq.symm⟩
+
+/-- Taylor expansion for polynomial evaluation over a commutative ring:
+    For any polynomial f and elements x, h, there exists c such that
+    f(x + h) = f(x) + f'(x) · h + h² · c. -/
+lemma taylor_expansion_aeval {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    (f : R[X]) (x h : S) :
+    ∃ c : S, f.aeval (x + h) = f.aeval x + f.derivative.aeval x * h + h^2 * c := by
+  induction f using Polynomial.induction_on with
+  | C r =>
+    -- Constant polynomial: f(x+h) = r = f(x), derivative = 0
+    use 0
+    simp only [Polynomial.aeval_C, Polynomial.derivative_C, Polynomial.aeval_zero,
+      mul_zero, add_zero, sq, zero_mul]
+  | add p₁ p₂ ih₁ ih₂ =>
+    -- Addition: use linearity
+    obtain ⟨c₁, hc₁⟩ := ih₁
+    obtain ⟨c₂, hc₂⟩ := ih₂
+    use c₁ + c₂
+    simp only [Polynomial.aeval_add, Polynomial.derivative_add] at *
+    rw [hc₁, hc₂]
+    ring
+  | monomial n r ih =>
+    -- Monomial: C r * X^(n+1)
+    simp only [Polynomial.aeval_mul, Polynomial.aeval_C, Polynomial.aeval_X_pow,
+      Polynomial.derivative_mul, Polynomial.derivative_C, zero_mul, zero_add,
+      Polynomial.derivative_X_pow]
+    -- Use binomial theorem: (x+h)^(n+1) = Σ_{m=0}^{n+1} C(n+1,m) * x^m * h^(n+1-m)
+    have h_binom : (x + h) ^ (n + 1) = ∑ m ∈ Finset.range (n + 2),
+        x ^ m * h ^ (n + 1 - m) * (n + 1).choose m := add_pow x h (n + 1)
+    -- Construct the remainder term (sum of terms with h² or higher)
+    let c' := ∑ m ∈ Finset.range n, x ^ m * h ^ (n - 1 - m) * (n + 1).choose m
+    use algebraMap R S r * c'
+    rw [h_binom]
+    -- Split sum: Σ_{m=0}^{n+1} = (Σ_{m=0}^{n-1}) + term(m=n) + term(m=n+1)
+    rw [Finset.sum_range_succ, Finset.sum_range_succ]
+    simp only [Nat.choose_self, Nat.cast_one, mul_one, Nat.sub_self, pow_zero,
+      Nat.add_sub_cancel]
+    -- (n+1).choose n = n+1
+    have h_choose_n : (n + 1).choose n = n + 1 := Nat.choose_succ_self_right n
+    rw [h_choose_n]
+    -- Since n+1-m ≥ 2 for m < n, we have h^(n+1-m) = h² * h^(n-1-m)
+    have h_sum_eq : (∑ m ∈ Finset.range n, x ^ m * h ^ (n + 1 - m) * (n + 1).choose m) =
+        h ^ 2 * c' := by
+      rw [Finset.mul_sum]
+      apply Finset.sum_congr rfl
+      intro m hm
+      rw [Finset.mem_range] at hm
+      -- m < n, so n + 1 - m ≥ 2, hence n + 1 - m = (n - 1 - m) + 2
+      have h_exp : n + 1 - m = (n - 1 - m) + 2 := by omega
+      rw [h_exp, pow_add]
+      ring
+    rw [h_sum_eq]
+    -- Normalize: n + 1 - n = 1, and Nat cast factors through algebraMap
+    have h_exp_simp : n + 1 - n = 1 := by omega
+    simp only [h_exp_simp, pow_one, ← map_natCast (algebraMap R S)]
+    ring
+
+/-- When the quotient map R/p → S/q is étale (with p = q.comap (algebraMap R S)),
+    and both rings are local, the maximal ideal of S decomposes as
+    ms = q ⊔ (image of mR under algebraMap). -/
+lemma maximalIdeal_eq_sup_of_etale_quotient
+    [IsDomain R] [IsDomain S] [Algebra R S] [Module.Finite R S]
+    (q : Ideal S) [hq_prime : q.IsPrime]
+    (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
+    IsLocalRing.maximalIdeal S =
+      q ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) := by
+  let φ := algebraMap R S
+  let p : Ideal R := q.comap φ
+  let R₀ := R ⧸ p
+  let S₀ := S ⧸ q
+  let φ₀ : R₀ →+* S₀ := Ideal.quotientMap q φ (le_refl p)
+  let mr := IsLocalRing.maximalIdeal R
+  let ms := IsLocalRing.maximalIdeal S
+  have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
+  -- Set up algebra structure on φ₀
+  letI : Algebra R₀ S₀ := φ₀.toAlgebra
+  have hφ₀_eq : algebraMap R₀ S₀ = φ₀ := RingHom.algebraMap_toAlgebra φ₀
+  -- φ₀ is finite and injective
+  have hφ₀_fin : φ₀.Finite := quotientMap_finite q
+  have hφ₀_inj : Injective φ₀ := Ideal.quotientMap_injective
+  -- R₀ and S₀ are domains and local rings
+  haveI hp_prime : p.IsPrime := Ideal.IsPrime.comap φ
+  haveI : IsDomain R₀ := Ideal.Quotient.isDomain p
+  haveI : IsDomain S₀ := Ideal.Quotient.isDomain q
+  haveI : Nontrivial R₀ := Ideal.Quotient.nontrivial_iff.mpr hp_prime.ne_top
+  haveI : IsLocalRing R₀ :=
+    IsLocalRing.of_surjective' (Ideal.Quotient.mk p) Ideal.Quotient.mk_surjective
+  haveI : Nontrivial S₀ := Ideal.Quotient.nontrivial_iff.mpr hq_prime.ne_top
+  haveI : IsLocalRing S₀ :=
+    IsLocalRing.of_surjective' (Ideal.Quotient.mk q) Ideal.Quotient.mk_surjective
+  -- Extract formally unramified from étale
+  have h_etale := (RingHom.etale_iff_formallyUnramified_and_smooth φ₀).mp hétale
+  have unram_φ₀ : φ₀.FormallyUnramified := h_etale.1
+  haveI : Algebra.FormallyUnramified R₀ S₀ := by rwa [← hφ₀_eq] at unram_φ₀
+  -- φ₀ finite and injective implies local homomorphism
+  haveI : IsLocalHom (algebraMap R₀ S₀) := by
+    rw [hφ₀_eq]
+    exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite hφ₀_fin) hφ₀_inj
+  -- EssFiniteType needed for map_maximalIdeal
+  haveI : Algebra.EssFiniteType R₀ S₀ :=
+    RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hφ₀_fin)
+  -- Key lemma: for formally unramified local maps, maximal ideals match
+  have h_max_eq : Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) = IsLocalRing.maximalIdeal S₀ := by
+    rw [← hφ₀_eq]; exact Algebra.FormallyUnramified.map_maximalIdeal
+  -- Maximal ideal of R/p = image of mr
+  have hp_le_mr : p ≤ mr := IsLocalRing.le_maximalIdeal hp_prime.ne_top
+  haveI : IsLocalHom (Ideal.Quotient.mk p) :=
+    IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
+  have h_max_R₀ : IsLocalRing.maximalIdeal R₀ = Ideal.map (Ideal.Quotient.mk p) mr := by
+    ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp only [Ideal.mem_map_iff_of_surjective _ Ideal.Quotient.mk_surjective,
+      IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
+    exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
+           fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
+  -- Maximal ideal of S/q = image of ms
+  haveI : IsLocalHom (Ideal.Quotient.mk q) :=
+    IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
+  have h_max_S₀ : IsLocalRing.maximalIdeal S₀ = Ideal.map (Ideal.Quotient.mk q) ms := by
+    ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp only [Ideal.mem_map_iff_of_surjective _ Ideal.Quotient.mk_surjective,
+      IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
+    exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
+           fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
+  -- Composition property: φ₀ ∘ (mk p) = (mk q) ∘ φ
+  have h_comp : φ₀.comp (Ideal.Quotient.mk p) = (Ideal.Quotient.mk q).comp φ := by
+    ext r
+    change φ₀ (Ideal.Quotient.mk p r) = Ideal.Quotient.mk q (φ r)
+    exact Ideal.quotientMap_mk
+  -- Chain of equalities: map (mk q) ms = map (mk q) (map φ mr)
+  have h_images_eq : Ideal.map (Ideal.Quotient.mk q) ms =
+      Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) :=
+    calc Ideal.map (Ideal.Quotient.mk q) ms
+      _ = IsLocalRing.maximalIdeal S₀ := h_max_S₀.symm
+      _ = Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) := h_max_eq.symm
+      _ = Ideal.map φ₀ (Ideal.map (Ideal.Quotient.mk p) mr) := by rw [h_max_R₀]
+      _ = Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) := by
+          rw [Ideal.map_map, Ideal.map_map, h_comp]
+  -- Since map (mk q) (q ⊔ X) = map (mk q) X (q maps to 0)
+  have h_sup_image : Ideal.map (Ideal.Quotient.mk q) (q ⊔ Ideal.map φ mr) =
+      Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) := by
+    rw [Ideal.map_sup, Ideal.map_quotient_self]; simp
+  -- Apply correspondence theorem: map f I = map f J ↔ I ⊔ ker f = J ⊔ ker f
+  rw [← h_sup_image, Ideal.map_eq_iff_sup_ker_eq_of_surjective _ Ideal.Quotient.mk_surjective,
+      Ideal.mk_ker, sup_eq_left.mpr hq_le_ms] at h_images_eq
+  -- Simplify RHS: (q ⊔ X) ⊔ q = q ⊔ X
+  calc ms = (q ⊔ Ideal.map φ mr) ⊔ q := h_images_eq
+    _ = q ⊔ (Ideal.map φ mr ⊔ q) := by rw [sup_assoc]
+    _ = q ⊔ (q ⊔ Ideal.map φ mr) := by rw [sup_comm (Ideal.map φ mr) q]
+    _ = (q ⊔ q) ⊔ Ideal.map φ mr := by rw [← sup_assoc]
+    _ = q ⊔ Ideal.map φ mr := by rw [sup_idem]
+
+
+/-- In a local ring, if x is a unit and y is in the maximal ideal, then x + y is a unit. -/
+lemma isUnit_add_of_isUnit_of_mem_maximalIdeal {S : Type*} [CommRing S] [IsLocalRing S]
+    {x y : S} (hx : IsUnit x) (hy : y ∈ IsLocalRing.maximalIdeal S) :
+    IsUnit (x + y) := by
+  rw [← IsLocalRing.notMem_maximalIdeal] at hx ⊢
+  intro h
+  apply hx
+  have : x = (x + y) - y := by ring
+  rw [this]
+  exact Ideal.sub_mem _ h hy
+
+/-- In a local ring, if x ∉ maximalIdeal and y ∈ maximalIdeal, then x + y ∉ maximalIdeal. -/
+lemma notMem_maximalIdeal_add_of_notMem_of_mem {S : Type*} [CommRing S] [IsLocalRing S]
+    {x y : S} (hx : x ∉ IsLocalRing.maximalIdeal S) (hy : y ∈ IsLocalRing.maximalIdeal S) :
+    x + y ∉ IsLocalRing.maximalIdeal S := by
+  rw [IsLocalRing.notMem_maximalIdeal] at hx ⊢
+  exact isUnit_add_of_isUnit_of_mem_maximalIdeal hx hy
+
+/-- If B lifts B₀ (i.e., mk q B = B₀) and q₀ ∈ q, then B + q₀ also lifts B₀. -/
+lemma lift_add_mem_ideal {S : Type*} [CommRing S] (q : Ideal S) (B q₀ : S)
+    (B₀ : S ⧸ q) (hB : Ideal.Quotient.mk q B = B₀) (hq₀ : q₀ ∈ q) :
+    Ideal.Quotient.mk q (B + q₀) = B₀ := by
+  simp only [map_add, Ideal.Quotient.eq_zero_iff_mem.mpr hq₀, add_zero, hB]
+
+end SubLemmas
 
 /-- Given regular local rings R and S with S a finite extension of R, if there exists a
 height one prime ideal q ⊆ S such that the induced map R/(q ∩ R) → S/q is étale,
@@ -172,134 +413,15 @@ theorem monogenic_of_etale_height_one_quotient
   let mr := IsLocalRing.maximalIdeal R
   let ms := IsLocalRing.maximalIdeal S
   have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
-  have h_ms_eq : ms = q ⊔ Ideal.map φ mr := by
-    /-
-    Strategy: Use the étale condition on φ₀ : R/p → S/q to show maximal ideals are related,
-    then use the lattice correspondence for quotient rings.
-    Key steps:
-    1. For étale (hence formally unramified) φ₀, we have:
-       Ideal.map φ₀ (maximalIdeal R₀) = maximalIdeal S₀
-    2. The maximal ideal of R/p equals the image of mr under the quotient map
-    3. Similarly for S/q
-    4. Using composition: φ₀ ∘ (mk p) = (mk q) ∘ φ
-    5. Apply correspondence theorem for surjective maps
-    -/
-    -- Set up algebra structure on φ₀
-    letI : Algebra R₀ S₀ := φ₀.toAlgebra
-    have hφ₀_eq : algebraMap R₀ S₀ = φ₀ := RingHom.algebraMap_toAlgebra φ₀
-    -- Extract formally unramified from étale
-    have h_etale := (RingHom.etale_iff_formallyUnramified_and_smooth φ₀).mp hφ₀_etale
-    have unram_φ₀ : φ₀.FormallyUnramified := h_etale.1
-    haveI : Algebra.FormallyUnramified R₀ S₀ := by rwa [← hφ₀_eq] at unram_φ₀
-    -- φ₀ finite and injective implies local homomorphism
-    haveI : IsLocalHom (algebraMap R₀ S₀) := by
-      rw [hφ₀_eq]
-      exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite hφ₀_fin) hφ₀_inj
-    -- EssFiniteType needed for map_maximalIdeal
-    haveI : Algebra.EssFiniteType R₀ S₀ :=
-      RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hφ₀_fin)
-    -- Key lemma: for formally unramified local maps, maximal ideals match
-    have h_max_eq : Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) = IsLocalRing.maximalIdeal S₀ := by
-      rw [← hφ₀_eq]; exact Algebra.FormallyUnramified.map_maximalIdeal
-    -- Maximal ideal of R/p = image of mr (using that local hom preserves nonunits)
-    have hp_le_mr : p ≤ mr := IsLocalRing.le_maximalIdeal hp_prime.ne_top
-    haveI : IsLocalHom (Ideal.Quotient.mk p) :=
-      IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
-    have h_max_R₀ : IsLocalRing.maximalIdeal R₀ = Ideal.map (Ideal.Quotient.mk p) mr := by
-      ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
-      simp only [Ideal.mem_map_iff_of_surjective _ Ideal.Quotient.mk_surjective,
-        IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
-      exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
-             fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
-    -- Maximal ideal of S/q = image of ms (similarly)
-    have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
-    haveI : IsLocalHom (Ideal.Quotient.mk q) :=
-      IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
-    have h_max_S₀ : IsLocalRing.maximalIdeal S₀ = Ideal.map (Ideal.Quotient.mk q) ms := by
-      ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
-      simp only [Ideal.mem_map_iff_of_surjective _ Ideal.Quotient.mk_surjective,
-        IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
-      exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
-             fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
-    -- Composition property: φ₀ ∘ (mk p) = (mk q) ∘ φ
-    have h_comp : φ₀.comp (Ideal.Quotient.mk p) = (Ideal.Quotient.mk q).comp φ := by
-      ext r
-      change φ₀ (Ideal.Quotient.mk p r) = Ideal.Quotient.mk q (φ r)
-      exact Ideal.quotientMap_mk
-    -- Chain of equalities: map (mk q) ms = map (mk q) (map φ mr)
-    have h_images_eq : Ideal.map (Ideal.Quotient.mk q) ms =
-        Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) :=
-      calc Ideal.map (Ideal.Quotient.mk q) ms
-        _ = IsLocalRing.maximalIdeal S₀ := h_max_S₀.symm
-        _ = Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) := h_max_eq.symm
-        _ = Ideal.map φ₀ (Ideal.map (Ideal.Quotient.mk p) mr) := by rw [h_max_R₀]
-        _ = Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) := by
-            rw [Ideal.map_map, Ideal.map_map, h_comp]
-    -- Since map (mk q) (q ⊔ X) = map (mk q) X (q maps to 0)
-    have h_sup_image : Ideal.map (Ideal.Quotient.mk q) (q ⊔ Ideal.map φ mr) =
-        Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) := by
-      rw [Ideal.map_sup, Ideal.map_quotient_self]; simp
-    -- Apply correspondence theorem: map f I = map f J ↔ I ⊔ ker f = J ⊔ ker f
-    rw [← h_sup_image, Ideal.map_eq_iff_sup_ker_eq_of_surjective _ Ideal.Quotient.mk_surjective,
-        Ideal.mk_ker, sup_eq_left.mpr hq_le_ms] at h_images_eq
-    -- Simplify RHS: (q ⊔ X) ⊔ q = q ⊔ X
-    calc ms = (q ⊔ Ideal.map φ mr) ⊔ q := h_images_eq
-      _ = q ⊔ (Ideal.map φ mr ⊔ q) := by rw [sup_assoc]
-      _ = q ⊔ (q ⊔ Ideal.map φ mr) := by rw [sup_comm (Ideal.map φ mr) q]
-      _ = (q ⊔ q) ⊔ Ideal.map φ mr := by rw [← sup_assoc]
-      _ = q ⊔ Ideal.map φ mr := by rw [sup_idem]
+  have h_ms_eq : ms = q ⊔ Ideal.map φ mr :=
+    maximalIdeal_eq_sup_of_etale_quotient q hétale
   -- Step 7: Two cases based on whether f₁(B) generates the right ideal
   -- Case analysis: does f₁(B) generate q modulo mr·S?
   -- The element f₁(B) ∈ S
   let f₁_B := Polynomial.aeval B f₁
   -- Since S is a UFD and q has height 1, q is principal
-  -- Let q₀ be a generator of q
-  have h_q_principal : ∃ q₀ : S, q = Ideal.span {q₀} := by
-    -- Step 1: q ≠ ⊥ because height q = 1 > 0
-    have hq_ne_bot : q ≠ ⊥ := by
-      intro h
-      rw [h, Ideal.height_bot] at hq_height
-      exact zero_ne_one hq_height
-    -- Step 2: By UFD property, every nonzero prime ideal contains a prime element
-    obtain ⟨p, hp_mem, hp_prime⟩ := Ideal.IsPrime.exists_mem_prime_of_ne_bot hq_prime hq_ne_bot
-    -- Step 3: span {p} is a prime ideal since p is prime
-    have h_span_prime : (Ideal.span {p}).IsPrime := by
-      rw [Ideal.span_singleton_prime hp_prime.ne_zero]
-      exact hp_prime
-    -- Step 4: span {p} ⊆ q
-    have h_span_le : Ideal.span {p} ≤ q := (Ideal.span_singleton_le_iff_mem (I := q)).mpr hp_mem
-    -- Step 5: span {p} ≠ ⊥
-    have h_span_ne_bot : Ideal.span {p} ≠ ⊥ := by
-      simp only [ne_eq, Ideal.span_singleton_eq_bot]
-      exact hp_prime.ne_zero
-    -- Step 6: Since height q = 1, if span {p} < q, then span {p} has height 0
-    -- In a domain, height 0 primes are just ⊥, but span {p} ≠ ⊥, contradiction.
-    -- So span {p} = q.
-    have h_eq : Ideal.span {p} = q := by
-      by_contra h_ne
-      have h_lt : Ideal.span {p} < q := lt_of_le_of_ne h_span_le h_ne
-      -- height (span {p}) < height q = 1, so height (span {p}) = 0
-      haveI : (Ideal.span {p}).IsPrime := h_span_prime
-      have hq_ht_ne_top : q.height ≠ ⊤ := by
-        rw [hq_height]
-        exact ENat.one_ne_top
-      haveI : q.FiniteHeight := ⟨Or.inr hq_ht_ne_top⟩
-      haveI : (Ideal.span {p}).FiniteHeight := Ideal.finiteHeight_of_le h_span_le hq_prime.ne_top
-      have h_ht_lt := Ideal.height_strict_mono_of_is_prime h_lt
-      rw [hq_height] at h_ht_lt
-      -- height (span {p}) < 1 means height (span {p}) = 0
-      have h_ht_zero : (Ideal.span {p}).height = 0 := ENat.lt_one_iff_eq_zero.mp h_ht_lt
-      -- span {p} is a minimal prime of S (height 0 prime)
-      rw [Ideal.height_eq_primeHeight, Ideal.primeHeight_eq_zero_iff] at h_ht_zero
-      -- In a domain, minimalPrimes of (⊥ : Ideal S) is just {⊥}
-      have h_span_eq_bot : Ideal.span {p} = ⊥ := by
-        have h_mem : Ideal.span {p} ∈ (⊥ : Ideal S).minimalPrimes := h_ht_zero
-        -- (⊥ : Ideal S).minimalPrimes = minimalPrimes S by definition
-        have : (⊥ : Ideal S).minimalPrimes = minimalPrimes S := rfl
-        rw [this, IsDomain.minimalPrimes_eq_singleton_bot] at h_mem
-        exact Set.mem_singleton_iff.mp h_mem
-      exact h_span_ne_bot h_span_eq_bot
-    exact ⟨p, h_eq.symm⟩
+  have h_q_principal : ∃ q₀ : S, q = Ideal.span {q₀} :=
+    height_one_prime_principal_of_UFD q hq_height
   obtain ⟨q₀, hq₀⟩ := h_q_principal
   -- Check if f₁(B) generates the right structure
   by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
@@ -402,65 +524,8 @@ theorem monogenic_of_etale_height_one_quotient
     -- = q₀ * (a + f₁'(B) + q₀ * b)
     have h_f₁B'_factorization : ∃ b : S, Polynomial.aeval B' f₁ =
       q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
-      -- First establish the Taylor expansion remainder property:
-      -- For any polynomial f, f(x + h) = f(x) + f'(x)*h + h²*c for some c
-      have taylor_remainder : ∀ (f : R[X]) (x h : S),
-          ∃ c : S, f.aeval (x + h) = f.aeval x + f.derivative.aeval x * h + h^2 * c := by
-        intro f x h
-        induction f using Polynomial.induction_on with
-        | C r =>
-          -- Constant polynomial: f(x+h) = r = f(x), derivative = 0
-          use 0
-          simp only [Polynomial.aeval_C, Polynomial.derivative_C, Polynomial.aeval_zero,
-            mul_zero, add_zero, sq, zero_mul]
-        | add p₁ p₂ ih₁ ih₂ =>
-          -- Addition: use linearity
-          obtain ⟨c₁, hc₁⟩ := ih₁
-          obtain ⟨c₂, hc₂⟩ := ih₂
-          use c₁ + c₂
-          simp only [Polynomial.aeval_add, Polynomial.derivative_add] at *
-          rw [hc₁, hc₂]
-          ring
-        | monomial n r ih =>
-          -- Monomial: C r * X^(n+1)
-          -- LHS = r * (x+h)^(n+1)
-          -- Derivative = r * (n+1) * X^n, so derivative.aeval x = r * (n+1) * x^n
-          -- RHS = r * x^(n+1) + r * (n+1) * x^n * h + h² * c
-          simp only [Polynomial.aeval_mul, Polynomial.aeval_C, Polynomial.aeval_X_pow,
-            Polynomial.derivative_mul, Polynomial.derivative_C, zero_mul, zero_add,
-            Polynomial.derivative_X_pow]
-          -- Use binomial theorem: (x+h)^(n+1) = Σ_{m=0}^{n+1} C(n+1,m) * x^m * h^(n+1-m)
-          have h_binom : (x + h) ^ (n + 1) = ∑ m ∈ Finset.range (n + 2),
-              x ^ m * h ^ (n + 1 - m) * (n + 1).choose m := add_pow x h (n + 1)
-          -- Construct the remainder term (sum of terms with h² or higher)
-          let c' := ∑ m ∈ Finset.range n, x ^ m * h ^ (n - 1 - m) * (n + 1).choose m
-          use algebraMap R S r * c'
-          rw [h_binom]
-          -- Split sum: Σ_{m=0}^{n+1} = (Σ_{m=0}^{n-1}) + term(m=n) + term(m=n+1)
-          rw [Finset.sum_range_succ, Finset.sum_range_succ]
-          simp only [Nat.choose_self, Nat.cast_one, mul_one, Nat.sub_self, pow_zero,
-            Nat.add_sub_cancel]
-          -- (n+1).choose n = n+1
-          have h_choose_n : (n + 1).choose n = n + 1 := Nat.choose_succ_self_right n
-          rw [h_choose_n]
-          -- Since n+1-m ≥ 2 for m < n, we have h^(n+1-m) = h² * h^(n-1-m)
-          have h_sum_eq : (∑ m ∈ Finset.range n, x ^ m * h ^ (n + 1 - m) * (n + 1).choose m) =
-              h ^ 2 * c' := by
-            rw [Finset.mul_sum]
-            apply Finset.sum_congr rfl
-            intro m hm
-            rw [Finset.mem_range] at hm
-            -- m < n, so n + 1 - m ≥ 2, hence n + 1 - m = (n - 1 - m) + 2
-            have h_exp : n + 1 - m = (n - 1 - m) + 2 := by omega
-            rw [h_exp, pow_add]
-            ring
-          rw [h_sum_eq]
-          -- Normalize: n + 1 - n = 1, and Nat cast factors through algebraMap
-          have h_exp_simp : n + 1 - n = 1 := by omega
-          simp only [h_exp_simp, pow_one, ← map_natCast (algebraMap R S)]
-          ring
       -- Apply the Taylor expansion to f₁ with x = B and h = q₀
-      obtain ⟨c, hc⟩ := taylor_remainder f₁ B q₀
+      obtain ⟨c, hc⟩ := taylor_expansion_aeval f₁ B q₀
       -- We have: f₁.aeval (B + q₀) = f₁.aeval B + f₁.derivative.aeval B * q₀ + q₀² * c
       -- Substitute ha: f₁.aeval B = q₀ * a (note: f₁_B = aeval B f₁)
       use c
@@ -474,60 +539,27 @@ theorem monogenic_of_etale_height_one_quotient
     -- Since f₁'(B) ∉ ms and a + f₁'(B) + q₀ * b has f₁'(B) as the "main term",
     -- (a + f₁'(B) + q₀ * b) is a unit (not in ms)
     have h_cofactor_unit : IsUnit (a + f₁.derivative.aeval B + q₀ * b) := by
-      -- In a local ring, x is a unit iff x ∉ maximalIdeal
       -- Strategy: show (a + q₀ * b) ∈ ms, then use that unit + ms element = unit
-      -- First, q₀ ∈ ms (since q ⊆ ms and q₀ generates q)
-      have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
-      have hq₀_in_ms : q₀ ∈ ms := by
-        apply hq_le_ms
-        rw [hq₀]
-        exact Ideal.mem_span_singleton_self q₀
-      -- q₀ * b ∈ ms (product with element in maximal ideal)
-      have hq₀b_in_ms : q₀ * b ∈ ms := by
-        rw [mul_comm]
-        exact Ideal.mul_mem_left ms b hq₀_in_ms
-      -- a ∈ ms: If a were a unit, then span {q₀ * a} = span {q₀} = q,
-      -- contradicting Case 2 (h_gen)
+      have hq_le_ms' : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
+      have hq₀_in_ms : q₀ ∈ ms := hq_le_ms' (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
+      have hq₀b_in_ms : q₀ * b ∈ ms := mul_comm q₀ b ▸ Ideal.mul_mem_left ms b hq₀_in_ms
+      -- a ∈ ms: If a were a unit, then span {q₀ * a} = span {q₀} = q, contradicting h_gen
       have ha_in_ms : a ∈ ms := by
         by_contra ha_not_in_ms
         have ha_unit : IsUnit a := IsLocalRing.notMem_maximalIdeal.mp ha_not_in_ms
-        -- If a is a unit, then span {f₁_B} = span {q₀ * a} = span {q₀} = q
         have h_span_eq' : Ideal.span {f₁_B} = q := by
           rw [show f₁_B = q₀ * a from ha, hq₀]
           exact Ideal.span_singleton_mul_right_unit ha_unit q₀
-        -- f₁_B ∈ ms since f₁_B ∈ q ⊆ ms
-        have h_f₁B_in_ms' : f₁_B ∈ ms := hq_le_ms h_f₁B_in_q
-        -- span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = q ⊔ Ideal.map φ mr • ⊤ = ms
+        have h_f₁B_in_ms' : f₁_B ∈ ms := hq_le_ms' h_f₁B_in_q
         have h_contains : Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms := by
-          rw [h_span_eq', h_ms_eq]
-          -- Need: q ⊔ Ideal.map φ mr • ⊤ = q ⊔ Ideal.map φ mr
-          -- For ideals: I • ⊤ = I * ⊤ = I (by Ideal.smul_eq_mul and Ideal.mul_top)
-          have h_smul_eq : Ideal.map φ mr • (⊤ : Ideal S) = Ideal.map φ mr := by
-            rw [Ideal.smul_eq_mul, Ideal.mul_top]
-          rw [h_smul_eq]
-        -- This contradicts h_gen
+          rw [h_span_eq', h_ms_eq, Ideal.smul_eq_mul, Ideal.mul_top]
         exact h_gen ⟨h_f₁B_in_ms', h_contains⟩
-      -- a + q₀ * b ∈ ms
       have h_sum_in_ms : a + q₀ * b ∈ ms := Ideal.add_mem ms ha_in_ms hq₀b_in_ms
-      -- Now: if u ∉ ms and x ∈ ms, then u + x ∉ ms
-      -- The goal is: IsUnit (a + f₁.derivative.aeval B + q₀ * b)
-      -- Rewrite using associativity: a + f₁'(B) + q₀*b = f₁'(B) + (a + q₀*b)
+      -- Rewrite: a + f₁'(B) + q₀*b = f₁'(B) + (a + q₀*b)
       have h_eq : a + f₁.derivative.aeval B + q₀ * b = f₁.derivative.aeval B + (a + q₀ * b) := by
         ring
-      rw [h_eq]
-      -- Goal: IsUnit (f₁.derivative.aeval B + (a + q₀ * b))
-      -- In a local ring, IsUnit x ↔ x ∉ maximalIdeal
-      rw [← IsLocalRing.notMem_maximalIdeal]
-      -- Goal: f₁.derivative.aeval B + (a + q₀ * b) ∉ ms
-      intro h_sum_in_ms'
-      -- If (f₁'(B) + (a + q₀*b)) ∈ ms, then f₁'(B) = (f₁'(B) + (a + q₀*b)) - (a + q₀*b) ∈ ms
-      have h_deriv_in_ms : f₁.derivative.aeval B ∈ ms := by
-        have h_sub : f₁.derivative.aeval B =
-            (f₁.derivative.aeval B + (a + q₀ * b)) - (a + q₀ * b) := by ring
-        rw [h_sub]
-        exact Ideal.sub_mem ms h_sum_in_ms' h_sum_in_ms
-      -- This contradicts h_deriv_unit
-      exact h_deriv_unit h_deriv_in_ms
+      rw [h_eq, ← IsLocalRing.notMem_maximalIdeal]
+      exact notMem_maximalIdeal_add_of_notMem_of_mem h_deriv_unit h_sum_in_ms
     -- Therefore, Ideal.span {f₁(B')} = Ideal.span {q₀} = q
     have h_span_eq : Ideal.span {Polynomial.aeval B' f₁} = q := by
       rw [hb, hq₀]
@@ -537,15 +569,8 @@ theorem monogenic_of_etale_height_one_quotient
     -- Now we can show R[B'] = S using B' = B + q₀
     -- The key is that B' still lifts B₀ (since q₀ ∈ q, it maps to 0 in S₀)
     have hB'_lifts : Ideal.Quotient.mk q B' = B₀ := by
-      have hq₀_in_q : q₀ ∈ q := by
-        rw [hq₀]
-        exact Ideal.mem_span_singleton_self q₀
-      calc Ideal.Quotient.mk q B'
-        = Ideal.Quotient.mk q (B + q₀) := rfl
-        _ = Ideal.Quotient.mk q B + Ideal.Quotient.mk q q₀ := by rw [map_add]
-        _ = Ideal.Quotient.mk q B + 0 := by rw [Ideal.Quotient.eq_zero_iff_mem.mpr hq₀_in_q]
-        _ = Ideal.Quotient.mk q B := by rw [add_zero]
-        _ = B₀ := hB
+      have hq₀_in_q : q₀ ∈ q := by rw [hq₀]; exact Ideal.mem_span_singleton_self q₀
+      exact lift_add_mem_ideal q B q₀ B₀ hB hq₀_in_q
     -- Step 8: Show Algebra.adjoin R {B'} = ⊤ and derive the isomorphism
     -- The correct witness polynomial is minpoly R B', not f₁.
     -- (f₁(B') = q₀ · unit ≠ 0, so eval at B' doesn't factor through R[X]/(f₁))
