@@ -22,6 +22,11 @@ namespace Monogenic
 
 variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 
+/-- Let `R -> S` be a finite extension of integral domains.
+    Suppose there exists `β ∈ S` such that `S = R[β]`.
+    If `R` is integrally closed, then there exists a polynomial `f ∈ R[x]` such that
+    `R[x]/f` and `S` are isomorphic as `R`-algebras.
+-/
 -- Note: We add [IsDomain R], [IsIntegrallyClosed R], and [IsDomain S] hypotheses.
 -- The [IsDomain R] and [IsIntegrallyClosed R] are needed for the minimal polynomial
 -- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
@@ -40,45 +45,47 @@ lemma gensUnivQuot_of_monogenic
 /-!
 ## Helper lemmas for the derivative unit condition
 
-The key fact from Lemma 3.2 of arXiv:2503.07846 is that for a finite étale extension of local rings,
+A key fact from Lemma 3.2 of arXiv:2503.07846 is that for a finite étale extension of local rings,
 the derivative of the minimal polynomial evaluated at the generator is a unit.
 
 The proof proceeds through the residue fields:
-1. Étale ⟹ residue field extension k_R → k_S is separable
-2. For separable extensions, the minimal polynomial is separable
+1. Since `R -> S` is étale, the residue field extension `R / m_R → S / m_S` is separable
+2. For separable extensions, the minimal polynomial is separable.
 3. Separable polynomial ⟹ derivative at root is non-zero
 4. Non-zero in residue field ⟹ unit in local ring
 -/
 
+-- For a local ring `S`, we denote its maximal ideal by `m_S`.
 variable [IsLocalRing S]
 
-/-- The residue of aeval β p equals eval₂ applied to the residues.
-
-    Note: The composition (residue S) ∘ (algebraMap R S) factors through residue R
-    when we have IsLocalHom (algebraMap R S), giving us a map k_R → k_S. -/
+/-- Given a polynomial `p ∈ R[x]` and `β ∈ S`,
+    `p(β) mod m_S = (p mod m_S)(β mod m_S)` -/
 theorem residue_aeval_eq (β : S) (p : R[X]) :
     IsLocalRing.residue S (aeval β p) =
     p.eval₂ ((IsLocalRing.residue S).comp (algebraMap R S)) (IsLocalRing.residue S β) := by
   simp only [aeval_def, hom_eval₂]
 
 
-/-- In a local ring, an element is a unit iff its residue is non-zero. -/
+/-- In a local ring `S`, an element is a unit iff its image in `S/m_S` is non-zero. -/
 lemma isUnit_of_residue_ne_zero {s : S} (h : IsLocalRing.residue S s ≠ 0) : IsUnit s := by
   rw [ne_eq, IsLocalRing.residue_eq_zero_iff] at h
   exact IsLocalRing.notMem_maximalIdeal.mp h
 
 variable [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S]
 
-/-- The residue field map from R to k_S factors as R → k_R → k_S. -/
+/-- The square
+      S -> S/m_S
+      ↑      ↑
+      R -> R/m_R
+    commutes. -/
 lemma residue_algebraMap_eq :
     (IsLocalRing.residue S).comp (algebraMap R S) =
     (algebraMap (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)).comp
       (IsLocalRing.residue R) :=
   rfl
 
-/-- When β generates S over R, the residue β₀ generates k_S over k_R.
-    This follows from the surjectivity of the residue map and the fact that
-    Algebra.adjoin R {β} = ⊤ maps onto Algebra.adjoin k_R {β₀}. -/
+/-- When `β` generates `S` over `R`, the residue `β₀ = β mod m_S`
+     generates `S / m_S` over `R / m_R.` -/
 lemma residue_generates_of_generates
     (β : S) (hβ_gen : Algebra.adjoin R {β} = ⊤) :
     Algebra.adjoin (IsLocalRing.ResidueField R) {IsLocalRing.residue S β} = ⊤ := by
@@ -113,8 +120,8 @@ lemma residue_generates_of_generates
     simp only [map_mul]
     exact Subalgebra.mul_mem _ (hx trivial) (hy trivial)
 
-/-- For étale extensions of local rings, finrank is preserved under base change to residue field.
-
+/-- For finite étale extensions of local rings, `rank_R S = rank_{R/m_R} S/m_S`.
+-- Q: Is this in the right level of generality?
     The proof uses:
     1. Étale ⟹ Smooth ⟹ Flat
     2. Finite + Flat over local ring ⟹ Free
@@ -157,9 +164,8 @@ lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
       rfl)
   rw [← e.finrank_eq, h]
 
-/-- Key lemma: (minpoly R β).map(residue) equals minpoly kR β₀ when we have an isomorphism
-    S ≃ R[X]/(minpoly R β).
-
+/-- Let `β ∈ S`, and let `f ∈ R[x]` be the minimal polynomial for `β` over `R`.
+    Then `f mod m_S` is the minimal polynomial for `β mod m_S`.
     The proof uses the degree equality: since minpoly kR β₀ | f_bar, both are monic, and we
     show they have the same degree, hence they're equal.
 -/
@@ -201,9 +207,8 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
   exact eq_of_monic_of_dvd_of_natDegree_le (minpoly.monic hβ₀_int) hf_bar_monic
     hdvd hdeg_eq.le
 
-/-- The key technical fact: if β₀ generates kS over kR (as an intermediate field) and the
-    extension is étale, then the minimal polynomial of β has derivative that is a unit when
-    evaluated at β.
+/-- A key technical fact: if `R -> S` is étale and `R[β] = S`,
+      then `f'(β) is a unit in S`.
 
     The proof uses:
     1. (minpoly R β).map(residue) = minpoly kR β₀ (degree equality from generation)
@@ -248,8 +253,8 @@ generates the maximal ideal modulo `mR · S`.
 -/
 
 omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
-/-- If β generates `S/q` over `R/p` (where `p = q.comap (algebraMap R S)`), then every
-    element of `S` is congruent to an element of `Algebra.adjoin R {β}` modulo `q`. -/
+/-- Let `ϕ : R → S` be a ring map. Given an ideal `q` in `S`, let `p = ϕ^{-1} q`.
+    If `R/p [β] = S/q`, then every element of `S` is congruent to an element of `R[β]` mod `q`. -/
 lemma exists_adjoin_sub_mem
     (β : S) (q : Ideal S)
     (h_gen : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
@@ -279,9 +284,8 @@ lemma exists_adjoin_sub_mem
   exact ⟨t, ht_mem, Ideal.Quotient.eq.mp ht_eq⟩
 
 omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
-/-- Nakayama argument: if β generates `S/q` over `R/p`, and the maximal ideal of S
-    is generated by some π ∈ Algebra.adjoin R {β} together with `mR · S`, then
-    `Algebra.adjoin R {β} = ⊤`.
+/-- Nakayama argument: if `R/p[β] = S/q`, and `mS = π S + m_R · S` for some `π ∈ R[β]`,
+    then `R[β] = S`.
 
     The proof combines:
     1. Quotient lifting: S = A + q (from `h_gen`)
@@ -409,7 +413,7 @@ mathlib convention? i tried.)
 see FaithfulSMul.iff_algebraMapInjective below for a proof its equivalent
 to asserting that phi is injective.
 -/
-lemma monogenic_of_finiteInjectiveEtale [Algebra.Etale R S] :
+theorem monogenic_of_finiteInjectiveEtale [Algebra.Etale R S] :
     ∃(β : S), Algebra.adjoin R {β} = ⊤ := by
   -- Key: maximal ideal maps to maximal ideal (from Mathlib's unramified local ring theory)
   have eq_max : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) =

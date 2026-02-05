@@ -133,8 +133,8 @@ lemma height_one_prime_principal_of_UFD {S : Type*} [CommRing S] [IsDomain S]
   exact ⟨p, h_eq.symm⟩
 
 /-- Taylor expansion for polynomial evaluation over a commutative ring:
-    For any polynomial f and elements x, h, there exists c such that
-    f(x + h) = f(x) + f'(x) · h + h² · c. -/
+    For any polynomial `f` and elements `x`, `h`, there exists `c` such that
+    `f(x + h) = f(x) + f'(x) · h + h² · c`. -/
 lemma taylor_expansion_aeval {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (f : R[X]) (x h : S) :
     ∃ c : S, f.aeval (x + h) = f.aeval x + f.derivative.aeval x * h + h^2 * c := by
@@ -188,9 +188,9 @@ lemma taylor_expansion_aeval {R S : Type*} [CommRing R] [CommRing S] [Algebra R 
     simp only [h_exp_simp, pow_one, ← map_natCast (algebraMap R S)]
     ring
 
-/-- When the quotient map R/p → S/q is étale (with p = q.comap (algebraMap R S)),
-    and both rings are local, the maximal ideal of S decomposes as
-    ms = q ⊔ (image of mR under algebraMap). -/
+/-- When the quotient map `R/p → S/q` is étale (with p = q.comap (algebraMap R S)),
+    and both rings are local, the maximal ideal of `S` decomposes as
+    `m_S = q + m_R S`. -/
 lemma maximalIdeal_eq_sup_of_etale_quotient
     [IsDomain R] [IsDomain S] [Algebra R S] [Module.Finite R S]
     (q : Ideal S) [hq_prime : q.IsPrime]
@@ -285,9 +285,9 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
 
 end SubLemmas
 
-/-- Given regular local rings R and S with S a finite extension of R, if there exists a
-height one prime ideal q ⊆ S such that the induced map R/(q ∩ R) → S/q is étale,
-then S is a monogenic extension of R.
+/-- Given regular local rings `R` and `S` with `S` a finite extension of `R`, if there exists a
+height one prime ideal `q ⊆ S` such that the induced map `R/(q ∩ R) → S/q` is étale,
+then `S` is a monogenic extension of `R`.
 
 Here:
 - `φ : R →+* S` is the structure map making S an extension of R
