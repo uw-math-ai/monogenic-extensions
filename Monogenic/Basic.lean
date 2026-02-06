@@ -2,6 +2,7 @@ import Mathlib.RingTheory.AdjoinRoot
 import Mathlib.RingTheory.LocalRing.Basic
 import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.RingTheory.IsAdjoinRoot
 
 open Polynomial
 open Function
@@ -53,17 +54,17 @@ lemma monogenic_of_univQuot
   intro s _
   obtain ⟨q, rfl⟩ := e.surjective s
   obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective q
+  -- e (mk (C r)) = e (algebraMap R _ r) = algebraMap R S r = φ r
+  have heC (r : R): e ((Ideal.Quotient.mk (Ideal.span {f})) (C r)) = φ r := by
+    -- C r = algebraMap R R[X] r, so mk (C r) = algebraMap R (R[X]/I) r
+    have h1 : C r = algebraMap R R[X] r := rfl
+    rw [h1]
+    -- mk ∘ algebraMap R R[X] = algebraMap R (R[X]/I)
+    have h2 : (Ideal.Quotient.mk (Ideal.span {f})) (algebraMap R R[X] r)
+      = algebraMap R (R[X] ⧸ Ideal.span {f}) r := rfl
+    rw [h2, AlgEquiv.commutes]
   induction p using Polynomial.induction_on with
   | C r =>
-    -- e (mk (C r)) = e (algebraMap R _ r) = algebraMap R S r = φ r
-    have heC : e ((Ideal.Quotient.mk (Ideal.span {f})) (C r)) = φ r := by
-      -- C r = algebraMap R R[X] r, so mk (C r) = algebraMap R (R[X]/I) r
-      have h1 : C r = algebraMap R R[X] r := rfl
-      rw [h1]
-      -- mk ∘ algebraMap R R[X] = algebraMap R (R[X]/I)
-      have h2 : (Ideal.Quotient.mk (Ideal.span {f})) (algebraMap R R[X] r)
-        = algebraMap R (R[X] ⧸ Ideal.span {f}) r := rfl
-      rw [h2, AlgEquiv.commutes]
     rw [heC]
     exact Subalgebra.algebraMap_mem (Algebra.adjoin R {β}) r
   | add p₁ p₂ hp₁ hp₂ =>
@@ -73,17 +74,67 @@ lemma monogenic_of_univQuot
     -- e (mk (C r * X^(n+1))) = φ r * β^(n+1)
     rw [map_mul, map_mul, map_pow, map_pow]
     apply Subalgebra.mul_mem
-    · have heC : e ((Ideal.Quotient.mk (Ideal.span {f})) (C r)) = φ r := by
-        have h1 : C r = algebraMap R R[X] r := rfl
-        rw [h1]
-        have h2 : (Ideal.Quotient.mk (Ideal.span {f})) (algebraMap R R[X] r) =
-                  algebraMap R (R[X] ⧸ Ideal.span {f}) r := rfl
-        rw [h2, AlgEquiv.commutes]
-      rw [heC]
+    · rw [heC]
       exact Subalgebra.algebraMap_mem (Algebra.adjoin R {β}) r
     · apply Subalgebra.pow_mem
       have hβ : e ((Ideal.Quotient.mk (Ideal.span {f})) X) = β := rfl
       rw [hβ]
       exact Algebra.self_mem_adjoin_singleton R β
+
+def isAdjoinRoot_ofAlgEquiv (f : R[X])
+    (e : (R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) :
+    IsAdjoinRoot S f := by
+  let h₀ := AdjoinRoot.isAdjoinRoot f
+  exact {
+    map := e.toAlgHom.comp h₀.map
+    map_surjective := e.surjective.comp h₀.map_surjective
+    ker_map := by ext; simp [Ideal.mem_span_singleton]
+  }
+
+lemma monogenic_of_surjective_map (f : R[X] →ₐ[R] S) (hsurj : Function.Surjective f) :
+    ∃(β : S), Algebra.adjoin R {β} = ⊤ := by
+  use f X
+  rw [eq_top_iff]
+  intro s _
+  obtain ⟨p, rfl⟩ := hsurj s
+  have algebraMap_C (r : R): f (C r) = algebraMap R S r := by
+    have test : algebraMap R R[X] r = C r := by rfl
+    rw [← test, AlgHom.commutes]
+  induction p using Polynomial.induction_on with
+  | C r =>
+    rw [algebraMap_C]
+    exact Subalgebra.algebraMap_mem (Algebra.adjoin R {f X}) r
+  | add p₁ p₂ hp₁ hp₂ =>
+    rw [map_add]
+    exact Subalgebra.add_mem _ (hp₁ trivial) (hp₂ trivial)
+  | monomial n r _ =>
+    rw [map_mul, map_pow, algebraMap_C]
+    exact Subalgebra.mul_mem _ (Subalgebra.algebraMap_mem _ r)
+      (Subalgebra.pow_mem _ (Algebra.self_mem_adjoin_singleton R (f X)) _)
+
+lemma surjective_map_of_monogenic (β : S) (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
+    ∃(f : R[X] →ₐ[R] S), Function.Surjective f := by
+  use aeval β
+  intro b
+  have hb : b ∈ Algebra.adjoin R {β} := adjoin_eq_top ▸ trivial
+  induction hb using Algebra.adjoin_induction with
+  | mem x hx =>
+    rw [Set.mem_singleton_iff] at hx
+    rw [hx]
+    exact ⟨X, aeval_X β⟩
+  | algebraMap r =>
+    use (C r)
+    change (aeval β) (C r) = (algebraMap R S) r
+    simp
+  | add x y _ _ ihx ihy =>
+    obtain ⟨px, hpx⟩ := ihx
+    obtain ⟨py, hpy⟩ := ihy
+    use px + py
+    simp only [map_add, hpx, hpy]
+  | mul x y _ _ ihx ihy =>
+    obtain ⟨px, hpx⟩ := ihx
+    obtain ⟨py, hpy⟩ := ihy
+    use px * py
+    simp only [map_mul, hpx, hpy]
 
 end Monogenic

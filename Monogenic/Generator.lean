@@ -89,9 +89,8 @@ lemma residue_algebraMap_eq :
 lemma residue_generates_of_generates
     (β : S) (hβ_gen : Algebra.adjoin R {β} = ⊤) :
     Algebra.adjoin (IsLocalRing.ResidueField R) {IsLocalRing.residue S β} = ⊤ := by
-  let kR := IsLocalRing.ResidueField R
-  let kS := IsLocalRing.ResidueField S
-  let β₀ : kS := IsLocalRing.residue S β
+  set kR := IsLocalRing.ResidueField R
+  set kS := IsLocalRing.ResidueField S
   -- The residue map is surjective and respects the algebra structure
   -- Algebra.adjoin R {β} = ⊤ maps onto Algebra.adjoin k_R {β₀} = k_S
   rw [eq_top_iff]
@@ -101,22 +100,19 @@ lemma residue_generates_of_generates
   -- s is in the adjoin of β over R, so residue(s) is in the adjoin of β₀ over k_R
   induction hs using Algebra.adjoin_induction with
   | mem x hx =>
-    simp only [Set.mem_singleton_iff] at hx
-    rw [hx]
-    exact Algebra.subset_adjoin (Set.mem_singleton _)
+    rw [Set.mem_singleton_iff.mp hx]
+    exact Algebra.subset_adjoin rfl
   | algebraMap r =>
     -- (residue S) (algebraMap R S r) = algebraMap kR kS (residue R r)
     -- which is in any subalgebra
     have : (IsLocalRing.residue S) (algebraMap R S r)
-        = algebraMap kR kS (IsLocalRing.residue R r) := by
-      rw [← RingHom.comp_apply, ← RingHom.comp_apply]
-      rfl
+        = algebraMap kR kS (IsLocalRing.residue R r) := rfl
     rw [this]
-    exact Subalgebra.algebraMap_mem (Algebra.adjoin kR {β₀}) _
+    exact Subalgebra.algebraMap_mem _ _
   | add x y _ _ hx hy =>
     simp only [map_add]
     exact Subalgebra.add_mem _ (hx trivial) (hy trivial)
-  | mul x y _ _ hx hy =>
+  | mul _ _ _ _ hx hy =>
     simp only [map_mul]
     exact Subalgebra.mul_mem _ (hx trivial) (hy trivial)
 
@@ -174,18 +170,10 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
     (β : S) (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
     (minpoly R β).map (IsLocalRing.residue R) = minpoly (IsLocalRing.ResidueField R)
       (IsLocalRing.residue S β) := by
-  let hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  let kR := IsLocalRing.ResidueField R
-  let kS := IsLocalRing.ResidueField S
-  let β₀ := IsLocalRing.residue S β
-  let f := minpoly R β
-  let f_bar := f.map (IsLocalRing.residue R)
-  -- f_bar is monic
-  have hf_monic : f.Monic := minpoly.monic hβ_int
-  have hf_bar_monic : f_bar.Monic := hf_monic.map (IsLocalRing.residue R)
-  -- β₀ is integral (finite extension)
-  haveI : Module.Finite kR kS := inferInstance
-  haveI : Algebra.IsIntegral kR kS := Algebra.IsIntegral.of_finite kR kS
+  have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
+  set kR := IsLocalRing.ResidueField R
+  set β₀ := IsLocalRing.residue S β
+  set f_bar := (minpoly R β).map (IsLocalRing.residue R)
   have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
   -- β₀ is a root of f_bar, so minpoly kR β₀ divides f_bar
   have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ (by
@@ -199,13 +187,13 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
       (Algebra.IsAlgebraic.isAlgebraic β₀)] at hβ₀_gen
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
-    rw [show f_bar.natDegree = f.natDegree from hf_monic.natDegree_map _,
+    rw [(minpoly.monic hβ_int).natDegree_map _,
       ← (IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_eq_top).finrank,
       finrank_eq_finrank_residueField, ← IntermediateField.finrank_top', ← hβ₀_field_gen,
       IntermediateField.adjoin.finrank hβ₀_int]
   -- Both monic, same degree, divisibility ⟹ equal
-  exact eq_of_monic_of_dvd_of_natDegree_le (minpoly.monic hβ₀_int) hf_bar_monic
-    hdvd hdeg_eq.le
+  exact eq_of_monic_of_dvd_of_natDegree_le (minpoly.monic hβ₀_int)
+    (minpoly.monic hβ_int |>.map _) hdvd hdeg_eq.le
 
 /-- A key technical fact: if `R -> S` is étale and `R[β] = S`,
       then `f'(β) is a unit in S`.
@@ -222,26 +210,13 @@ lemma deriv_isUnit_of_monogenic [Algebra.Etale R S] [IsDomain R] [IsDomain S]
     IsUnit (aeval β (minpoly R β).derivative) := by
   -- Strategy: show residue of (aeval β f') is non-zero, hence aeval β f' is a unit
   apply isUnit_of_residue_ne_zero
-  let kR := IsLocalRing.ResidueField R
-  let kS := IsLocalRing.ResidueField S
-  let β₀ := IsLocalRing.residue S β
-  -- The residue field extension is separable (from étale)
-  haveI : Algebra.IsSeparable kR kS := inferInstance
-  -- β₀ is integral over k_R (since k_S is finite over k_R)
-  haveI : Module.Finite kR kS := inferInstance
-  haveI : Algebra.IsIntegral kR kS := Algebra.IsIntegral.of_finite kR kS
-  have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
-  -- β₀ is separable, so its minimal polynomial is separable
-  have hβ₀_sep : (minpoly kR β₀).Separable := Algebra.IsSeparable.isSeparable kR β₀
+  set kR := IsLocalRing.ResidueField R
+  set β₀ := IsLocalRing.residue S β
   -- Therefore, derivative of minpoly at β₀ is non-zero
   have hderiv_ne_zero : aeval β₀ (minpoly kR β₀).derivative ≠ 0 :=
-    hβ₀_sep.aeval_derivative_ne_zero (minpoly.aeval kR β₀)
-  -- The key fact: (minpoly R β).map(residue R) = minpoly kR β₀
-  have hminpoly_eq : (minpoly R β).map (IsLocalRing.residue R) = minpoly kR β₀ :=
-    minpoly_map_eq_minpoly_residue β adjoin_eq_top
-  -- Now connect the derivatives
-  rw [residue_aeval_eq, residue_algebraMap_eq, ← eval₂_map, ← derivative_map, hminpoly_eq,
-    ← aeval_def]
+    (Algebra.IsSeparable.isSeparable kR β₀).aeval_derivative_ne_zero (minpoly.aeval kR β₀)
+  rw [residue_aeval_eq, residue_algebraMap_eq, ← eval₂_map,
+    ← derivative_map, minpoly_map_eq_minpoly_residue β adjoin_eq_top, ← aeval_def]
   exact hderiv_ne_zero
 
 /-!

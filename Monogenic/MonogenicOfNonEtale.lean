@@ -50,6 +50,19 @@ The following lemmas are extracted from the main theorem to improve modularity.
 
 section SubLemmas
 
+/-- In a quotient of a local ring by a prime, the maximal ideal is the image of the original. -/
+lemma maximalIdeal_quotient_eq_map {R : Type*} [CommRing R] [IsLocalRing R]
+    (p : Ideal R) [p.IsPrime] [IsLocalRing (R ⧸ p)] :
+    IsLocalRing.maximalIdeal (R ⧸ p) =
+      Ideal.map (Ideal.Quotient.mk p) (IsLocalRing.maximalIdeal R) := by
+  haveI : IsLocalHom (Ideal.Quotient.mk p) :=
+    IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
+  ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+  simp only [Ideal.mem_map_iff_of_surjective _ Ideal.Quotient.mk_surjective,
+    IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
+  exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
+         fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
+
 omit [IsLocalRing R] [IsLocalRing S] in
 /-- If `S` is a finite `R`-module and `q` is an ideal of `S`, then the induced quotient map
     `R/(q ∩ R) →+* S/q` is finite. -/
@@ -60,24 +73,19 @@ lemma quotientMap_finite [Algebra R S] [Module.Finite R S] (q : Ideal S) :
   let φ₀ := Ideal.quotientMap q φ (le_refl p)
   letI : Algebra (R ⧸ p) (S ⧸ q) := φ₀.toAlgebra
   classical
-  have h_fg : (⊤ : Submodule R S).FG := Module.finite_def.mp inferInstance
-  obtain ⟨s, hs⟩ := h_fg
+  obtain ⟨s, hs⟩ := Module.finite_def.mp ‹Module.Finite R S›
   refine ⟨⟨s.image (Ideal.Quotient.mk q), ?_⟩⟩
   rw [eq_top_iff]
   intro x _
   obtain ⟨x', rfl⟩ := Ideal.Quotient.mk_surjective x
-  have hx' : x' ∈ Submodule.span R (s : Set S) := by rw [hs]; trivial
+  have hx' : x' ∈ Submodule.span R (s : Set S) := hs ▸ trivial
   refine Submodule.span_induction ?_ ?_ ?_ ?_ hx'
   · intro y hy
     exact Submodule.subset_span (Finset.mem_image_of_mem _ hy)
   · simp only [map_zero]; exact Submodule.zero_mem _
   · intro _ _ _ _ hy hz; simp only [map_add]; exact Submodule.add_mem _ hy hz
   · intro r _ _ hy
-    rw [Algebra.smul_def, map_mul]
-    have h_alg : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
-    rw [h_alg]
-    rw [← Ideal.quotientMap_mk (f := φ) (H := le_refl p)]
-    change (Ideal.Quotient.mk p r) • (Ideal.Quotient.mk q _) ∈ _
+    rw [Algebra.smul_def, map_mul, ← Ideal.quotientMap_mk (f := φ) (H := le_refl p)]
     exact Submodule.smul_mem _ _ hy
 
 omit [IsLocalRing R] [IsLocalRing S] in
@@ -236,24 +244,11 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
   have h_max_eq : Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) = IsLocalRing.maximalIdeal S₀ := by
     rw [← hφ₀_eq]; exact Algebra.FormallyUnramified.map_maximalIdeal
   -- Maximal ideal of R/p = image of mr
-  have hp_le_mr : p ≤ mr := IsLocalRing.le_maximalIdeal hp_prime.ne_top
-  haveI : IsLocalHom (Ideal.Quotient.mk p) :=
-    IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
-  have h_max_R₀ : IsLocalRing.maximalIdeal R₀ = Ideal.map (Ideal.Quotient.mk p) mr := by
-    ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
-    simp only [Ideal.mem_map_iff_of_surjective _ Ideal.Quotient.mk_surjective,
-      IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
-    exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
-           fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
+  have h_max_R₀ : IsLocalRing.maximalIdeal R₀ = Ideal.map (Ideal.Quotient.mk p) mr :=
+    maximalIdeal_quotient_eq_map p
   -- Maximal ideal of S/q = image of ms
-  haveI : IsLocalHom (Ideal.Quotient.mk q) :=
-    IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
-  have h_max_S₀ : IsLocalRing.maximalIdeal S₀ = Ideal.map (Ideal.Quotient.mk q) ms := by
-    ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
-    simp only [Ideal.mem_map_iff_of_surjective _ Ideal.Quotient.mk_surjective,
-      IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
-    exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
-           fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
+  have h_max_S₀ : IsLocalRing.maximalIdeal S₀ = Ideal.map (Ideal.Quotient.mk q) ms :=
+    maximalIdeal_quotient_eq_map q
   -- Composition property: φ₀ ∘ (mk p) = (mk q) ∘ φ
   have h_comp : φ₀.comp (Ideal.Quotient.mk p) = (Ideal.Quotient.mk q).comp φ := by
     ext r
@@ -277,10 +272,7 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
       Ideal.mk_ker, sup_eq_left.mpr hq_le_ms] at h_images_eq
   -- Simplify RHS: (q ⊔ X) ⊔ q = q ⊔ X
   calc ms = (q ⊔ Ideal.map φ mr) ⊔ q := h_images_eq
-    _ = q ⊔ (Ideal.map φ mr ⊔ q) := by rw [sup_assoc]
-    _ = q ⊔ (q ⊔ Ideal.map φ mr) := by rw [sup_comm (Ideal.map φ mr) q]
-    _ = (q ⊔ q) ⊔ Ideal.map φ mr := by rw [← sup_assoc]
-    _ = q ⊔ Ideal.map φ mr := by rw [sup_idem]
+    _ = q ⊔ Ideal.map φ mr := by rw [sup_comm, sup_left_idem]
 
 
 end SubLemmas
