@@ -92,8 +92,7 @@ def isAdjoinRoot_ofAlgEquiv (f : R[X])
   }
 
 lemma monogenic_of_surjective_map (f : R[X] →ₐ[R] S) (hsurj : Function.Surjective f) :
-    ∃(β : S), Algebra.adjoin R {β} = ⊤ := by
-  use f X
+    Algebra.adjoin R {f X} = ⊤ := by
   rw [eq_top_iff]
   intro s _
   obtain ⟨p, rfl⟩ := hsurj s
@@ -113,8 +112,7 @@ lemma monogenic_of_surjective_map (f : R[X] →ₐ[R] S) (hsurj : Function.Surje
       (Subalgebra.pow_mem _ (Algebra.self_mem_adjoin_singleton R (f X)) _)
 
 lemma surjective_map_of_monogenic (β : S) (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
-    ∃(f : R[X] →ₐ[R] S), Function.Surjective f := by
-  use aeval β
+    Function.Surjective (aeval (R:=R) β) := by
   intro b
   have hb : b ∈ Algebra.adjoin R {β} := adjoin_eq_top ▸ trivial
   induction hb using Algebra.adjoin_induction with

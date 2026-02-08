@@ -14,6 +14,7 @@ import Mathlib.LinearAlgebra.TensorProduct.Quotient
 import Mathlib.LinearAlgebra.Dimension.Constructions
 import Mathlib.RingTheory.Nakayama
 import Mathlib.FieldTheory.PrimitiveElement
+import Monogenic.Basic
 
 open Polynomial
 open Function
@@ -32,15 +33,49 @@ variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 -- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
 -- [IsDomain S] follows naturally for étale extensions of domains.
 -- We also add étale hypothesis to prove the derivative is a unit via separability.
-lemma gensUnivQuot_of_monogenic
+def gensUnivQuot_of_monogenic
   [Module.Finite R S] [FaithfulSMul R S]
-  [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
+  [IsDomain R] [IsDomain S]
+  [Algebra.Etale R S]
+  [IsLocalRing R] [IsLocalRing S]
   (β : S)
   (adjoin_top : Algebra.adjoin R {β} = ⊤) :
-    Nonempty ((R[X] ⧸ Ideal.span {minpoly R β}) ≃ₐ[R] S) := by
+    IsAdjoinRootMonic S (minpoly R β) := by
+  have smooth : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
+  have flat := Algebra.Smooth.flat (R:=R) (A:=S)
+  have free := Module.free_of_flat_of_isLocalRing (R:=R) (P:=S)
+  have basis := free.chooseBasis
   have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  have adjoin := IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_top
-  exact ⟨adjoin.adjoinRootAlgEquiv⟩
+  let f := minpoly R β
+  let monic := minpoly.monic hβ_int
+  have adjoin := AdjoinRoot.isAdjoinRootMonic f monic
+  exact {
+    map := aeval β
+    map_surjective := surjective_map_of_monogenic β adjoin_top
+    monic := monic
+    ker_map := by
+      ext g
+      constructor
+      · intro hg
+        rw [mem_ker] at hg
+        rw [Ideal.mem_span_singleton']
+        use Polynomial.divByMonic g f
+        have div := Polynomial.modByMonic_add_div g monic
+        have zeqz : (aeval β g) = (aeval β g) := rfl
+        conv at zeqz =>
+          lhs; rw [← div]
+        simp [hg] at zeqz
+        have hic : g %ₘ f = 0 := by
+          sorry
+        rw [hic, zero_add, mul_comm] at div
+        exact div
+      · intro hg
+        rw [mem_ker]
+        rw [Ideal.mem_span_singleton'] at hg
+        obtain ⟨a, ha⟩ := hg
+        rw [← ha]
+        simp
+  }
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -67,9 +102,8 @@ theorem residue_aeval_eq (β : S) (p : R[X]) :
 
 
 /-- In a local ring `S`, an element is a unit iff its image in `S/m_S` is non-zero. -/
-lemma isUnit_of_residue_ne_zero {s : S} (h : IsLocalRing.residue S s ≠ 0) : IsUnit s := by
-  rw [ne_eq, IsLocalRing.residue_eq_zero_iff] at h
-  exact IsLocalRing.notMem_maximalIdeal.mp h
+lemma isUnit_of_residue_ne_zero {s : S} (h : IsLocalRing.residue S s ≠ 0) : IsUnit s :=
+  IsLocalRing.notMem_maximalIdeal.mp <| mt (IsLocalRing.residue_eq_zero_iff s).mpr h
 
 variable [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S]
 
