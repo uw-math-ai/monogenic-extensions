@@ -200,7 +200,7 @@ lemma taylor_expansion_aeval {R S : Type*} [CommRing R] [CommRing S] [Algebra R 
     and both rings are local, the maximal ideal of `S` decomposes as
     `m_S = q + m_R S`. -/
 lemma maximalIdeal_eq_sup_of_etale_quotient
-    [IsDomain R] [IsDomain S] [Algebra R S] [Module.Finite R S]
+    [Algebra R S] [Module.Finite R S]
     (q : Ideal S) [hq_prime : q.IsPrime]
     (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
     IsLocalRing.maximalIdeal S =
@@ -293,7 +293,7 @@ Here:
 theorem monogenic_of_etale_height_one_quotient
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [UniqueFactorizationMonoid S] [Algebra R S]
     [FaithfulSMul R S] [Module.Finite R S]
-    (q : Ideal S) [IsIntegrallyClosed <| R ⧸ (q.comap <| algebraMap R S)]
+    (q : Ideal S)
     [hq_prime : q.IsPrime] (hq_height : q.height = 1)
     (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
     ∃ f : R[X], Nonempty (IsAdjoinRootMonic S f) := by
@@ -304,7 +304,7 @@ theorem monogenic_of_etale_height_one_quotient
   by_cases hφ_etale : Algebra.Etale R S
   · let ⟨β, adj⟩ := monogenic_of_finiteInjectiveEtale (R:=R) (S:=S)
     have hβ_int := Algebra.IsIntegral.isIntegral (R:=R) β
-    exact ⟨minpoly R β, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adj⟩⟩
+    exact ⟨minpoly R β, ⟨gensUnivQuot_of_monogenic β adj⟩⟩
   -- Step 2: Define the quotient structures
   -- p = q ∩ R (preimage of q under φ)
   let p : Ideal R := q.comap φ
@@ -570,14 +570,13 @@ theorem monogenic_of_etale_height_one_quotient'
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
     [UniqueFactorizationMonoid S]
     (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
-    (q : Ideal S) [ic : IsIntegrallyClosed <| R ⧸ (q.comap <| φ)]
+    (q : Ideal S)
     [hq_prime : q.IsPrime] (hq_height : q.height = 1)
     (hétale : Etale (Ideal.quotientMap q φ (le_refl (q.comap φ)))) :
     ∃(β : S), Algebra.adjoin φ.range {β} = ⊤ := by
   letI : Algebra R S := φ.toAlgebra
   have eq : φ = algebraMap R S := (algebraMap_toAlgebra φ).symm
   rw [eq] at hφ_inj
-  rw [eq] at ic
   rw [eq]
   haveI : FaithfulSMul R S := (faithfulSMul_iff_algebraMap_injective R S).mpr hφ_inj
   haveI : Module.Finite R S := finite_algebraMap.mp hφ_fin

@@ -12,6 +12,7 @@ import Mathlib.RingTheory.IsAdjoinRoot
 import Mathlib.RingTheory.Smooth.Flat
 import Mathlib.LinearAlgebra.TensorProduct.Quotient
 import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Charpoly.Basic
 import Mathlib.RingTheory.Nakayama
 import Mathlib.FieldTheory.PrimitiveElement
 import Monogenic.Basic
@@ -23,59 +24,90 @@ namespace Monogenic
 
 variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 
-/-- Let `R -> S` be a finite extension of integral domains.
+/-- Let `R -> S` be a finite étale extension of local integral domains.
     Suppose there exists `β ∈ S` such that `S = R[β]`.
-    If `R` is integrally closed, then there exists a polynomial `f ∈ R[x]` such that
-    `R[x]/f` and `S` are isomorphic as `R`-algebras.
+    Then `R[x]/(minpoly R β)` is isomorphic to `S` as an `R`-algebra.
+
+    This avoids the `IsIntegrallyClosed` hypothesis by using:
+    1. Cayley-Hamilton to bound `natDegree (minpoly R β) ≤ finrank R S`
+    2. Quotient rank inequality for the reverse bound
+    3. Surjective endomorphism injectivity for free modules
 -/
--- Note: We add [IsDomain R], [IsIntegrallyClosed R], and [IsDomain S] hypotheses.
--- The [IsDomain R] and [IsIntegrallyClosed R] are needed for the minimal polynomial
--- to have the divisibility property (minpoly.isIntegrallyClosed_dvd).
--- [IsDomain S] follows naturally for étale extensions of domains.
--- We also add étale hypothesis to prove the derivative is a unit via separability.
-def gensUnivQuot_of_monogenic
+noncomputable def gensUnivQuot_of_monogenic
   [Module.Finite R S] [FaithfulSMul R S]
-  [IsDomain R] [IsDomain S]
   [Algebra.Etale R S]
   [IsLocalRing R] [IsLocalRing S]
   (β : S)
   (adjoin_top : Algebra.adjoin R {β} = ⊤) :
     IsAdjoinRootMonic S (minpoly R β) := by
-  have smooth : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
-  have flat := Algebra.Smooth.flat (R:=R) (A:=S)
-  have free := Module.free_of_flat_of_isLocalRing (R:=R) (P:=S)
-  have basis := free.chooseBasis
+  -- Step 0: S is free over R (étale → smooth → flat, finite flat local → free)
+  haveI : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
+  haveI : Module.Flat R S := Algebra.Smooth.flat R S
+  haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
   have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  let f := minpoly R β
-  let monic := minpoly.monic hβ_int
-  have adjoin := AdjoinRoot.isAdjoinRootMonic f monic
-  exact {
-    map := aeval β
-    map_surjective := surjective_map_of_monogenic β adjoin_top
-    monic := monic
-    ker_map := by
-      ext g
-      constructor
-      · intro hg
-        rw [mem_ker] at hg
-        rw [Ideal.mem_span_singleton']
-        use Polynomial.divByMonic g f
-        have div := Polynomial.modByMonic_add_div g monic
-        have zeqz : (aeval β g) = (aeval β g) := rfl
-        conv at zeqz =>
-          lhs; rw [← div]
-        simp [hg] at zeqz
-        have hic : g %ₘ f = 0 := by
-          sorry
-        rw [hic, zero_add, mul_comm] at div
-        exact div
-      · intro hg
-        rw [mem_ker]
-        rw [Ideal.mem_span_singleton'] at hg
-        obtain ⟨a, ha⟩ := hg
-        rw [← ha]
-        simp
-  }
+  set f := minpoly R β with f_def
+  have hf_monic : f.Monic := minpoly.monic hβ_int
+  haveI : Module.Free R (AdjoinRoot f) := hf_monic.free_adjoinRoot
+  haveI : Module.Finite R (AdjoinRoot f) := hf_monic.finite_adjoinRoot
+  -- Step 1: Build surjective AlgHom AdjoinRoot f →ₐ[R] S
+  let φ : AdjoinRoot f →ₐ[R] S :=
+    AdjoinRoot.liftAlgHom f (Algebra.ofId R S) β (minpoly.aeval R β)
+  have hφ_surj : Surjective φ := by
+    intro s
+    obtain ⟨p, hp⟩ := surjective_map_of_monogenic β adjoin_top s
+    exact ⟨AdjoinRoot.mk f p, by simp [φ, AdjoinRoot.liftAlgHom_mk, ← aeval_def, hp]⟩
+  -- Step 2: natDegree f ≤ finrank R S (Cayley-Hamilton)
+  have h_d_le_n : f.natDegree ≤ Module.finrank R S := by
+    -- The charpoly of "multiply by β" is monic of degree finrank and kills β
+    set lβ := Algebra.lmul R S β
+    -- Transfer Cayley-Hamilton from endomorphism to element
+    have h_aeval_zero : aeval β lβ.charpoly = 0 := by
+      have h : Algebra.lmul R S (aeval β lβ.charpoly) = 0 := by
+        rw [← aeval_algHom_apply]; exact LinearMap.aeval_self_charpoly lβ
+      have h2 := DFunLike.congr_fun h (1 : S)
+      simp only [LinearMap.zero_apply] at h2
+      rwa [show (Algebra.lmul R S (aeval β lβ.charpoly)) (1 : S) =
+        aeval β lβ.charpoly from by simp [mul_one]] at h2
+    -- minpoly has minimal degree, charpoly has degree finrank
+    have h_min := minpoly.min R β (LinearMap.charpoly_monic lβ) h_aeval_zero
+    rw [degree_eq_natDegree hf_monic.ne_zero,
+        degree_eq_natDegree (LinearMap.charpoly_monic lβ).ne_zero] at h_min
+    have : (f.natDegree : WithBot ℕ) ≤ (Module.finrank R S : WithBot ℕ) :=
+      h_min.trans (by simp [LinearMap.charpoly_natDegree lβ])
+    exact_mod_cast this
+  -- Step 3: finrank R S ≤ natDegree f (surjection from AdjoinRoot of rank d)
+  have h_n_le_d : Module.finrank R S ≤ f.natDegree := by
+    have h_adj_rank : Module.finrank R (AdjoinRoot f) = f.natDegree :=
+      finrank_quotient_span_eq_natDegree' hf_monic
+    calc Module.finrank R S
+        ≤ Module.finrank R (AdjoinRoot f) := by
+          -- S ≅ AdjoinRoot f / ker φ, so finrank S ≤ finrank (AdjoinRoot f)
+          let e := φ.toLinearMap.quotKerEquivRange.trans
+            (LinearEquiv.ofTop _ (LinearMap.range_eq_top.mpr hφ_surj))
+          rw [← e.finrank_eq]
+          exact Submodule.finrank_quotient_le _
+      _ = f.natDegree := h_adj_rank
+  -- Step 4: Rank equality
+  have h_rank_eq : f.natDegree = Module.finrank R S := le_antisymm h_d_le_n h_n_le_d
+  -- Step 5: Injectivity via surjective endomorphism argument
+  have hφ_inj : Injective φ := by
+    -- Build a linear equiv AdjoinRoot f ≃ₗ[R] S (both free of same rank)
+    have h_card : Fintype.card (Fin f.natDegree) =
+        Fintype.card (Module.Free.ChooseBasisIndex R S) := by
+      rw [Fintype.card_fin, h_rank_eq, Module.finrank_eq_card_chooseBasisIndex]
+    let e : AdjoinRoot f ≃ₗ[R] S :=
+      (AdjoinRoot.powerBasis' hf_monic).basis.equiv
+        (Module.Free.chooseBasis R S) (Fintype.equivOfCardEq h_card)
+    -- Compose: e⁻¹ ∘ φ is a surjective endomorphism of AdjoinRoot f
+    let ψ : Module.End R (AdjoinRoot f) := e.symm.toLinearMap.comp φ.toLinearMap
+    have hψ_surj : Surjective ψ := e.symm.surjective.comp hφ_surj
+    have hψ_inj := OrzechProperty.injective_of_surjective_endomorphism ψ hψ_surj
+    -- ψ = e.symm ∘ φ injective implies φ injective
+    intro x y hxy
+    exact hψ_inj (by change e.symm (φ x) = e.symm (φ y); rw [hxy])
+  -- Step 6: Build AlgEquiv and convert to IsAdjoinRootMonic
+  let e := AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩
+  exact { isAdjoinRoot_ofAlgEquiv f e with monic := hf_monic }
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -200,7 +232,6 @@ lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
     show they have the same degree, hence they're equal.
 -/
 lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
-    [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
     (β : S) (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
     (minpoly R β).map (IsLocalRing.residue R) = minpoly (IsLocalRing.ResidueField R)
       (IsLocalRing.residue S β) := by
@@ -222,7 +253,7 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
     rw [(minpoly.monic hβ_int).natDegree_map _,
-      ← (IsAdjoinRootMonic.mkOfAdjoinEqTop hβ_int adjoin_eq_top).finrank,
+      ← (gensUnivQuot_of_monogenic β adjoin_eq_top).finrank,
       finrank_eq_finrank_residueField, ← IntermediateField.finrank_top', ← hβ₀_field_gen,
       IntermediateField.adjoin.finrank hβ₀_int]
   -- Both monic, same degree, divisibility ⟹ equal
@@ -237,8 +268,7 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
     2. Separability gives aeval β₀ (minpoly kR β₀).derivative ≠ 0
     3. Therefore aeval β (minpoly R β).derivative ∉ m_S, hence is a unit
 -/
-lemma deriv_isUnit_of_monogenic [Algebra.Etale R S] [IsDomain R] [IsDomain S]
-    [IsIntegrallyClosed R]
+lemma deriv_isUnit_of_monogenic [Algebra.Etale R S]
     (β : S)
     (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
     IsUnit (aeval β (minpoly R β).derivative) := by
