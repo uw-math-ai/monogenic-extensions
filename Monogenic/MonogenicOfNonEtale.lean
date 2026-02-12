@@ -90,7 +90,7 @@ lemma quotientMap_finite [Algebra R S] [Module.Finite R S] (q : Ideal S) :
 
 omit [IsLocalRing R] [IsLocalRing S] in
 /-- In a UFD, a height one prime ideal is principal. -/
-lemma exists_eq_span_singleton_of_height_eq_one {S : Type*} [CommRing S] [IsDomain S]
+lemma height_one_prime_principal_of_UFD {S : Type*} [CommRing S] [IsDomain S]
     [UniqueFactorizationMonoid S]
     (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1) :
     ∃ q₀ : S, q = Ideal.span {q₀} := by
@@ -143,7 +143,7 @@ lemma exists_eq_span_singleton_of_height_eq_one {S : Type*} [CommRing S] [IsDoma
 /-- Taylor expansion for polynomial evaluation over a commutative ring:
     For any polynomial `f` and elements `x`, `h`, there exists `c` such that
     `f(x + h) = f(x) + f'(x) · h + h² · c`. -/
-lemma exists_aeval_add_eq {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+lemma taylor_expansion_aeval {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (f : R[X]) (x h : S) :
     ∃ c : S, f.aeval (x + h) = f.aeval x + f.derivative.aeval x * h + h^2 * c := by
   induction f using Polynomial.induction_on with
@@ -199,7 +199,7 @@ lemma exists_aeval_add_eq {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
 /-- When the quotient map `R/p → S/q` is étale (with p = q.comap (algebraMap R S)),
     and both rings are local, the maximal ideal of `S` decomposes as
     `m_S = q + m_R S`. -/
-lemma maximalIdeal_eq_sup_of_quotientMap_etale
+lemma maximalIdeal_eq_sup_of_etale_quotient
     [Algebra R S] [Module.Finite R S]
     (q : Ideal S) [hq_prime : q.IsPrime]
     (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
@@ -290,7 +290,7 @@ Here:
 - The induced quotient map is `Ideal.quotientMap q φ` which gives `R/(q ∩ R) →+* S/q`
 - `hétale` asserts this quotient map is étale
 -/
-theorem exists_isAdjoinRootMonic
+theorem monogenic_of_etale_height_one_quotient
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [UniqueFactorizationMonoid S] [Algebra R S]
     [FaithfulSMul R S] [Module.Finite R S]
     (q : Ideal S)
@@ -302,9 +302,9 @@ theorem exists_isAdjoinRootMonic
   have φ_eq : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
   -- Step 1: If φ is already étale, apply FiniteInjectiveEtale_IsMonogenic directly
   by_cases hφ_etale : Algebra.Etale R S
-  · let ⟨β, adj⟩ := exists_adjoin_eq_top (R:=R) (S:=S)
+  · let ⟨β, adj⟩ := monogenic_of_finiteInjectiveEtale (R:=R) (S:=S)
     have hβ_int := Algebra.IsIntegral.isIntegral (R:=R) β
-    exact ⟨minpoly R β, ⟨isAdjoinRootMonic_minpoly β adj⟩⟩
+    exact ⟨minpoly R β, ⟨gensUnivQuot_of_monogenic β adj⟩⟩
   -- Step 2: Define the quotient structures
   -- p = q ∩ R (preimage of q under φ)
   let p : Ideal R := q.comap φ
@@ -342,7 +342,7 @@ theorem exists_isAdjoinRootMonic
   haveI : Module.Finite R₀ S₀ := RingHom.finite_algebraMap.mp hφ₀_fin
   haveI : Algebra.Etale R₀ S₀ := RingHom.etale_algebraMap.mp hφ₀_etale
   obtain ⟨B₀, adj⟩ :=
-    exists_adjoin_eq_top (R:=R₀) (S:=S₀)
+    monogenic_of_finiteInjectiveEtale (R:=R₀) (S:=S₀)
   let f₀ := minpoly R₀ B₀
   -- Lift B₀ to B ∈ S
   obtain ⟨B, hB⟩ := Ideal.Quotient.mk_surjective B₀
@@ -367,14 +367,14 @@ theorem exists_isAdjoinRootMonic
   let ms := IsLocalRing.maximalIdeal S
   have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
   have h_ms_eq : ms = q ⊔ Ideal.map φ mr :=
-    maximalIdeal_eq_sup_of_quotientMap_etale q hétale
+    maximalIdeal_eq_sup_of_etale_quotient q hétale
   -- Step 7: Two cases based on whether f₁(B) generates the right ideal
   -- Case analysis: does f₁(B) generate q modulo mr·S?
   -- The element f₁(B) ∈ S
   let f₁_B := Polynomial.aeval B f₁
   -- Since S is a UFD and q has height 1, q is principal
   have h_q_principal : ∃ q₀ : S, q = Ideal.span {q₀} :=
-    exists_eq_span_singleton_of_height_eq_one q hq_height
+    height_one_prime_principal_of_UFD q hq_height
   obtain ⟨q₀, hq₀⟩ := h_q_principal
   -- Check if f₁(B) generates the right structure
   by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
@@ -396,7 +396,7 @@ theorem exists_isAdjoinRootMonic
         have h := h_gen.2
         simp only [Ideal.smul_eq_mul, Ideal.mul_top] at h
         exact h.symm
-      exact adjoin_eq_top_of_quotient B q h_gen' f₁_B hπ_mem h_ms'
+      exact adjoin_eq_top_of_quotient_gen B q h_gen' f₁_B hπ_mem h_ms'
     have hB_int := Algebra.IsIntegral.isIntegral (R:=R) B
     exact ⟨minpoly R B, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop hB_int h_adjoin_top⟩⟩
   · -- Case 2: f₁(B) does not generate the right ideal
@@ -435,7 +435,7 @@ theorem exists_isAdjoinRootMonic
         rw [faithfulSMul_iff_algebraMap_injective]
         exact hφ₀_inj
       have h_unit_B₀ : IsUnit (Polynomial.aeval B₀ (minpoly R₀ B₀).derivative) :=
-        isUnit_aeval_derivative_minpoly B₀ adj
+        deriv_isUnit_of_monogenic B₀ adj
       -- Step 5: Commutative diagram - mk q (f₁'.aeval B) = f₀'.aeval B₀
       have h_deriv_comm : Ideal.Quotient.mk q (f₁.derivative.aeval B) =
           (f₀.derivative).aeval B₀ := by
@@ -478,7 +478,7 @@ theorem exists_isAdjoinRootMonic
     have h_f₁B'_factorization : ∃ b : S, Polynomial.aeval B' f₁ =
       q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
       -- Apply the Taylor expansion to f₁ with x = B and h = q₀
-      obtain ⟨c, hc⟩ := exists_aeval_add_eq f₁ B q₀
+      obtain ⟨c, hc⟩ := taylor_expansion_aeval f₁ B q₀
       -- We have: f₁.aeval (B + q₀) = f₁.aeval B + f₁.derivative.aeval B * q₀ + q₀² * c
       -- Substitute ha: f₁.aeval B = q₀ * a (note: f₁_B = aeval B f₁)
       use c
@@ -561,12 +561,12 @@ theorem exists_isAdjoinRootMonic
         have h := h_ms_eq
         rw [← h_span_eq] at h
         exact h
-      exact adjoin_eq_top_of_quotient B' q h_gen' (Polynomial.aeval B' f₁) hπ_mem h_ms'
+      exact adjoin_eq_top_of_quotient_gen B' q h_gen' (Polynomial.aeval B' f₁) hπ_mem h_ms'
     have hB'_int := Algebra.IsIntegral.isIntegral (R:=R) B'
     exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop hB'_int h_adjoin_top⟩⟩
 
 -- Alternative formulation using explicit ring homomorphism
-theorem exists_adjoin_range_eq_top
+theorem monogenic_of_etale_height_one_quotient'
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
     [UniqueFactorizationMonoid S]
     (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
@@ -580,7 +580,7 @@ theorem exists_adjoin_range_eq_top
   rw [eq]
   haveI : FaithfulSMul R S := (faithfulSMul_iff_algebraMap_injective R S).mpr hφ_inj
   haveI : Module.Finite R S := finite_algebraMap.mp hφ_fin
-  have ⟨f, ⟨adj_monic⟩⟩ := exists_isAdjoinRootMonic (R:=R) (S:=S) q hq_height hétale
+  have ⟨f, ⟨adj_monic⟩⟩ := monogenic_of_etale_height_one_quotient (R:=R) (S:=S) q hq_height hétale
   use adj_monic.root
   -- adj_monic.adjoin_root_eq_top gives: Algebra.adjoin R {adj_monic.root} = ⊤
   -- Goal: Algebra.adjoin φ.range {adj_monic.root} = ⊤
