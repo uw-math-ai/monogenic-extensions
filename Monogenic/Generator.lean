@@ -24,15 +24,10 @@ variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 -/
 noncomputable def isAdjoinRootMonic_minpoly
   [Module.Finite R S] [FaithfulSMul R S]
-  [Algebra.Etale R S]
-  [IsLocalRing R] [IsLocalRing S]
+  [Module.Free R S] [Nontrivial R]
   (β : S)
   (adjoin_top : Algebra.adjoin R {β} = ⊤) :
-    IsAdjoinRootMonic S (minpoly R β) := by
-  -- Step 0: S is free over R (étale → smooth → flat, finite flat local → free)
-  haveI : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
-  haveI : Module.Flat R S := Algebra.Smooth.flat R S
-  haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
+     IsAdjoinRootMonic S (minpoly R β) := by
   have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
   set f := minpoly R β with f_def
   have hf_monic : f.Monic := minpoly.monic hβ_int
@@ -121,7 +116,6 @@ theorem residue_aeval_eq (β : S) (p : R[X]) :
     p.eval₂ ((IsLocalRing.residue S).comp (algebraMap R S)) (IsLocalRing.residue S β) := by
   simp only [aeval_def, hom_eval₂]
 
-
 /-- In a local ring `S`, an element is a unit iff its image in `S/m_S` is non-zero. -/
 lemma isUnit_of_residue_ne_zero {s : S} (h : IsLocalRing.residue S s ≠ 0) : IsUnit s :=
   IsLocalRing.notMem_maximalIdeal.mp <| mt (IsLocalRing.residue_eq_zero_iff s).mpr h
@@ -129,9 +123,9 @@ lemma isUnit_of_residue_ne_zero {s : S} (h : IsLocalRing.residue S s ≠ 0) : Is
 variable [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S]
 
 /-- The square
-      S -> S/m_S
-      ↑      ↑
-      R -> R/m_R
+      S → S/m_S
+      ↑     ↑
+      R → R/m_R
     commutes. -/
 lemma residue_comp_algebraMap :
     (IsLocalRing.residue S).comp (algebraMap R S) =
@@ -241,6 +235,9 @@ lemma minpoly_map_residue [Algebra.Etale R S]
       (Algebra.IsAlgebraic.isAlgebraic β₀)] at hβ₀_gen
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
+    haveI : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
+    haveI : Module.Flat R S := Algebra.Smooth.flat R S
+    haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
     rw [(minpoly.monic hβ_int).natDegree_map _,
       ← (isAdjoinRootMonic_minpoly β adjoin_eq_top).finrank,
       finrank_eq_finrank_residueField, ← IntermediateField.finrank_top', ← hβ₀_field_gen,
@@ -262,12 +259,17 @@ lemma isUnit_aeval_derivative_minpoly [Algebra.Etale R S]
     (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
     IsUnit (aeval β (minpoly R β).derivative) := by
   -- Strategy: show residue of (aeval β f') is non-zero, hence aeval β f' is a unit
-  apply isUnit_of_residue_ne_zero
+  apply fun s h =>
+    IsLocalRing.notMem_maximalIdeal.mp <| mt (IsLocalRing.residue_eq_zero_iff s).mpr h
   set kR := IsLocalRing.ResidueField R
   set β₀ := IsLocalRing.residue S β
   -- Therefore, derivative of minpoly at β₀ is non-zero
   have hderiv_ne_zero : aeval β₀ (minpoly kR β₀).derivative ≠ 0 :=
     (Algebra.IsSeparable.isSeparable kR β₀).aeval_derivative_ne_zero (minpoly.aeval kR β₀)
+  let p := (minpoly R β).derivative
+  have residue_aeval_eq : IsLocalRing.residue S (aeval β <| p) =
+      p.eval₂ ((IsLocalRing.residue S).comp (algebraMap R S)) (IsLocalRing.residue S β) := by
+    simp only [aeval_def, hom_eval₂]
   rw [residue_aeval_eq, residue_comp_algebraMap, ← eval₂_map,
     ← derivative_map, minpoly_map_residue β adjoin_eq_top, ← aeval_def]
   exact hderiv_ne_zero

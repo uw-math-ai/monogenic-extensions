@@ -121,13 +121,11 @@ lemma surjective_map_of_monogenic (β : S) (adjoin_eq_top : Algebra.adjoin R {β
     change (aeval β) (C r) = (algebraMap R S) r
     simp
   | add x y _ _ ihx ihy =>
-    obtain ⟨px, hpx⟩ := ihx
-    obtain ⟨py, hpy⟩ := ihy
+    obtain ⟨⟨px, hpx⟩, ⟨py, hpy⟩⟩ := And.intro ihx ihy
     use px + py
     simp only [map_add, hpx, hpy]
   | mul x y _ _ ihx ihy =>
-    obtain ⟨px, hpx⟩ := ihx
-    obtain ⟨py, hpy⟩ := ihy
+    obtain ⟨⟨px, hpx⟩, ⟨py, hpy⟩⟩ := And.intro ihx ihy
     use px * py
     simp only [map_mul, hpx, hpy]
 

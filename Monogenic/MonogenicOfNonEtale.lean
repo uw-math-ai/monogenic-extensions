@@ -255,8 +255,11 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   have φ_eq : algebraMap R S = φ := RingHom.algebraMap_toAlgebra φ
   -- Step 1: If φ is already étale, apply FiniteInjectiveEtale_IsMonogenic directly
   by_cases hφ_etale : Algebra.Etale R S
-  · haveI := hφ_etale
-    let ⟨β, adj⟩ := exists_adjoin_eq_top (R:=R) (S:=S)
+  · let ⟨β, adj⟩ := exists_adjoin_eq_top (R:=R) (S:=S)
+    have hβ_int := Algebra.IsIntegral.isIntegral (R:=R) β
+    haveI : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
+    haveI : Module.Flat R S := Algebra.Smooth.flat R S
+    haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
     exact ⟨minpoly R β, ⟨isAdjoinRootMonic_minpoly β adj⟩⟩
   -- Step 2: Define the quotient structures
   -- p = q ∩ R (preimage of q under φ)
