@@ -1,6 +1,3 @@
-import Mathlib.FieldTheory.IntermediateField.Algebraic
-import Mathlib.FieldTheory.Minpoly.IsIntegrallyClosed
-import Mathlib.RingTheory.Etale.Basic
 import Mathlib.RingTheory.Etale.StandardEtale
 import Mathlib.RingTheory.Unramified.LocalRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Defs
