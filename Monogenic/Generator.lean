@@ -1,6 +1,7 @@
 import Mathlib.FieldTheory.IntermediateField.Algebraic
 import Mathlib.FieldTheory.Minpoly.IsIntegrallyClosed
 import Mathlib.RingTheory.Etale.Basic
+import Mathlib.RingTheory.Etale.StandardEtale
 import Mathlib.RingTheory.Unramified.LocalRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Defs
 import Mathlib.RingTheory.LocalRing.Module
@@ -33,7 +34,7 @@ variable {R S} [CommRing R] [CommRing S] [Algebra R S]
     2. Quotient rank inequality for the reverse bound
     3. Surjective endomorphism injectivity for free modules
 -/
-noncomputable def gensUnivQuot_of_monogenic
+noncomputable def isAdjoinRootMonic_minpoly
   [Module.Finite R S] [FaithfulSMul R S]
   [Algebra.Etale R S]
   [IsLocalRing R] [IsLocalRing S]
@@ -144,7 +145,7 @@ variable [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S]
       ↑      ↑
       R -> R/m_R
     commutes. -/
-lemma residue_algebraMap_eq :
+lemma residue_comp_algebraMap :
     (IsLocalRing.residue S).comp (algebraMap R S) =
     (algebraMap (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)).comp
       (IsLocalRing.residue R) :=
@@ -152,7 +153,7 @@ lemma residue_algebraMap_eq :
 
 /-- When `β` generates `S` over `R`, the residue `β₀ = β mod m_S`
      generates `S / m_S` over `R / m_R.` -/
-lemma residue_generates_of_generates
+lemma adjoin_residue_eq_top
     (β : S) (hβ_gen : Algebra.adjoin R {β} = ⊤) :
     Algebra.adjoin (IsLocalRing.ResidueField R) {IsLocalRing.residue S β} = ⊤ := by
   set kR := IsLocalRing.ResidueField R
@@ -231,7 +232,7 @@ lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
     The proof uses the degree equality: since minpoly kR β₀ | f_bar, both are monic, and we
     show they have the same degree, hence they're equal.
 -/
-lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
+lemma minpoly_map_residue [Algebra.Etale R S]
     (β : S) (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
     (minpoly R β).map (IsLocalRing.residue R) = minpoly (IsLocalRing.ResidueField R)
       (IsLocalRing.residue S β) := by
@@ -242,9 +243,9 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
   have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
   -- β₀ is a root of f_bar, so minpoly kR β₀ divides f_bar
   have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ (by
-    rw [aeval_def, eval₂_map, ← residue_algebraMap_eq, ← hom_eval₂, ← aeval_def, minpoly.aeval,
+    rw [aeval_def, eval₂_map, ← residue_comp_algebraMap, ← hom_eval₂, ← aeval_def, minpoly.aeval,
       map_zero])
-  have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := residue_generates_of_generates β adjoin_eq_top
+  have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := adjoin_residue_eq_top β adjoin_eq_top
   -- Degree chain: natDegree f_bar = natDegree f = finrank R S
   --             = finrank kR kS = natDegree (minpoly kR β₀)
   have hβ₀_field_gen : IntermediateField.adjoin kR {β₀} = ⊤ := by
@@ -253,7 +254,7 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
     rw [(minpoly.monic hβ_int).natDegree_map _,
-      ← (gensUnivQuot_of_monogenic β adjoin_eq_top).finrank,
+      ← (isAdjoinRootMonic_minpoly β adjoin_eq_top).finrank,
       finrank_eq_finrank_residueField, ← IntermediateField.finrank_top', ← hβ₀_field_gen,
       IntermediateField.adjoin.finrank hβ₀_int]
   -- Both monic, same degree, divisibility ⟹ equal
@@ -268,7 +269,7 @@ lemma minpoly_map_eq_minpoly_residue [Algebra.Etale R S]
     2. Separability gives aeval β₀ (minpoly kR β₀).derivative ≠ 0
     3. Therefore aeval β (minpoly R β).derivative ∉ m_S, hence is a unit
 -/
-lemma deriv_isUnit_of_monogenic [Algebra.Etale R S]
+lemma isUnit_aeval_derivative_minpoly [Algebra.Etale R S]
     (β : S)
     (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
     IsUnit (aeval β (minpoly R β).derivative) := by
@@ -279,8 +280,8 @@ lemma deriv_isUnit_of_monogenic [Algebra.Etale R S]
   -- Therefore, derivative of minpoly at β₀ is non-zero
   have hderiv_ne_zero : aeval β₀ (minpoly kR β₀).derivative ≠ 0 :=
     (Algebra.IsSeparable.isSeparable kR β₀).aeval_derivative_ne_zero (minpoly.aeval kR β₀)
-  rw [residue_aeval_eq, residue_algebraMap_eq, ← eval₂_map,
-    ← derivative_map, minpoly_map_eq_minpoly_residue β adjoin_eq_top, ← aeval_def]
+  rw [residue_aeval_eq, residue_comp_algebraMap, ← eval₂_map,
+    ← derivative_map, minpoly_map_residue β adjoin_eq_top, ← aeval_def]
   exact hderiv_ne_zero
 
 /-!
@@ -331,7 +332,7 @@ omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
     2. Artinian descent: ms^n ⊆ mR·S for some n
     3. Iterative reduction: q ⊆ A + mR·S (using π ∈ A and ms = ⟨π⟩ + mR·S)
     4. Nakayama's lemma: S ⊆ A + mR·S implies A = S -/
-lemma adjoin_eq_top_of_quotient_gen
+lemma adjoin_eq_top_of_quotient
     [IsLocalRing R] [IsLocalRing S] [Module.Finite R S]
     (β : S) (q : Ideal S) [q.IsPrime]
     (h_gen : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
@@ -452,7 +453,7 @@ mathlib convention? i tried.)
 see FaithfulSMul.iff_algebraMapInjective below for a proof its equivalent
 to asserting that phi is injective.
 -/
-theorem monogenic_of_finiteInjectiveEtale [Algebra.Etale R S] :
+theorem exists_adjoin_eq_top [Algebra.Etale R S] :
     ∃(β : S), Algebra.adjoin R {β} = ⊤ := by
   -- Key: maximal ideal maps to maximal ideal (from Mathlib's unramified local ring theory)
   have eq_max : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) =
@@ -526,6 +527,69 @@ theorem monogenic_of_finiteInjectiveEtale [Algebra.Etale R S] :
     -- Result: S' = ⊤
     exact eq_top_iff.mpr h_top_le
   exact ⟨β, adjoin_eq_top⟩
+
+/-!
+## Converse: monogenic with unit derivative implies étale
+
+The converse direction: if `S ≅ R[X]/(f)` with `f` monic and `f'(root)` a unit,
+then the algebra map `R → S` is étale. This completes the characterization:
+for finite local extensions, étale with single generator is equivalent to
+monogenic with unit derivative (i.e., standard étale).
+-/
+
+omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
+/-- If `S ≅ R[X]/(f)` with `f` monic and `f'(root)` a unit in `S`, then `R → S` is étale.
+This is the converse of `isUnit_aeval_derivative_minpoly`: together they show that
+for finite extensions of local rings, the étale condition is equivalent to
+being a monogenic extension with unit derivative.
+
+The proof constructs a `StandardEtalePresentation` using the pair `(f, f')`:
+since `f' · 1 + f · 0 = f'^1`, the derivative condition gives the Bézout-type
+relation needed for standard étaleness. -/
+theorem IsAdjoinRootMonic.algebra_etale
+    {f : R[X]} (adj : IsAdjoinRootMonic S f)
+    (hunit : IsUnit (aeval adj.root f.derivative)) :
+    Algebra.Etale R S := by
+  -- Standard étale pair (f, f') with trivial Bézout: f' · 1 + f · 0 = f'^1
+  let P : StandardEtalePair R :=
+    ⟨f, adj.monic, f.derivative, 1, 0, 1, by ring⟩
+  have hmap : P.HasMap adj.root := ⟨adj.aeval_root_self, hunit⟩
+  -- Build an explicit inverse of P.lift: compose S ≃ AdjoinRoot f →[liftHom] P.Ring
+  set e := adj.toIsAdjoinRoot.adjoinRootAlgEquiv with he_def
+    -- e : AdjoinRoot f ≃ₐ[R] S
+  set bwd : S →ₐ[R] P.Ring :=
+    (AdjoinRoot.liftAlgHom f _ P.X P.hasMap_X.1).comp e.symm.toAlgHom with hbwd_def
+    -- bwd sends adj.root → AdjoinRoot.root f → P.X
+  -- bwd is a left inverse of P.lift (checked on P.X via hom_ext)
+  have h_left_eq : bwd.comp (P.lift adj.root hmap) = AlgHom.id R P.Ring := by
+    apply P.hom_ext
+    change bwd (P.lift adj.root hmap P.X) = P.X
+    simp [hbwd_def, he_def]
+  have h_left : ∀ x, bwd (P.lift adj.root hmap x) = x :=
+    fun x => by simpa using DFunLike.congr_fun h_left_eq x
+  -- bwd is a right inverse of P.lift (checked on adj.map p for all p)
+  have h_right : ∀ s, P.lift adj.root hmap (bwd s) = s := by
+    intro s
+    obtain ⟨p, rfl⟩ := adj.map_surjective s
+    -- e.symm (adj.map p) = mk f p (the canonical representative in AdjoinRoot f)
+    have h1 : e.symm (adj.map p) = AdjoinRoot.mk f p :=
+      e.symm_apply_eq.mpr (adj.toIsAdjoinRoot.adjoinRootAlgEquiv_apply_mk p).symm
+    -- Compute bwd (adj.map p) = aeval P.X p
+    have h_bwd_val : bwd (adj.map p) = aeval P.X p := by
+      change (AdjoinRoot.liftAlgHom f _ P.X P.hasMap_X.1) (e.symm (adj.map p)) = aeval P.X p
+      rw [h1]; simp [aeval_def]
+    -- Chain: P.lift (aeval P.X p) = aeval adj.root p = adj.map p
+    rw [h_bwd_val]
+    calc P.lift adj.root hmap (aeval P.X p)
+        = aeval (P.lift adj.root hmap P.X) p := (aeval_algHom_apply _ _ _).symm
+      _ = aeval adj.root p := by rw [P.lift_X]
+      _ = adj.map p := by simp
+  -- Conclude: P.lift is bijective, so S is standard étale, hence étale
+  have lift_bij : Function.Bijective (P.lift adj.root hmap) :=
+    ⟨fun a b hab => by rw [← h_left a, ← h_left b, hab],
+     fun s => ⟨bwd s, h_right s⟩⟩
+  haveI : Algebra.IsStandardEtale R S := ⟨⟨P, adj.root, hmap, lift_bij⟩⟩
+  exact inferInstance
 
 end Monogenic
 
