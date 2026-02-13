@@ -55,31 +55,6 @@ lemma maximalIdeal_quotient_eq_map {R : Type*} [CommRing R] [IsLocalRing R]
          fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
 
 omit [IsLocalRing R] [IsLocalRing S] in
-/-- If `S` is a finite `R`-module and `q` is an ideal of `S`, then the induced quotient map
-    `R/(q ∩ R) →+* S/q` is finite. -/
-lemma quotientMap_finite [Algebra R S] [Module.Finite R S] (q : Ideal S) :
-    (Ideal.quotientMap q (algebraMap R S) le_rfl).Finite := by
-  let φ := algebraMap R S
-  let p := q.comap φ
-  let φ₀ := Ideal.quotientMap q φ (le_refl p)
-  letI : Algebra (R ⧸ p) (S ⧸ q) := φ₀.toAlgebra
-  classical
-  obtain ⟨s, hs⟩ := Module.finite_def.mp ‹Module.Finite R S›
-  refine ⟨⟨s.image (Ideal.Quotient.mk q), ?_⟩⟩
-  rw [eq_top_iff]
-  intro x _
-  obtain ⟨x', rfl⟩ := Ideal.Quotient.mk_surjective x
-  have hx' : x' ∈ Submodule.span R (s : Set S) := hs ▸ trivial
-  refine Submodule.span_induction ?_ ?_ ?_ ?_ hx'
-  · intro y hy
-    exact Submodule.subset_span (Finset.mem_image_of_mem _ hy)
-  · simp only [map_zero]; exact Submodule.zero_mem _
-  · intro _ _ _ _ hy hz; simp only [map_add]; exact Submodule.add_mem _ hy hz
-  · intro r _ _ hy
-    rw [Algebra.smul_def, map_mul, ← Ideal.quotientMap_mk (f := φ) (H := le_refl p)]
-    exact Submodule.smul_mem _ _ hy
-
-omit [IsLocalRing R] [IsLocalRing S] in
 /-- In a UFD, a height one prime ideal is principal. -/
 lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRing S] [IsDomain S]
     [UniqueFactorizationMonoid S]
@@ -207,8 +182,6 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
   -- Set up algebra structure on φ₀
   letI : Algebra R₀ S₀ := φ₀.toAlgebra
   have hφ₀_eq : algebraMap R₀ S₀ = φ₀ := RingHom.algebraMap_toAlgebra φ₀
-  -- φ₀ is finite and injective
-  have hφ₀_fin : φ₀.Finite := quotientMap_finite q
   have hφ₀_inj : Injective φ₀ := Ideal.quotientMap_injective
   -- R₀ and S₀ are domains and local rings
   haveI hp_prime : p.IsPrime := Ideal.IsPrime.comap φ
@@ -224,13 +197,16 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
   have h_etale := (RingHom.etale_iff_formallyUnramified_and_smooth φ₀).mp hétale
   have unram_φ₀ : φ₀.FormallyUnramified := h_etale.1
   haveI : Algebra.FormallyUnramified R₀ S₀ := by rwa [← hφ₀_eq] at unram_φ₀
-  -- φ₀ finite and injective implies local homomorphism
+  -- Module.Finite descends to quotients via scalar tower
+  haveI : IsScalarTower R R₀ S₀ := .of_algebraMap_eq' rfl
+  haveI : Module.Finite R₀ S₀ :=
+    Module.Finite.of_restrictScalars_finite R _ _
   haveI : IsLocalHom (algebraMap R₀ S₀) := by
     rw [hφ₀_eq]
-    exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite hφ₀_fin) hφ₀_inj
-  -- EssFiniteType needed for map_maximalIdeal
-  haveI : Algebra.EssFiniteType R₀ S₀ :=
-    RingHom.FiniteType.essFiniteType (RingHom.FiniteType.of_finite hφ₀_fin)
+    exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite
+      (RingHom.finite_algebraMap.mpr ‹Module.Finite R₀ S₀›)) hφ₀_inj
+  -- EssFiniteType from Module.Finite → FiniteType → EssFiniteType
+  haveI : Algebra.EssFiniteType R₀ S₀ := Algebra.EssFiniteType.of_finiteType R₀ S₀
   -- Key lemma: for formally unramified local maps, maximal ideals match
   have h_max_eq : Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) = IsLocalRing.maximalIdeal S₀ := by
     rw [← hφ₀_eq]; exact Algebra.FormallyUnramified.map_maximalIdeal
@@ -307,8 +283,6 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   -- φ₀ is étale by hypothesis
   have hφ₀_etale : Etale φ₀ := hétale
   -- Step 3: Show φ₀ is finite and injective, then apply FiniteInjectiveEtale_IsMonogenic
-  -- φ₀ is finite (quotient of finite extension)
-  have hφ₀_fin : φ₀.Finite := quotientMap_finite q
   -- φ₀ is injective (since p = q.comap φ, quotientMap is automatically injective)
   have hφ₀_inj : Injective φ₀ := Ideal.quotientMap_injective
   -- R₀ is a domain (quotient by prime ideal)
@@ -330,7 +304,8 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   haveI : IsLocalRing S₀ :=
     IsLocalRing.of_surjective' (Ideal.Quotient.mk q) Ideal.Quotient.mk_surjective
   -- Apply FiniteInjectiveEtale_IsMonogenic to get B₀ such that R₀[B₀] = S₀
-  haveI : Module.Finite R₀ S₀ := RingHom.finite_algebraMap.mp hφ₀_fin
+  haveI : IsScalarTower R R₀ S₀ := .of_algebraMap_eq' rfl
+  haveI : Module.Finite R₀ S₀ := Module.Finite.of_restrictScalars_finite R _ _
   haveI : Algebra.Etale R₀ S₀ := RingHom.etale_algebraMap.mp hφ₀_etale
   haveI : FaithfulSMul R₀ S₀ := by
     rw [faithfulSMul_iff_algebraMap_injective]; exact hφ₀_inj
