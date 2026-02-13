@@ -3,18 +3,8 @@ Copyright (c) 2026 University of Washington Math AI Lab. All rights reserved.
 Authors: Bianca Viray, Bryan Boehnke, Grant Yang, George Peykanu, Tianshuo Wang
 -/
 import Monogenic.Generator
-import Mathlib.RingTheory.LocalRing.Defs
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.Degree.Defs
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import Mathlib.Algebra.Algebra.Subalgebra.Lattice
-import Mathlib.Algebra.Polynomial.Derivative
 import Mathlib.RingTheory.RingHom.Etale
-import Mathlib.RingTheory.Ideal.Span
-import Mathlib.RingTheory.Ideal.Maps
-import Mathlib.Algebra.Polynomial.Eval.Algebra
 import Mathlib.RingTheory.Ideal.Height
-import Mathlib.RingTheory.IntegralClosure.IntegrallyClosed
 
 
 open Polynomial

@@ -1,18 +1,9 @@
 import Mathlib.RingTheory.Etale.StandardEtale
 import Mathlib.RingTheory.Unramified.LocalRing
-import Mathlib.RingTheory.LocalRing.ResidueField.Defs
+import Mathlib.RingTheory.Smooth.Flat
 import Mathlib.RingTheory.LocalRing.Module
 import Mathlib.RingTheory.LocalRing.Quotient
-import Mathlib.RingTheory.IntegralClosure.IsIntegralClosure.Basic
-import Mathlib.RingTheory.IntegralClosure.IntegrallyClosed
-import Mathlib.RingTheory.AdjoinRoot
-import Mathlib.RingTheory.IsAdjoinRoot
-import Mathlib.RingTheory.Smooth.Flat
-import Mathlib.LinearAlgebra.TensorProduct.Quotient
-import Mathlib.LinearAlgebra.Dimension.Constructions
 import Mathlib.LinearAlgebra.Charpoly.Basic
-import Mathlib.RingTheory.Nakayama
-import Mathlib.FieldTheory.PrimitiveElement
 import Monogenic.Basic
 
 open Polynomial
