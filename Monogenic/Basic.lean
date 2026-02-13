@@ -1,6 +1,3 @@
-import Mathlib.RingTheory.AdjoinRoot
-import Mathlib.Algebra.Algebra.Subalgebra.Basic
-import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.IsAdjoinRoot
 
 open Polynomial
