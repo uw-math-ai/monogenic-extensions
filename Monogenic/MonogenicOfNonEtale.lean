@@ -31,18 +31,6 @@ The following lemmas are extracted from the main theorem to improve modularity.
 
 section SubLemmas
 
-/-- In a quotient of a local ring by a prime, the maximal ideal is the image of the original. -/
-lemma maximalIdeal_quotient_eq_map {R : Type*} [CommRing R] [IsLocalRing R]
-    (p : Ideal R) [p.IsPrime] [IsLocalRing (R ⧸ p)] :
-    IsLocalRing.maximalIdeal (R ⧸ p) =
-      Ideal.map (Ideal.Quotient.mk p) (IsLocalRing.maximalIdeal R) := by
-  haveI : IsLocalHom (Ideal.Quotient.mk p) :=
-    IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
-  ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
-  simp only [Ideal.mem_map_iff_of_surjective _ Ideal.Quotient.mk_surjective,
-    IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
-  exact ⟨fun h => ⟨x, (map_mem_nonunits_iff _ x).mp h, rfl⟩,
-         fun ⟨y, hy, hxy⟩ => hxy ▸ (map_mem_nonunits_iff _ y).mpr hy⟩
 
 omit [IsLocalRing R] [IsLocalRing S] in
 /-- In a UFD, a height one prime ideal is principal. -/
@@ -200,12 +188,20 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
   -- Key lemma: for formally unramified local maps, maximal ideals match
   have h_max_eq : Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) = IsLocalRing.maximalIdeal S₀ := by
     rw [← hφ₀_eq]; exact Algebra.FormallyUnramified.map_maximalIdeal
-  -- Maximal ideal of R/p = image of mr
-  have h_max_R₀ : IsLocalRing.maximalIdeal R₀ = Ideal.map (Ideal.Quotient.mk p) mr :=
-    maximalIdeal_quotient_eq_map p
-  -- Maximal ideal of S/q = image of ms
-  have h_max_S₀ : IsLocalRing.maximalIdeal S₀ = Ideal.map (Ideal.Quotient.mk q) ms :=
-    maximalIdeal_quotient_eq_map q
+  -- Maximal ideal of R/p = image of mr (via local_hom_TFAE + map_comap_of_surjective)
+  have h_max_R₀ : IsLocalRing.maximalIdeal R₀ = Ideal.map (Ideal.Quotient.mk p) mr := by
+    haveI := IsLocalHom.of_surjective (Ideal.Quotient.mk p) Ideal.Quotient.mk_surjective
+    have h := ((IsLocalRing.local_hom_TFAE (Ideal.Quotient.mk p)).out 0 4).mp ‹_›
+    rw [← Ideal.map_comap_of_surjective (Ideal.Quotient.mk p)
+      Ideal.Quotient.mk_surjective (IsLocalRing.maximalIdeal R₀)]
+    exact congr_arg _ h
+  -- Maximal ideal of S/q = image of ms (via local_hom_TFAE + map_comap_of_surjective)
+  have h_max_S₀ : IsLocalRing.maximalIdeal S₀ = Ideal.map (Ideal.Quotient.mk q) ms := by
+    haveI := IsLocalHom.of_surjective (Ideal.Quotient.mk q) Ideal.Quotient.mk_surjective
+    have h := ((IsLocalRing.local_hom_TFAE (Ideal.Quotient.mk q)).out 0 4).mp ‹_›
+    rw [← Ideal.map_comap_of_surjective (Ideal.Quotient.mk q)
+      Ideal.Quotient.mk_surjective (IsLocalRing.maximalIdeal S₀)]
+    exact congr_arg _ h
   -- Composition property: φ₀ ∘ (mk p) = (mk q) ∘ φ
   have h_comp : φ₀.comp (Ideal.Quotient.mk p) = (Ideal.Quotient.mk q).comp φ := by
     ext r
