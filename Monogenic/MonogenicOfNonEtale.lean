@@ -340,8 +340,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
       -- Convert `adj : Algebra.adjoin R₀ {B₀} = ⊤` to the form needed by the helper
       have h_gen' : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
           {Ideal.Quotient.mk q B} = ⊤ := by
-        convert adj using 2
-        simp [hB]
+        convert adj using 3
       -- aeval B f₁ ∈ Algebra.adjoin R {B}
       have hπ_mem : f₁_B ∈ Algebra.adjoin R {B} := by
         rw [Algebra.adjoin_singleton_eq_range_aeval]
@@ -484,7 +483,8 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
     have hB'_lifts : Ideal.Quotient.mk q B' = B₀ := by
       have hq₀_in_q : q₀ ∈ q := hq₀ ▸ Ideal.mem_span_singleton_self q₀
       change Ideal.Quotient.mk q (B + q₀) = B₀
-      simp only [map_add, Ideal.Quotient.eq_zero_iff_mem.mpr hq₀_in_q, add_zero, hB]
+      simp only [map_add, Ideal.Quotient.eq_zero_iff_mem.mpr hq₀_in_q, hB]
+      exact add_zero B₀
     -- Step 8: Show Algebra.adjoin R {B'} = ⊤ and derive the isomorphism
     -- The correct witness polynomial is minpoly R B', not f₁.
     -- (f₁(B') = q₀ · unit ≠ 0, so eval at B' doesn't factor through R[X]/(f₁))
@@ -504,8 +504,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
       -- Convert `adj : Algebra.adjoin R₀ {B₀} = ⊤` using `hB'_lifts : mk q B' = B₀`
       have h_gen' : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
           {Ideal.Quotient.mk q B'} = ⊤ := by
-        convert adj using 2
-        simp [hB'_lifts]
+        convert adj using 3
       -- aeval B' f₁ ∈ Algebra.adjoin R {B'}
       have hπ_mem : Polynomial.aeval B' f₁ ∈ Algebra.adjoin R {B'} := by
         rw [Algebra.adjoin_singleton_eq_range_aeval]

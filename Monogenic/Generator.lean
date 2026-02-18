@@ -207,7 +207,7 @@ lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
       -- RHS: mk(r) • mk(x) = mk(algebraMap r * x) (in S ⧸ mS)
       simp only [RingEquiv.toAddEquiv_eq_coe]
       rfl)
-  rw [← e.finrank_eq, h]
+  erw [← e.finrank_eq, h]
 
 /-- Let `β ∈ S`, and let `f ∈ R[x]` be the minimal polynomial for `β` over `R`.
     Then `f mod m_S` is the minimal polynomial for `β mod m_S`.
