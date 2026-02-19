@@ -87,58 +87,29 @@ lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRin
 /-- Taylor expansion for polynomial evaluation over a commutative ring:
     For any polynomial `f` and elements `x`, `h`, there exists `c` such that
     `f(x + h) = f(x) + f'(x) · h + h² · c`. -/
-lemma Polynomial.exists_aeval_add_eq {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+lemma exists_aeval_add_eq {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (f : R[X]) (x h : S) :
-    ∃ c : S, f.aeval (x + h) = f.aeval x + f.derivative.aeval x * h + h^2 * c := by
-  induction f using Polynomial.induction_on with
-  | C r =>
-    -- Constant polynomial: f(x+h) = r = f(x), derivative = 0
-    use 0
-    simp only [Polynomial.aeval_C, Polynomial.derivative_C, Polynomial.aeval_zero,
-      mul_zero, add_zero, sq, zero_mul]
-  | add p₁ p₂ ih₁ ih₂ =>
-    -- Addition: use linearity
-    obtain ⟨c₁, hc₁⟩ := ih₁
-    obtain ⟨c₂, hc₂⟩ := ih₂
-    use c₁ + c₂
-    simp only [Polynomial.aeval_add, Polynomial.derivative_add] at *
-    rw [hc₁, hc₂]
-    ring
-  | monomial n r ih =>
-    -- Monomial: C r * X^(n+1)
-    simp only [Polynomial.aeval_mul, Polynomial.aeval_C, Polynomial.aeval_X_pow,
-      Polynomial.derivative_mul, Polynomial.derivative_C, zero_mul, zero_add,
-      Polynomial.derivative_X_pow]
-    -- Use binomial theorem: (x+h)^(n+1) = Σ_{m=0}^{n+1} C(n+1,m) * x^m * h^(n+1-m)
-    have h_binom : (x + h) ^ (n + 1) = ∑ m ∈ Finset.range (n + 2),
-        x ^ m * h ^ (n + 1 - m) * (n + 1).choose m := add_pow x h (n + 1)
-    -- Construct the remainder term (sum of terms with h² or higher)
-    let c' := ∑ m ∈ Finset.range n, x ^ m * h ^ (n - 1 - m) * (n + 1).choose m
-    use algebraMap R S r * c'
-    rw [h_binom]
-    -- Split sum: Σ_{m=0}^{n+1} = (Σ_{m=0}^{n-1}) + term(m=n) + term(m=n+1)
-    rw [Finset.sum_range_succ, Finset.sum_range_succ]
-    simp only [Nat.choose_self, Nat.cast_one, mul_one, Nat.sub_self, pow_zero,
-      Nat.add_sub_cancel]
-    -- (n+1).choose n = n+1
-    have h_choose_n : (n + 1).choose n = n + 1 := Nat.choose_succ_self_right n
-    rw [h_choose_n]
-    -- Since n+1-m ≥ 2 for m < n, we have h^(n+1-m) = h² * h^(n-1-m)
-    have h_sum_eq : (∑ m ∈ Finset.range n, x ^ m * h ^ (n + 1 - m) * (n + 1).choose m) =
-        h ^ 2 * c' := by
-      rw [Finset.mul_sum]
-      apply Finset.sum_congr rfl
-      intro m hm
-      rw [Finset.mem_range] at hm
-      -- m < n, so n + 1 - m ≥ 2, hence n + 1 - m = (n - 1 - m) + 2
-      have h_exp : n + 1 - m = (n - 1 - m) + 2 := by omega
-      rw [h_exp, pow_add]
-      ring
-    rw [h_sum_eq]
-    -- Normalize: n + 1 - n = 1, and Nat cast factors through algebraMap
-    have h_exp_simp : n + 1 - n = 1 := by omega
-    simp only [h_exp_simp, pow_one, ← map_natCast (algebraMap R S)]
-    ring
+    ∃ c : S, f.aeval (x + h) = f.aeval x + f.derivative.aeval x * h + h ^ 2 * c := by
+  -- Reduce aeval to eval via map, then use the Taylor expansion
+  simp only [aeval_def, ← eval_map, ← derivative_map]
+  set g := f.map (algebraMap R S)
+  -- Use taylor_eval to rewrite g.eval (h + x) as (taylor x g).eval h
+  rw [add_comm, ← taylor_eval]
+  -- Extract constant and linear terms from the Taylor polynomial
+  set T := taylor x g with hT
+  refine ⟨∑ i ∈ Finset.range (T.natDegree + 1), T.coeff (i + 2) * h ^ i, ?_⟩
+  rw [eval_eq_sum_range' (show T.natDegree < T.natDegree + 1 + 2 by omega)]
+  rw [show T.natDegree + 1 + 2 = (T.natDegree + 1) + 1 + 1 from by omega]
+  rw [Finset.sum_range_succ', Finset.sum_range_succ']
+  simp only [pow_zero, mul_one, zero_add, pow_one]
+  -- Use taylor_coeff_zero and taylor_coeff_one to identify the constant and linear coefficients
+  rw [show T.coeff 0 = g.eval x from by rw [hT]; exact taylor_coeff_zero x g]
+  rw [show T.coeff 1 = (derivative g).eval x from by rw [hT]; exact taylor_coeff_one x g]
+  -- Factor h² out of the remaining sum
+  have h_sum : (∑ k ∈ Finset.range (T.natDegree + 1), T.coeff (k + 2) * h ^ (k + 2)) =
+      h ^ 2 * ∑ k ∈ Finset.range (T.natDegree + 1), T.coeff (k + 2) * h ^ k := by
+    rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro i _; ring
+  rw [h_sum]; ring_nf
 
 /-- When the quotient map `R/p → S/q` is étale (with p = q.comap (algebraMap R S)),
     and both rings are local, the maximal ideal of `S` decomposes as
