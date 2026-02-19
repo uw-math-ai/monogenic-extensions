@@ -176,37 +176,20 @@ lemma adjoin_residue_eq_top
 lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
     Module.finrank R S =
       Module.finrank (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) := by
-  -- Étale implies FormallySmooth and FinitePresentation, hence Smooth
-  haveI : Algebra.FormallySmooth R S := inferInstance
-  haveI : Algebra.FinitePresentation R S := inferInstance
-  haveI : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
-  haveI : Module.Flat R S := Algebra.Smooth.flat R S
-  -- Finite + Flat over local ring ⟹ Free
+  -- Étale ⟹ flat, and finite + flat over local ring ⟹ Free
   haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
-  -- For étale: m_R · S = m_S
+  -- Étale ⟹ m_R · S = m_S
   have hmaximal : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) =
       IsLocalRing.maximalIdeal S := Algebra.FormallyUnramified.map_maximalIdeal
   -- finrank_quotient_map gives: finrank (R ⧸ m_R) (S ⧸ Ideal.map m_R) = finrank R S
-  -- ResidueField S = S ⧸ maximalIdeal S, and hmaximal says Ideal.map m_R = m_S
-  -- Use Eq.rec to transport along hmaximal
   have h := IsLocalRing.finrank_quotient_map (R := R) (S := S)
-  -- h : finrank (R ⧸ mR) (S ⧸ Ideal.map mR) = finrank R S
-  -- We need: finrank R S = finrank kR kS
-  -- where kR = R ⧸ mR = ResidueField R, kS = S ⧸ mS = ResidueField S
-  -- hmaximal gives: Ideal.map mR = mS, so S ⧸ Ideal.map mR ≃ₗ S ⧸ mS = kS
-  -- ResidueField R = R ⧸ maximalIdeal R and ResidueField S = S ⧸ maximalIdeal S by definition
-  simp only [IsLocalRing.ResidueField]
   -- Use the linear equivalence from quotEquivOfEq to transfer finrank
   let e : (S ⧸ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R))
       ≃ₗ[R ⧸ IsLocalRing.maximalIdeal R] (S ⧸ IsLocalRing.maximalIdeal S) :=
     AddEquiv.toLinearEquiv (Ideal.quotEquivOfEq hmaximal).toAddEquiv (fun r x => by
       obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
       obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
-      -- Goal: quotEquivOfEq(mk(algebraMap r * x)) = mk(r) • quotEquivOfEq(mk(x))
-      -- LHS: quotEquivOfEq(mk(algebraMap r * x)) = mk(algebraMap r * x) (in S ⧸ mS)
-      -- RHS: mk(r) • mk(x) = mk(algebraMap r * x) (in S ⧸ mS)
-      simp only [RingEquiv.toAddEquiv_eq_coe]
-      rfl)
+      simp only [RingEquiv.toAddEquiv_eq_coe]; rfl)
   erw [← e.finrank_eq, h]
 
 /-- Let `β ∈ S`, and let `f ∈ R[x]` be the minimal polynomial for `β` over `R`.
