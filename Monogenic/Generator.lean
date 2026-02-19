@@ -31,7 +31,6 @@ noncomputable def isAdjoinRootMonic_minpoly
   have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
   set f := minpoly R β with f_def
   have hf_monic : f.Monic := minpoly.monic hβ_int
-  haveI : Module.Free R (AdjoinRoot f) := hf_monic.free_adjoinRoot
   haveI : Module.Finite R (AdjoinRoot f) := hf_monic.finite_adjoinRoot
   -- Step 1: Build surjective AlgHom AdjoinRoot f →ₐ[R] S
   let φ : AdjoinRoot f →ₐ[R] S :=
@@ -218,8 +217,6 @@ lemma minpoly_map_residue [Algebra.Etale R S]
       (Algebra.IsAlgebraic.isAlgebraic β₀)] at hβ₀_gen
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
-    haveI : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
-    haveI : Module.Flat R S := Algebra.Smooth.flat R S
     haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
     rw [(minpoly.monic hβ_int).natDegree_map _,
       ← (isAdjoinRootMonic_minpoly β adjoin_eq_top).finrank,
@@ -322,7 +319,6 @@ lemma adjoin_eq_top_of_quotient
   -- S ⧸ mR_S is a finite module over the field R ⧸ mR, hence Artinian
   haveI : IsArtinianRing (S ⧸ mR_S) := by
     letI : Field (R ⧸ mR) := Ideal.Quotient.field mR
-    haveI : IsArtinianRing (R ⧸ mR) := DivisionRing.instIsArtinianRing
     haveI : Module.Finite (R ⧸ mR) (S ⧸ mR_S) :=
       Module.Finite.of_restrictScalars_finite R (R ⧸ mR) (S ⧸ mR_S)
     exact IsArtinianRing.of_finite (R ⧸ mR) (S ⧸ mR_S)
@@ -438,7 +434,6 @@ theorem exists_adjoin_eq_top [Algebra.Etale R S] :
   -- Lift β₀ to β in S via the quotient map
   obtain ⟨β, hβ⟩ := Ideal.Quotient.mk_surjective β₀
   -- φ finite implies S is integral over R
-  haveI : Algebra.IsIntegral R S := Algebra.IsIntegral.of_finite R S
   -- The key claim: Algebra.adjoin R {β} = ⊤
   -- This follows from Nakayama's lemma: since the image of adjoin R {β} in S/m_S
   -- equals k_R⟮β₀⟯ = k_S (by primitive element theorem and the lift), and S is
