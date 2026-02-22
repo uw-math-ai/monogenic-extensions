@@ -404,7 +404,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
     have h_f₁B'_factorization : ∃ b : S, Polynomial.aeval B' f₁ =
       q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
       -- Apply the Taylor expansion to f₁ with x = B and h = q₀
-      obtain ⟨c, hc⟩ := Polynomial.exists_aeval_add_eq f₁ B q₀
+      obtain ⟨c, hc⟩ := exists_aeval_add_eq f₁ B q₀
       -- We have: f₁.aeval (B + q₀) = f₁.aeval B + f₁.derivative.aeval B * q₀ + q₀² * c
       -- Substitute ha: f₁.aeval B = q₀ * a (note: f₁_B = aeval B f₁)
       use c

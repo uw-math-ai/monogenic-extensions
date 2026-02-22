@@ -22,22 +22,15 @@ variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 -- in Mathlib.LinearAlgebra.Charpoly.Basic
 -- doesn't really make sense to put it with charpoly though...
 theorem _root_.minpoly.natDegree_le' [Module.Finite R S]
-    [Module.Free R S] [Nontrivial R] {α : S} (hα : IsIntegral R α) :
+    [Module.Free R S] [Nontrivial R] (α : S) :
     (minpoly R α).natDegree ≤ Module.finrank R S := by
-  let lα := Algebra.lmul R S α
-  have h_aeval_zero : aeval α lα.charpoly = 0 := by
-    have h : Algebra.lmul R S (aeval α lα.charpoly) = 0 := by
-      rw [← aeval_algHom_apply]; exact LinearMap.aeval_self_charpoly lα
-    have h2 := DFunLike.congr_fun h (1 : S)
-    simp only [LinearMap.zero_apply] at h2
-    rwa [show (Algebra.lmul R S (aeval α lα.charpoly)) (1 : S) =
-      aeval α lα.charpoly from by simp [mul_one]] at h2
-  have h_min := minpoly.min R α (LinearMap.charpoly_monic lα) h_aeval_zero
-  rw [degree_eq_natDegree (minpoly.monic hα).ne_zero,
-      degree_eq_natDegree (LinearMap.charpoly_monic lα).ne_zero] at h_min
-  have : (minpoly R α).natDegree ≤ (Module.finrank R S : WithBot ℕ) :=
-    h_min.trans (by simp [LinearMap.charpoly_natDegree lα])
-  exact_mod_cast this
+  set lα := Algebra.lmul R S α
+  have haeval : aeval α lα.charpoly = 0 := Algebra.lmul_injective
+    (by rw [map_zero, ← aeval_algHom_apply]; exact lα.aeval_self_charpoly)
+  calc (minpoly R α).natDegree
+      ≤ lα.charpoly.natDegree :=
+        natDegree_le_natDegree (minpoly.min R α lα.charpoly_monic haeval)
+    _ = Module.finrank R S := lα.charpoly_natDegree
 
 /-- Let `R -> S` be a finite étale extension of local integral domains.
     Suppose there exists `β ∈ S` such that `S = R[β]`.
@@ -51,45 +44,36 @@ theorem _root_.minpoly.natDegree_le' [Module.Finite R S]
 noncomputable def _root_.IsAdjoinRoot.mkOfAdjoinEqTop'
   [Module.Finite R S]
   [Module.Free R S] [Nontrivial R]
-  {β : S}
-  (hadj : Algebra.adjoin R {β} = ⊤) :
-     IsAdjoinRootMonic S (minpoly R β) := by
-  let f := minpoly R β
-  have hf_monic : f.Monic := minpoly.monic <| Algebra.IsIntegral.isIntegral β
-  haveI : Module.Free R (AdjoinRoot f) := hf_monic.free_adjoinRoot
-  haveI : Module.Finite R (AdjoinRoot f) := hf_monic.finite_adjoinRoot
+  {α : S} (hα : Algebra.adjoin R {α} = ⊤) :
+    IsAdjoinRootMonic S (minpoly R α) := by
+  set f := minpoly R α
+  have hf : f.Monic := minpoly.monic (Algebra.IsIntegral.isIntegral α)
+  haveI : Module.Free R (AdjoinRoot f) := hf.free_adjoinRoot
+  haveI : Module.Finite R (AdjoinRoot f) := hf.finite_adjoinRoot
   let φ : AdjoinRoot f →ₐ[R] S :=
-    AdjoinRoot.liftAlgHom f (Algebra.ofId R S) β (minpoly.aeval R β)
+    AdjoinRoot.liftAlgHom f (Algebra.ofId R S) α (minpoly.aeval R α)
   have hφ_surj : Function.Surjective φ := by
-    rw [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at hadj
-    intro s
-    obtain ⟨p, hp⟩ := hadj s
-    exact ⟨AdjoinRoot.mk f p,
-      by simp [φ, AdjoinRoot.liftAlgHom_mk, ← aeval_def, hp]⟩
-  have h_n_le_d : Module.finrank R S ≤ f.natDegree := by
+    rw [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at hα
+    intro s; obtain ⟨p, hp⟩ := hα s
+    exact ⟨AdjoinRoot.mk f p, by simp [φ, ← aeval_def, hp]⟩
+  have h_le : Module.finrank R S ≤ f.natDegree := by
     calc Module.finrank R S
         ≤ Module.finrank R (AdjoinRoot f) := by
           let e := φ.toLinearMap.quotKerEquivRange.trans
             (LinearEquiv.ofTop _ (LinearMap.range_eq_top.mpr hφ_surj))
           rw [← e.finrank_eq]
           exact Submodule.finrank_quotient_le _
-      _ = f.natDegree := finrank_quotient_span_eq_natDegree' hf_monic
-  have h_rank_eq : f.natDegree = Module.finrank R S :=
-    le_antisymm (minpoly.natDegree_le' <| Algebra.IsIntegral.isIntegral β) h_n_le_d
+      _ = f.natDegree := finrank_quotient_span_eq_natDegree' hf
+  have hrank : f.natDegree = Module.finrank R S :=
+    le_antisymm (minpoly.natDegree_le' α) h_le
   have hφ_inj : Function.Injective φ := by
-    have h_card : Fintype.card (Fin f.natDegree) =
-        Fintype.card (Module.Free.ChooseBasisIndex R S) := by
-      rw [Fintype.card_fin, h_rank_eq, Module.finrank_eq_card_chooseBasisIndex]
-    let e : AdjoinRoot f ≃ₗ[R] S :=
-      (AdjoinRoot.powerBasis' hf_monic).basis.equiv
-        (Module.Free.chooseBasis R S) (Fintype.equivOfCardEq h_card)
-    let ψ : Module.End R (AdjoinRoot f) := e.symm.toLinearMap.comp φ.toLinearMap
-    have hψ_surj : Function.Surjective ψ := e.symm.surjective.comp hφ_surj
-    have hψ_inj := OrzechProperty.injective_of_surjective_endomorphism ψ hψ_surj
-    intro x y hxy
-    exact hψ_inj (by change e.symm (φ x) = e.symm (φ y); rw [hxy])
+    let e := LinearEquiv.ofFinrankEq (R := R) (AdjoinRoot f) S
+      ((finrank_quotient_span_eq_natDegree' hf).trans hrank)
+    have h := OrzechProperty.injective_of_surjective_endomorphism
+      (e.symm.toLinearMap.comp φ.toLinearMap) (e.symm.surjective.comp hφ_surj)
+    intro x y hxy; exact h (congr_arg e.symm hxy)
   let e := AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩
-  exact { IsAdjoinRoot.ofAdjoinRootEquiv e with monic := hf_monic }
+  exact { IsAdjoinRoot.ofAdjoinRootEquiv e with monic := hf }
 
 /-!
 ## Helper lemmas for the derivative unit condition
