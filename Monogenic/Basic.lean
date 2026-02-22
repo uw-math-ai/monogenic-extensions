@@ -32,41 +32,31 @@ and tweaked the generated code.
 namespace Monogenic
 variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 
-/-
-NOTE: This theorem/def is already in mathlib as IsAdjoinRoot.ofAdjoinRootEquiv
-but for some reason I can't use it because of the
-"LCNF" (Lean Compiler Normal Form) for it is missing?
-Seems like a bug in the lean compiler on the latest toolchain version.
--/
-def isAdjoinRoot_ofAlgEquiv (f : R[X])
+noncomputable def _isAdjoinRoot_ofAlgEquiv (f : R[X])
     (e : (R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S) :
-    IsAdjoinRoot S f where
-  map := e.toAlgHom.comp (Ideal.Quotient.mkₐ R (Ideal.span {f}))
-  map_surjective := e.surjective.comp Ideal.Quotient.mk_surjective
-  ker_map := by
-    ext; simp [Ideal.mem_span_singleton, Ideal.Quotient.eq_zero_iff_mem]
+    IsAdjoinRoot S f := IsAdjoinRoot.ofAdjoinRootEquiv e
 
 /-An equivalent defintion of isMonogenicExtension:
   ∃ β ∈ S such that R[X] → S, X ↦ β is surjective with kernel (f)
 -/
 -- already in mathlib: compose IsAdjoinRoot.ofAdjoinRootEquiv
-lemma monogenic_of_univQuot
+lemma _monogenic_of_univQuot
     (hiso : ∃ f : R[X], Nonempty ((R[X] ⧸ Ideal.span {f}) ≃ₐ[R] S)) :
     ∃ β : S, (Algebra.adjoin R {β} = ⊤) := by
   let ⟨f, ⟨e⟩⟩ := hiso
-  let adj := isAdjoinRoot_ofAlgEquiv f e
+  let adj := IsAdjoinRoot.ofAdjoinRootEquiv e
   exact ⟨adj.root, adj.adjoin_root_eq_top⟩
 
 
 -- Both lemmas follow from Algebra.adjoin_singleton_eq_range_aeval:
 --   adjoin R {x} = (aeval x).range
-lemma monogenic_of_surjective_map (f : R[X] →ₐ[R] S) (hsurj : Function.Surjective f) :
+lemma _monogenic_of_surjective_map (f : R[X] →ₐ[R] S) (hsurj : Function.Surjective f) :
     Algebra.adjoin R {f X} = ⊤ := by
   rw [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top]
   intro s; obtain ⟨p, hp⟩ := hsurj s
   exact ⟨p, by simp [aeval_algHom_apply f, hp]⟩
 
-lemma surjective_map_of_monogenic (β : S) (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
+lemma _surjective_map_of_monogenic (β : S) (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
     Function.Surjective (aeval (R:=R) β) := by
   rwa [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at adjoin_eq_top
 

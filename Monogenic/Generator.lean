@@ -4,7 +4,7 @@ import Mathlib.RingTheory.Smooth.Flat
 import Mathlib.RingTheory.LocalRing.Module
 import Mathlib.RingTheory.LocalRing.Quotient
 import Mathlib.LinearAlgebra.Charpoly.Basic
-import Monogenic.Basic
+import Mathlib.RingTheory.IsAdjoinRoot
 
 open Polynomial
 open Function
@@ -12,6 +12,32 @@ open RingHom
 namespace Monogenic
 
 variable {R S} [CommRing R] [CommRing S] [Algebra R S]
+
+#check minpoly.natDegree_le
+
+-- considered
+-- Mathlib.LinearAlgebra.FreeModule.Finite.Basic
+-- but charpoly imports that...
+-- so maybe just next to LinearMap.charpoly_natDegree? (which we use here!)
+-- in Mathlib.LinearAlgebra.Charpoly.Basic
+-- doesn't really make sense to put it with charpoly though...
+theorem _root_.minpoly.natDegree_le' [Module.Finite R S]
+    [Module.Free R S] [Nontrivial R] {α : S} (hα : IsIntegral R α) :
+    (minpoly R α).natDegree ≤ Module.finrank R S := by
+  let lα := Algebra.lmul R S α
+  have h_aeval_zero : aeval α lα.charpoly = 0 := by
+    have h : Algebra.lmul R S (aeval α lα.charpoly) = 0 := by
+      rw [← aeval_algHom_apply]; exact LinearMap.aeval_self_charpoly lα
+    have h2 := DFunLike.congr_fun h (1 : S)
+    simp only [LinearMap.zero_apply] at h2
+    rwa [show (Algebra.lmul R S (aeval α lα.charpoly)) (1 : S) =
+      aeval α lα.charpoly from by simp [mul_one]] at h2
+  have h_min := minpoly.min R α (LinearMap.charpoly_monic lα) h_aeval_zero
+  rw [degree_eq_natDegree (minpoly.monic hα).ne_zero,
+      degree_eq_natDegree (LinearMap.charpoly_monic lα).ne_zero] at h_min
+  have : (minpoly R α).natDegree ≤ (Module.finrank R S : WithBot ℕ) :=
+    h_min.trans (by simp [LinearMap.charpoly_natDegree lα])
+  exact_mod_cast this
 
 /-- Let `R -> S` be a finite étale extension of local integral domains.
     Suppose there exists `β ∈ S` such that `S = R[β]`.
@@ -22,75 +48,48 @@ variable {R S} [CommRing R] [CommRing S] [Algebra R S]
     2. Quotient rank inequality for the reverse bound
     3. Surjective endomorphism injectivity for free modules
 -/
-noncomputable def isAdjoinRootMonic_minpoly
-  [Module.Finite R S] [FaithfulSMul R S]
+noncomputable def _root_.IsAdjoinRoot.mkOfAdjoinEqTop'
+  [Module.Finite R S]
   [Module.Free R S] [Nontrivial R]
-  (β : S)
-  (adjoin_top : Algebra.adjoin R {β} = ⊤) :
+  {β : S}
+  (hadj : Algebra.adjoin R {β} = ⊤) :
      IsAdjoinRootMonic S (minpoly R β) := by
-  have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  set f := minpoly R β with f_def
-  have hf_monic : f.Monic := minpoly.monic hβ_int
+  let f := minpoly R β
+  have hf_monic : f.Monic := minpoly.monic <| Algebra.IsIntegral.isIntegral β
+  haveI : Module.Free R (AdjoinRoot f) := hf_monic.free_adjoinRoot
   haveI : Module.Finite R (AdjoinRoot f) := hf_monic.finite_adjoinRoot
-  -- Step 1: Build surjective AlgHom AdjoinRoot f →ₐ[R] S
   let φ : AdjoinRoot f →ₐ[R] S :=
     AdjoinRoot.liftAlgHom f (Algebra.ofId R S) β (minpoly.aeval R β)
-  have hφ_surj : Surjective φ := by
+  have hφ_surj : Function.Surjective φ := by
+    rw [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at hadj
     intro s
-    obtain ⟨p, hp⟩ := surjective_map_of_monogenic β adjoin_top s
-    exact ⟨AdjoinRoot.mk f p, by simp [φ, AdjoinRoot.liftAlgHom_mk, ← aeval_def, hp]⟩
-  -- Step 2: natDegree f ≤ finrank R S (Cayley-Hamilton)
-  have h_d_le_n : f.natDegree ≤ Module.finrank R S := by
-    -- The charpoly of "multiply by β" is monic of degree finrank and kills β
-    set lβ := Algebra.lmul R S β
-    -- Transfer Cayley-Hamilton from endomorphism to element
-    have h_aeval_zero : aeval β lβ.charpoly = 0 := by
-      have h : Algebra.lmul R S (aeval β lβ.charpoly) = 0 := by
-        rw [← aeval_algHom_apply]; exact LinearMap.aeval_self_charpoly lβ
-      have h2 := DFunLike.congr_fun h (1 : S)
-      simp only [LinearMap.zero_apply] at h2
-      rwa [show (Algebra.lmul R S (aeval β lβ.charpoly)) (1 : S) =
-        aeval β lβ.charpoly from by simp [mul_one]] at h2
-    -- minpoly has minimal degree, charpoly has degree finrank
-    have h_min := minpoly.min R β (LinearMap.charpoly_monic lβ) h_aeval_zero
-    rw [degree_eq_natDegree hf_monic.ne_zero,
-        degree_eq_natDegree (LinearMap.charpoly_monic lβ).ne_zero] at h_min
-    have : (f.natDegree : WithBot ℕ) ≤ (Module.finrank R S : WithBot ℕ) :=
-      h_min.trans (by simp [LinearMap.charpoly_natDegree lβ])
-    exact_mod_cast this
-  -- Step 3: finrank R S ≤ natDegree f (surjection from AdjoinRoot of rank d)
+    obtain ⟨p, hp⟩ := hadj s
+    exact ⟨AdjoinRoot.mk f p,
+      by simp [φ, AdjoinRoot.liftAlgHom_mk, ← aeval_def, hp]⟩
   have h_n_le_d : Module.finrank R S ≤ f.natDegree := by
-    have h_adj_rank : Module.finrank R (AdjoinRoot f) = f.natDegree :=
-      finrank_quotient_span_eq_natDegree' hf_monic
     calc Module.finrank R S
         ≤ Module.finrank R (AdjoinRoot f) := by
-          -- S ≅ AdjoinRoot f / ker φ, so finrank S ≤ finrank (AdjoinRoot f)
           let e := φ.toLinearMap.quotKerEquivRange.trans
             (LinearEquiv.ofTop _ (LinearMap.range_eq_top.mpr hφ_surj))
           rw [← e.finrank_eq]
           exact Submodule.finrank_quotient_le _
-      _ = f.natDegree := h_adj_rank
-  -- Step 4: Rank equality
-  have h_rank_eq : f.natDegree = Module.finrank R S := le_antisymm h_d_le_n h_n_le_d
-  -- Step 5: Injectivity via surjective endomorphism argument
-  have hφ_inj : Injective φ := by
-    -- Build a linear equiv AdjoinRoot f ≃ₗ[R] S (both free of same rank)
+      _ = f.natDegree := finrank_quotient_span_eq_natDegree' hf_monic
+  have h_rank_eq : f.natDegree = Module.finrank R S :=
+    le_antisymm (minpoly.natDegree_le' <| Algebra.IsIntegral.isIntegral β) h_n_le_d
+  have hφ_inj : Function.Injective φ := by
     have h_card : Fintype.card (Fin f.natDegree) =
         Fintype.card (Module.Free.ChooseBasisIndex R S) := by
       rw [Fintype.card_fin, h_rank_eq, Module.finrank_eq_card_chooseBasisIndex]
     let e : AdjoinRoot f ≃ₗ[R] S :=
       (AdjoinRoot.powerBasis' hf_monic).basis.equiv
         (Module.Free.chooseBasis R S) (Fintype.equivOfCardEq h_card)
-    -- Compose: e⁻¹ ∘ φ is a surjective endomorphism of AdjoinRoot f
     let ψ : Module.End R (AdjoinRoot f) := e.symm.toLinearMap.comp φ.toLinearMap
-    have hψ_surj : Surjective ψ := e.symm.surjective.comp hφ_surj
+    have hψ_surj : Function.Surjective ψ := e.symm.surjective.comp hφ_surj
     have hψ_inj := OrzechProperty.injective_of_surjective_endomorphism ψ hψ_surj
-    -- ψ = e.symm ∘ φ injective implies φ injective
     intro x y hxy
     exact hψ_inj (by change e.symm (φ x) = e.symm (φ y); rw [hxy])
-  -- Step 6: Build AlgEquiv and convert to IsAdjoinRootMonic
   let e := AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩
-  exact { isAdjoinRoot_ofAlgEquiv f e with monic := hf_monic }
+  exact { IsAdjoinRoot.ofAdjoinRootEquiv e with monic := hf_monic }
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -132,37 +131,27 @@ lemma residue_comp_algebraMap :
       (IsLocalRing.residue R) :=
   rfl
 
-/-- When `β` generates `S` over `R`, the residue `β₀ = β mod m_S`
-     generates `S / m_S` over `R / m_R.` -/
-lemma adjoin_residue_eq_top
-    (β : S) (hβ_gen : Algebra.adjoin R {β} = ⊤) :
+/--
+In Mathlib.RingTheory.LocalRing.ResidueField.Basic? maybe?
+
+When `β` generates `S` over `R`, the residue `β₀ = β mod m_S`
+generates `S / m_S` over `R / m_R.`
+
+  R[X] --aeval β-->  S
+   |                 |
+map(residue R)    residue S
+   v                 v
+  kR[X] --aeval β₀-> kS
+-/
+lemma adjoin_residue_eq_top_of_adjoin_eq_top
+    {β : S} (hβ_gen : Algebra.adjoin R {β} = ⊤) :
     Algebra.adjoin (IsLocalRing.ResidueField R) {IsLocalRing.residue S β} = ⊤ := by
-  set kR := IsLocalRing.ResidueField R
-  set kS := IsLocalRing.ResidueField S
-  -- The residue map is surjective and respects the algebra structure
-  -- Algebra.adjoin R {β} = ⊤ maps onto Algebra.adjoin k_R {β₀} = k_S
-  rw [eq_top_iff]
-  intro x _
+  rw [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at *
+  intro x
   obtain ⟨s, rfl⟩ := IsLocalRing.residue_surjective (R := S) x
-  have hs : s ∈ Algebra.adjoin R {β} := by rw [hβ_gen]; trivial
-  -- s is in the adjoin of β over R, so residue(s) is in the adjoin of β₀ over k_R
-  induction hs using Algebra.adjoin_induction with
-  | mem x hx =>
-    rw [Set.mem_singleton_iff.mp hx]
-    exact Algebra.subset_adjoin rfl
-  | algebraMap r =>
-    -- (residue S) (algebraMap R S r) = algebraMap kR kS (residue R r)
-    -- which is in any subalgebra
-    have : (IsLocalRing.residue S) (algebraMap R S r)
-        = algebraMap kR kS (IsLocalRing.residue R r) := rfl
-    rw [this]
-    exact Subalgebra.algebraMap_mem _ _
-  | add x y _ _ hx hy =>
-    simp only [map_add]
-    exact Subalgebra.add_mem _ (hx trivial) (hy trivial)
-  | mul _ _ _ _ hx hy =>
-    simp only [map_mul]
-    exact Subalgebra.mul_mem _ (hx trivial) (hy trivial)
+  obtain ⟨p, rfl⟩ := hβ_gen s
+  exact ⟨p.map (IsLocalRing.residue R),
+    by simp only [aeval_def, eval₂_map, hom_eval₂]; rfl⟩
 
 /-- For finite étale extensions of local rings, `rank_R S = rank_{R/m_R} S/m_S`.
 -- Q: Is this in the right level of generality?
@@ -197,19 +186,19 @@ lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
     show they have the same degree, hence they're equal.
 -/
 lemma minpoly_map_residue [Algebra.Etale R S]
-    (β : S) (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
+    {β : S} (hadj : Algebra.adjoin R {β} = ⊤) :
     (minpoly R β).map (IsLocalRing.residue R) = minpoly (IsLocalRing.ResidueField R)
       (IsLocalRing.residue S β) := by
-  have hβ_int : IsIntegral R β := Algebra.IsIntegral.isIntegral β
-  set kR := IsLocalRing.ResidueField R
-  set β₀ := IsLocalRing.residue S β
-  set f_bar := (minpoly R β).map (IsLocalRing.residue R)
+  have hmonic := minpoly.monic <| Algebra.IsIntegral.isIntegral (R:=R) β
+  let kR := IsLocalRing.ResidueField R
+  let β₀ := IsLocalRing.residue S β
+  let f_bar := (minpoly R β).map (IsLocalRing.residue R)
   have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
   -- β₀ is a root of f_bar, so minpoly kR β₀ divides f_bar
   have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ (by
     rw [aeval_def, eval₂_map, ← residue_comp_algebraMap, ← hom_eval₂, ← aeval_def, minpoly.aeval,
       map_zero])
-  have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := adjoin_residue_eq_top β adjoin_eq_top
+  have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := adjoin_residue_eq_top_of_adjoin_eq_top hadj
   -- Degree chain: natDegree f_bar = natDegree f = finrank R S
   --             = finrank kR kS = natDegree (minpoly kR β₀)
   have hβ₀_field_gen : IntermediateField.adjoin kR {β₀} = ⊤ := by
@@ -218,13 +207,13 @@ lemma minpoly_map_residue [Algebra.Etale R S]
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
     haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
-    rw [(minpoly.monic hβ_int).natDegree_map _,
-      ← (isAdjoinRootMonic_minpoly β adjoin_eq_top).finrank,
+    rw [hmonic.natDegree_map _,
+      ← (IsAdjoinRoot.mkOfAdjoinEqTop' hadj).finrank,
       finrank_eq_finrank_residueField, ← IntermediateField.finrank_top', ← hβ₀_field_gen,
       IntermediateField.adjoin.finrank hβ₀_int]
   -- Both monic, same degree, divisibility ⟹ equal
   exact eq_of_monic_of_dvd_of_natDegree_le (minpoly.monic hβ₀_int)
-    (minpoly.monic hβ_int |>.map _) hdvd hdeg_eq.le
+    (hmonic.map _) hdvd hdeg_eq.le
 
 /-- A key technical fact: if `R -> S` is étale and `R[β] = S`,
       then `f'(β) is a unit in S`.
@@ -234,15 +223,15 @@ lemma minpoly_map_residue [Algebra.Etale R S]
     2. Separability gives aeval β₀ (minpoly kR β₀).derivative ≠ 0
     3. Therefore aeval β (minpoly R β).derivative ∉ m_S, hence is a unit
 -/
-lemma isUnit_aeval_derivative_minpoly [Algebra.Etale R S]
-    (β : S)
-    (adjoin_eq_top : Algebra.adjoin R {β} = ⊤) :
+lemma isUnit_aeval_derivative_minpoly_of_adjoin_eq_top
+    [Algebra.Etale R S] {β : S}
+    (hadj : Algebra.adjoin R {β} = ⊤) :
     IsUnit (aeval β (minpoly R β).derivative) := by
   -- Strategy: show residue of (aeval β f') is non-zero, hence aeval β f' is a unit
   apply fun s h =>
     IsLocalRing.notMem_maximalIdeal.mp <| mt (IsLocalRing.residue_eq_zero_iff s).mpr h
-  set kR := IsLocalRing.ResidueField R
-  set β₀ := IsLocalRing.residue S β
+  let kR := IsLocalRing.ResidueField R
+  let β₀ := IsLocalRing.residue S β
   -- Therefore, derivative of minpoly at β₀ is non-zero
   have hderiv_ne_zero : aeval β₀ (minpoly kR β₀).derivative ≠ 0 :=
     (Algebra.IsSeparable.isSeparable kR β₀).aeval_derivative_ne_zero (minpoly.aeval kR β₀)
@@ -251,7 +240,7 @@ lemma isUnit_aeval_derivative_minpoly [Algebra.Etale R S]
       p.eval₂ ((IsLocalRing.residue S).comp (algebraMap R S)) (IsLocalRing.residue S β) := by
     simp only [aeval_def, hom_eval₂]
   rw [residue_aeval_eq, residue_comp_algebraMap, ← eval₂_map,
-    ← derivative_map, minpoly_map_residue β adjoin_eq_top, ← aeval_def]
+    ← derivative_map, minpoly_map_residue hadj, ← aeval_def]
   exact hderiv_ne_zero
 
 /-!
@@ -311,10 +300,10 @@ lemma adjoin_eq_top_of_quotient
     (h_ms : IsLocalRing.maximalIdeal S =
       Ideal.span {π} ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R)) :
     Algebra.adjoin R {β} = ⊤ := by
-  set A := Algebra.adjoin R {β}
-  set mR := IsLocalRing.maximalIdeal R
-  set ms := IsLocalRing.maximalIdeal S with ms_def
-  set mR_S := Ideal.map (algebraMap R S) mR
+  let A := Algebra.adjoin R {β}
+  let mR := IsLocalRing.maximalIdeal R
+  set ms := IsLocalRing.maximalIdeal S
+  let mR_S := Ideal.map (algebraMap R S) mR
   -- Step 1: Show ms^n ≤ mR_S for some n, via Artinian quotient
   -- S ⧸ mR_S is a finite module over the field R ⧸ mR, hence Artinian
   haveI : IsArtinianRing (S ⧸ mR_S) := by

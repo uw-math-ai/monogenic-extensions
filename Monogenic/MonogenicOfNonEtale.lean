@@ -231,7 +231,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
     haveI : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
     haveI : Module.Flat R S := Algebra.Smooth.flat R S
     haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
-    exact ⟨minpoly R β, ⟨isAdjoinRootMonic_minpoly β adj⟩⟩
+    exact ⟨minpoly R β, ⟨IsAdjoinRoot.mkOfAdjoinEqTop' adj⟩⟩
   -- Step 2: Define the quotient structures
   -- p = q ∩ R (preimage of q under φ)
   let p : Ideal R := q.comap φ
@@ -361,7 +361,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
         rw [faithfulSMul_iff_algebraMap_injective]
         exact hφ₀_inj
       have h_unit_B₀ : IsUnit (Polynomial.aeval B₀ (minpoly R₀ B₀).derivative) :=
-        isUnit_aeval_derivative_minpoly B₀ adj
+        isUnit_aeval_derivative_minpoly_of_adjoin_eq_top adj
       -- Step 5: Commutative diagram - mk q (f₁'.aeval B) = f₀'.aeval B₀
       have h_deriv_comm : Ideal.Quotient.mk q (f₁.derivative.aeval B) =
           (f₀.derivative).aeval B₀ := by
