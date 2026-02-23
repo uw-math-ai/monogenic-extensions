@@ -38,51 +38,20 @@ lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRin
     [UniqueFactorizationMonoid S]
     (q : Ideal S) [hq_prime : q.IsPrime] (hq_height : q.height = 1) :
     ∃ q₀ : S, q = Ideal.span {q₀} := by
-  -- Step 1: q ≠ ⊥ because height q = 1 > 0
-  have hq_ne_bot : q ≠ ⊥ := by
-    intro h
-    rw [h, Ideal.height_bot] at hq_height
-    exact zero_ne_one hq_height
-  -- Step 2: By UFD property, every nonzero prime ideal contains a prime element
-  obtain ⟨p, hp_mem, hp_prime⟩ := Ideal.IsPrime.exists_mem_prime_of_ne_bot hq_prime hq_ne_bot
-  -- Step 3: span {p} is a prime ideal since p is prime
-  have h_span_prime : (Ideal.span {p}).IsPrime := by
-    rw [Ideal.span_singleton_prime hp_prime.ne_zero]
-    exact hp_prime
-  -- Step 4: span {p} ⊆ q
-  have h_span_le : Ideal.span {p} ≤ q := (Ideal.span_singleton_le_iff_mem (I := q)).mpr hp_mem
-  -- Step 5: span {p} ≠ ⊥
-  have h_span_ne_bot : Ideal.span {p} ≠ ⊥ := by
-    simp only [ne_eq, Ideal.span_singleton_eq_bot]
-    exact hp_prime.ne_zero
-  -- Step 6: Since height q = 1, if span {p} < q, then span {p} has height 0
-  -- In a domain, height 0 primes are just ⊥, but span {p} ≠ ⊥, contradiction.
-  -- So span {p} = q.
-  have h_eq : Ideal.span {p} = q := by
-    by_contra h_ne
-    have h_lt : Ideal.span {p} < q := lt_of_le_of_ne h_span_le h_ne
-    -- height (span {p}) < height q = 1, so height (span {p}) = 0
-    haveI : (Ideal.span {p}).IsPrime := h_span_prime
-    have hq_ht_ne_top : q.height ≠ ⊤ := by
-      rw [hq_height]
-      exact ENat.one_ne_top
-    haveI : q.FiniteHeight := ⟨Or.inr hq_ht_ne_top⟩
-    haveI : (Ideal.span {p}).FiniteHeight := Ideal.finiteHeight_of_le h_span_le hq_prime.ne_top
-    have h_ht_lt := Ideal.height_strict_mono_of_is_prime h_lt
-    rw [hq_height] at h_ht_lt
-    -- height (span {p}) < 1 means height (span {p}) = 0
-    have h_ht_zero : (Ideal.span {p}).height = 0 := ENat.lt_one_iff_eq_zero.mp h_ht_lt
-    -- span {p} is a minimal prime of S (height 0 prime)
-    rw [Ideal.height_eq_primeHeight, Ideal.primeHeight_eq_zero_iff] at h_ht_zero
-    -- In a domain, minimalPrimes of (⊥ : Ideal S) is just {⊥}
-    have h_span_eq_bot : Ideal.span {p} = ⊥ := by
-      have h_mem : Ideal.span {p} ∈ (⊥ : Ideal S).minimalPrimes := h_ht_zero
-      -- (⊥ : Ideal S).minimalPrimes = minimalPrimes S by definition
-      have : (⊥ : Ideal S).minimalPrimes = minimalPrimes S := rfl
-      rw [this, IsDomain.minimalPrimes_eq_singleton_bot] at h_mem
-      exact Set.mem_singleton_iff.mp h_mem
-    exact h_span_ne_bot h_span_eq_bot
-  exact ⟨p, h_eq.symm⟩
+  have hq_ne_bot : q ≠ ⊥ := by rintro rfl; simp at hq_height
+  obtain ⟨p, hp_mem, hp_prime⟩ := hq_prime.exists_mem_prime_of_ne_bot hq_ne_bot
+  suffices h : Ideal.span {p} = q from ⟨p, h.symm⟩
+  by_contra h_ne
+  have h_lt := lt_of_le_of_ne (Ideal.span_le.mpr (Set.singleton_subset_iff.mpr hp_mem)) h_ne
+  haveI : (Ideal.span {p}).IsPrime := (Ideal.span_singleton_prime hp_prime.ne_zero).mpr hp_prime
+  haveI : q.FiniteHeight := ⟨Or.inr (by rw [hq_height]; exact ENat.one_ne_top)⟩
+  haveI := Ideal.finiteHeight_of_le h_lt.le hq_prime.ne_top
+  have h0 : (Ideal.span {p}).height = 0 := ENat.lt_one_iff_eq_zero.mp (by
+    have := Ideal.height_strict_mono_of_is_prime h_lt; rwa [hq_height] at this)
+  rw [Ideal.height_eq_primeHeight, Ideal.primeHeight_eq_zero_iff,
+    IsDomain.minimalPrimes_eq_singleton_bot, Set.mem_singleton_iff,
+    Ideal.span_singleton_eq_bot] at h0
+  exact hp_prime.ne_zero h0
 
 /-- Taylor expansion for polynomial evaluation over a commutative ring:
     For any polynomial `f` and elements `x`, `h`, there exists `c` such that
@@ -110,83 +79,45 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
     (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
     IsLocalRing.maximalIdeal S =
       q ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) := by
-  let φ := algebraMap R S
-  let p : Ideal R := q.comap φ
-  let R₀ := R ⧸ p
-  let S₀ := S ⧸ q
-  let φ₀ : R₀ →+* S₀ := Ideal.quotientMap q φ (le_refl p)
-  let mr := IsLocalRing.maximalIdeal R
-  let ms := IsLocalRing.maximalIdeal S
-  have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
-  -- Set up algebra structure on φ₀
-  letI : Algebra R₀ S₀ := φ₀.toAlgebra
-  have hφ₀_eq : algebraMap R₀ S₀ = φ₀ := RingHom.algebraMap_toAlgebra φ₀
-  have hφ₀_inj : Injective φ₀ := Ideal.quotientMap_injective
-  -- R₀ and S₀ are domains and local rings
-  haveI hp_prime : p.IsPrime := Ideal.IsPrime.comap φ
-  haveI : IsDomain R₀ := Ideal.Quotient.isDomain p
-  haveI : IsDomain S₀ := Ideal.Quotient.isDomain q
-  haveI : Nontrivial R₀ := Ideal.Quotient.nontrivial_iff.mpr hp_prime.ne_top
-  haveI : IsLocalRing R₀ :=
-    IsLocalRing.of_surjective' (Ideal.Quotient.mk p) Ideal.Quotient.mk_surjective
-  haveI : Nontrivial S₀ := Ideal.Quotient.nontrivial_iff.mpr hq_prime.ne_top
-  haveI : IsLocalRing S₀ :=
-    IsLocalRing.of_surjective' (Ideal.Quotient.mk q) Ideal.Quotient.mk_surjective
-  -- Extract formally unramified from étale
-  have h_etale := (RingHom.etale_iff_formallyUnramified_and_smooth φ₀).mp hétale
-  have unram_φ₀ : φ₀.FormallyUnramified := h_etale.1
-  haveI : Algebra.FormallyUnramified R₀ S₀ := by rwa [← hφ₀_eq] at unram_φ₀
-  -- Module.Finite descends to quotients via scalar tower
-  haveI : IsScalarTower R R₀ S₀ := .of_algebraMap_eq' rfl
-  haveI : Module.Finite R₀ S₀ :=
-    Module.Finite.of_restrictScalars_finite R _ _
-  haveI : IsLocalHom (algebraMap R₀ S₀) := by
-    rw [hφ₀_eq]
-    exact RingHom.IsIntegral.isLocalHom (RingHom.IsIntegral.of_finite
-      (RingHom.finite_algebraMap.mpr ‹Module.Finite R₀ S₀›)) hφ₀_inj
-  -- EssFiniteType from Module.Finite → FiniteType → EssFiniteType
-  haveI : Algebra.EssFiniteType R₀ S₀ := Algebra.EssFiniteType.of_finiteType R₀ S₀
-  -- Key lemma: for formally unramified local maps, maximal ideals match
-  have h_max_eq : Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) = IsLocalRing.maximalIdeal S₀ := by
+  set φ := algebraMap R S; set p := q.comap φ
+  set φ₀ : R ⧸ p →+* S ⧸ q := Ideal.quotientMap q φ le_rfl
+  letI : Algebra (R ⧸ p) (S ⧸ q) := φ₀.toAlgebra
+  have hφ₀_eq : algebraMap (R ⧸ p) (S ⧸ q) = φ₀ := RingHom.algebraMap_toAlgebra φ₀
+  haveI hp : p.IsPrime := Ideal.IsPrime.comap φ
+  haveI : IsDomain (R ⧸ p) := Ideal.Quotient.isDomain p
+  haveI : IsDomain (S ⧸ q) := Ideal.Quotient.isDomain q
+  haveI : IsLocalRing (R ⧸ p) := .of_surjective' _ Ideal.Quotient.mk_surjective
+  haveI : IsLocalRing (S ⧸ q) := .of_surjective' _ Ideal.Quotient.mk_surjective
+  haveI : Algebra.FormallyUnramified (R ⧸ p) (S ⧸ q) := by
+    have := ((RingHom.etale_iff_formallyUnramified_and_smooth φ₀).mp hétale).1
+    rwa [← hφ₀_eq] at this
+  haveI : IsScalarTower R (R ⧸ p) (S ⧸ q) := .of_algebraMap_eq' rfl
+  haveI : Module.Finite (R ⧸ p) (S ⧸ q) := Module.Finite.of_restrictScalars_finite R _ _
+  haveI : IsLocalHom (algebraMap (R ⧸ p) (S ⧸ q)) := by
+    rw [hφ₀_eq]; exact RingHom.IsIntegral.isLocalHom (.of_finite
+      (RingHom.finite_algebraMap.mpr ‹_›)) Ideal.quotientMap_injective
+  haveI : Algebra.EssFiniteType (R ⧸ p) (S ⧸ q) := .of_finiteType _ _
+  have h_max_eq : Ideal.map φ₀ (IsLocalRing.maximalIdeal (R ⧸ p)) =
+      IsLocalRing.maximalIdeal (S ⧸ q) := by
     rw [← hφ₀_eq]; exact Algebra.FormallyUnramified.map_maximalIdeal
-  -- Maximal ideal of R/p = image of mr (via local_hom_TFAE + map_comap_of_surjective)
-  have h_max_R₀ : IsLocalRing.maximalIdeal R₀ = Ideal.map (Ideal.Quotient.mk p) mr := by
+  -- map (mk I) (maximalIdeal R) = maximalIdeal (R ⧸ I) for I ≤ maximalIdeal R
+  have map_max_R : (IsLocalRing.maximalIdeal R).map (Ideal.Quotient.mk p) =
+      IsLocalRing.maximalIdeal (R ⧸ p) := by
     haveI := IsLocalHom.of_surjective (Ideal.Quotient.mk p) Ideal.Quotient.mk_surjective
-    have h := ((IsLocalRing.local_hom_TFAE (Ideal.Quotient.mk p)).out 0 4).mp ‹_›
-    rw [← Ideal.map_comap_of_surjective (Ideal.Quotient.mk p)
-      Ideal.Quotient.mk_surjective (IsLocalRing.maximalIdeal R₀)]
-    exact congr_arg _ h
-  -- Maximal ideal of S/q = image of ms (via local_hom_TFAE + map_comap_of_surjective)
-  have h_max_S₀ : IsLocalRing.maximalIdeal S₀ = Ideal.map (Ideal.Quotient.mk q) ms := by
+    ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp [sup_eq_left.mpr (IsLocalRing.le_maximalIdeal hp.ne_top)]
+  have map_max_S : (IsLocalRing.maximalIdeal S).map (Ideal.Quotient.mk q) =
+      IsLocalRing.maximalIdeal (S ⧸ q) := by
     haveI := IsLocalHom.of_surjective (Ideal.Quotient.mk q) Ideal.Quotient.mk_surjective
-    have h := ((IsLocalRing.local_hom_TFAE (Ideal.Quotient.mk q)).out 0 4).mp ‹_›
-    rw [← Ideal.map_comap_of_surjective (Ideal.Quotient.mk q)
-      Ideal.Quotient.mk_surjective (IsLocalRing.maximalIdeal S₀)]
-    exact congr_arg _ h
-  -- Composition property: φ₀ ∘ (mk p) = (mk q) ∘ φ
-  have h_comp : φ₀.comp (Ideal.Quotient.mk p) = (Ideal.Quotient.mk q).comp φ := by
-    ext r
-    change φ₀ (Ideal.Quotient.mk p r) = Ideal.Quotient.mk q (φ r)
-    exact Ideal.quotientMap_mk
-  -- Chain of equalities: map (mk q) ms = map (mk q) (map φ mr)
-  have h_images_eq : Ideal.map (Ideal.Quotient.mk q) ms =
-      Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) :=
-    calc Ideal.map (Ideal.Quotient.mk q) ms
-      _ = IsLocalRing.maximalIdeal S₀ := h_max_S₀.symm
-      _ = Ideal.map φ₀ (IsLocalRing.maximalIdeal R₀) := h_max_eq.symm
-      _ = Ideal.map φ₀ (Ideal.map (Ideal.Quotient.mk p) mr) := by rw [h_max_R₀]
-      _ = Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) := by
-          rw [Ideal.map_map, Ideal.map_map, h_comp]
-  -- Since map (mk q) (q ⊔ X) = map (mk q) X (q maps to 0)
-  have h_sup_image : Ideal.map (Ideal.Quotient.mk q) (q ⊔ Ideal.map φ mr) =
-      Ideal.map (Ideal.Quotient.mk q) (Ideal.map φ mr) := by
-    rw [Ideal.map_sup, Ideal.map_quotient_self]; simp
-  -- Apply correspondence theorem: map f I = map f J ↔ I ⊔ ker f = J ⊔ ker f
-  rw [← h_sup_image, Ideal.map_eq_iff_sup_ker_eq_of_surjective _ Ideal.Quotient.mk_surjective,
-      Ideal.mk_ker, sup_eq_left.mpr hq_le_ms] at h_images_eq
-  -- Simplify RHS: (q ⊔ X) ⊔ q = q ⊔ X
-  calc ms = (q ⊔ Ideal.map φ mr) ⊔ q := h_images_eq
-    _ = q ⊔ Ideal.map φ mr := by rw [sup_comm, sup_left_idem]
+    ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp [sup_eq_left.mpr (IsLocalRing.le_maximalIdeal hq_prime.ne_top)]
+  have key : (IsLocalRing.maximalIdeal S).map (Ideal.Quotient.mk q) =
+      (Ideal.map φ (IsLocalRing.maximalIdeal R)).map (Ideal.Quotient.mk q) := by
+    rw [map_max_S, ← h_max_eq, ← map_max_R, Ideal.map_map, Ideal.map_map]
+    congr 1
+  rwa [Ideal.map_eq_iff_sup_ker_eq_of_surjective _ Ideal.Quotient.mk_surjective,
+    Ideal.mk_ker, sup_eq_left.mpr (IsLocalRing.le_maximalIdeal hq_prime.ne_top),
+    sup_comm] at key
 
 
 end SubLemmas
