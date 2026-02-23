@@ -33,6 +33,7 @@ section SubLemmas
 
 
 omit [IsLocalRing R] [IsLocalRing S] in
+--Can be placed in Height.lean with no additional imports
 /-- In a UFD, a height one prime ideal is principal. -/
 lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRing S] [IsDomain S]
     [UniqueFactorizationMonoid S]
@@ -53,6 +54,7 @@ lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRin
     Ideal.span_singleton_eq_bot] at h0
   exact hp_prime.ne_zero h0
 
+--Can be placed in Taylor.lean with no additional imports.
 /-- Taylor expansion for polynomial evaluation over a commutative ring:
     For any polynomial `f` and elements `x`, `h`, there exists `c` such that
     `f(x + h) = f(x) + f'(x) · h + h² · c`.
