@@ -86,30 +86,20 @@ lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRin
 
 /-- Taylor expansion for polynomial evaluation over a commutative ring:
     For any polynomial `f` and elements `x`, `h`, there exists `c` such that
-    `f(x + h) = f(x) + f'(x) · h + h² · c`. -/
+    `f(x + h) = f(x) + f'(x) · h + h² · c`.
+
+    Proved by lifting `Polynomial.aeval_add_of_sq_eq_zero` from `S ⧸ ⟨h²⟩`. -/
 lemma exists_aeval_add_eq {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (f : R[X]) (x h : S) :
     ∃ c : S, f.aeval (x + h) = f.aeval x + f.derivative.aeval x * h + h ^ 2 * c := by
-  -- Reduce aeval to eval via map, then use the Taylor expansion
-  simp only [aeval_def, ← eval_map, ← derivative_map]
-  set g := f.map (algebraMap R S)
-  -- Use taylor_eval to rewrite g.eval (h + x) as (taylor x g).eval h
-  rw [add_comm, ← taylor_eval]
-  -- Extract constant and linear terms from the Taylor polynomial
-  set T := taylor x g with hT
-  refine ⟨∑ i ∈ Finset.range (T.natDegree + 1), T.coeff (i + 2) * h ^ i, ?_⟩
-  rw [eval_eq_sum_range' (show T.natDegree < T.natDegree + 1 + 2 by omega)]
-  rw [show T.natDegree + 1 + 2 = (T.natDegree + 1) + 1 + 1 from by omega]
-  rw [Finset.sum_range_succ', Finset.sum_range_succ']
-  simp only [pow_zero, mul_one, zero_add, pow_one]
-  -- Use taylor_coeff_zero and taylor_coeff_one to identify the constant and linear coefficients
-  rw [show T.coeff 0 = g.eval x from by rw [hT]; exact taylor_coeff_zero x g]
-  rw [show T.coeff 1 = (derivative g).eval x from by rw [hT]; exact taylor_coeff_one x g]
-  -- Factor h² out of the remaining sum
-  have h_sum : (∑ k ∈ Finset.range (T.natDegree + 1), T.coeff (k + 2) * h ^ (k + 2)) =
-      h ^ 2 * ∑ k ∈ Finset.range (T.natDegree + 1), T.coeff (k + 2) * h ^ k := by
-    rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro i _; ring
-  rw [h_sum]; ring_nf
+  set π := Ideal.Quotient.mkₐ R (Ideal.span ({h ^ 2} : Set S))
+  have hsq : (π h) ^ 2 = 0 := by
+    rw [← map_pow]; exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span rfl)
+  have key : π (f.aeval (x + h) - (f.aeval x + f.derivative.aeval x * h)) = 0 := by
+    simp only [map_sub, map_add, map_mul, ← Polynomial.aeval_algHom_apply]
+    exact sub_eq_zero.mpr (Polynomial.aeval_add_of_sq_eq_zero f _ _ hsq)
+  obtain ⟨c, hc⟩ := Ideal.mem_span_singleton.mp (Ideal.Quotient.eq_zero_iff_mem.mp key)
+  exact ⟨c, by linear_combination hc⟩
 
 /-- When the quotient map `R/p → S/q` is étale (with p = q.comap (algebraMap R S)),
     and both rings are local, the maximal ideal of `S` decomposes as
