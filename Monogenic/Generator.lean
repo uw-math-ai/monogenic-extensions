@@ -3,7 +3,6 @@ import Mathlib.RingTheory.Unramified.LocalRing
 import Mathlib.RingTheory.Smooth.Flat
 import Mathlib.RingTheory.LocalRing.Module
 import Mathlib.RingTheory.LocalRing.Quotient
-import Mathlib.LinearAlgebra.Charpoly.Basic
 import Mathlib.RingTheory.IsAdjoinRoot
 
 open Polynomial
@@ -13,23 +12,18 @@ namespace Monogenic
 
 variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 
-#check minpoly.natDegree_le
--- considered
--- Mathlib.LinearAlgebra.FreeModule.Finite.Basic
--- but charpoly imports that...
--- so maybe just next to LinearMap.charpoly_natDegree? (which we use here!)
--- in Mathlib.LinearAlgebra.Charpoly.Basic
--- doesn't really make sense to put it with charpoly though...
 theorem _root_.minpoly.natDegree_le' [Module.Finite R S]
     [Module.Free R S] [Nontrivial R] (α : S) :
     (minpoly R α).natDegree ≤ Module.finrank R S := by
-  set lα := Algebra.lmul R S α
-  have haeval : aeval α lα.charpoly = 0 := Algebra.lmul_injective
-    (by rw [map_zero, ← aeval_algHom_apply]; exact lα.aeval_self_charpoly)
-  calc (minpoly R α).natDegree
-      ≤ lα.charpoly.natDegree :=
-        natDegree_le_natDegree (minpoly.min R α lα.charpoly_monic haeval)
-    _ = Module.finrank R S := lα.charpoly_natDegree
+  classical
+  let b := Module.Free.chooseBasis R S
+  let M := LinearMap.toMatrixAlgEquiv b (Algebra.lmul R S α)
+  have haeval : aeval α M.charpoly = 0 := by
+    have h := Matrix.aeval_self_charpoly M
+    rwa [aeval_algHom_apply, map_eq_zero_iff _ (LinearMap.toMatrixAlgEquiv b).injective,
+      aeval_algHom_apply, map_eq_zero_iff _ Algebra.lmul_injective] at h
+  exact (natDegree_le_natDegree (minpoly.min R α M.charpoly_monic haeval)).trans
+    (M.charpoly_natDegree_eq_dim.trans (Module.finrank_eq_card_chooseBasisIndex R S).symm).le
 
 /-- Let `R -> S` be a finite étale extension of local integral domains.
     Suppose there exists `β ∈ S` such that `S = R[β]`.
@@ -380,41 +374,31 @@ theorem IsAdjoinRootMonic.algebra_etale
     {f : R[X]} (adj : IsAdjoinRootMonic S f)
     (hunit : IsUnit (aeval adj.root f.derivative)) :
     Algebra.Etale R S := by
-  -- Standard étale pair (f, f') with trivial Bézout: f' · 1 + f · 0 = f'^1
   let P : StandardEtalePair R :=
     ⟨f, adj.monic, f.derivative, 1, 0, 1, by ring⟩
   have hmap : P.HasMap adj.root := ⟨adj.aeval_root_self, hunit⟩
-  -- Build an explicit inverse of P.lift: compose S ≃ AdjoinRoot f →[liftHom] P.Ring
   set e := adj.toIsAdjoinRoot.adjoinRootAlgEquiv with he_def
-    -- e : AdjoinRoot f ≃ₐ[R] S
   set bwd : S →ₐ[R] P.Ring :=
     (AdjoinRoot.liftAlgHom f _ P.X P.hasMap_X.1).comp e.symm.toAlgHom with hbwd_def
-    -- bwd sends adj.root → AdjoinRoot.root f → P.X
-  -- bwd is a left inverse of P.lift (checked on P.X via hom_ext)
   have h_left_eq : bwd.comp (P.lift adj.root hmap) = AlgHom.id R P.Ring := by
     apply P.hom_ext
     change bwd (P.lift adj.root hmap P.X) = P.X
     simp [hbwd_def, he_def]
   have h_left : ∀ x, bwd (P.lift adj.root hmap x) = x :=
     fun x => by simpa using DFunLike.congr_fun h_left_eq x
-  -- bwd is a right inverse of P.lift (checked on adj.map p for all p)
   have h_right : ∀ s, P.lift adj.root hmap (bwd s) = s := by
     intro s
     obtain ⟨p, rfl⟩ := adj.map_surjective s
-    -- e.symm (adj.map p) = mk f p (the canonical representative in AdjoinRoot f)
     have h1 : e.symm (adj.map p) = AdjoinRoot.mk f p :=
       e.symm_apply_eq.mpr (adj.toIsAdjoinRoot.adjoinRootAlgEquiv_apply_mk p).symm
-    -- Compute bwd (adj.map p) = aeval P.X p
     have h_bwd_val : bwd (adj.map p) = aeval P.X p := by
       change (AdjoinRoot.liftAlgHom f _ P.X P.hasMap_X.1) (e.symm (adj.map p)) = aeval P.X p
       rw [h1]; simp [aeval_def]
-    -- Chain: P.lift (aeval P.X p) = aeval adj.root p = adj.map p
     rw [h_bwd_val]
     calc P.lift adj.root hmap (aeval P.X p)
         = aeval (P.lift adj.root hmap P.X) p := (aeval_algHom_apply _ _ _).symm
       _ = aeval adj.root p := by rw [P.lift_X]
       _ = adj.map p := by simp
-  -- Conclude: P.lift is bijective, so S is standard étale, hence étale
   have lift_bij : Function.Bijective (P.lift adj.root hmap) :=
     ⟨fun a b hab => by rw [← h_left a, ← h_left b, hab],
      fun s => ⟨bwd s, h_right s⟩⟩
