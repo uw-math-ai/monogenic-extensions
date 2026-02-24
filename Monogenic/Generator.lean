@@ -14,7 +14,6 @@ namespace Monogenic
 variable {R S} [CommRing R] [CommRing S] [Algebra R S]
 
 #check minpoly.natDegree_le
-
 -- considered
 -- Mathlib.LinearAlgebra.FreeModule.Finite.Basic
 -- but charpoly imports that...
@@ -170,7 +169,7 @@ lemma minpoly_map_residue [Algebra.Etale R S]
   have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
   -- β₀ is a root of f_bar, so minpoly kR β₀ divides f_bar
   have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ (by
-    rw [aeval_def, eval₂_map, ← residue_comp_algebraMap, ← hom_eval₂, ← aeval_def, minpoly.aeval,
+    rw [aeval_def, eval₂_map, ← residue_comp_algebraMap,  ← hom_eval₂, ← aeval_def, minpoly.aeval,
       map_zero])
   have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := adjoin_residue_eq_top_of_adjoin_eq_top hadj
   -- Degree chain: natDegree f_bar = natDegree f = finrank R S
@@ -233,28 +232,21 @@ lemma exists_adjoin_sub_mem
     (h_gen : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
       {Ideal.Quotient.mk q β} = ⊤) (s : S) :
     ∃ t ∈ Algebra.adjoin R {β}, s - t ∈ q := by
-  let p := q.comap (algebraMap R S)
-  let R₀ := R ⧸ p
-  let S₀ := S ⧸ q
-  let β₀ := Ideal.Quotient.mk q β
-  have hs₀ : Ideal.Quotient.mk q s ∈ Algebra.adjoin R₀ {β₀} := by
-    rw [h_gen]; trivial
-  -- Induct on membership in Algebra.adjoin R₀ {β₀}
-  obtain ⟨t, ht_mem, ht_eq⟩ : ∃ t ∈ Algebra.adjoin R {β},
+  have hs₀ : Ideal.Quotient.mk q s ∈ Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
+      {Ideal.Quotient.mk q β} := by rw [h_gen]; trivial
+  obtain ⟨t, ht, ht_eq⟩ : ∃ t ∈ Algebra.adjoin R {β},
       Ideal.Quotient.mk q s = Ideal.Quotient.mk q t := by
     refine Algebra.adjoin_induction ?_ ?_ ?_ ?_ hs₀
-    · intro x hx
-      simp only [Set.mem_singleton_iff] at hx
-      exact ⟨β, Algebra.subset_adjoin (Set.mem_singleton _), by rw [hx]⟩
-    · intro r
-      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
+    · intro x hx; simp only [Set.mem_singleton_iff] at hx
+      exact ⟨β, Algebra.subset_adjoin rfl, by rw [hx]⟩
+    · intro r; obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
       exact ⟨algebraMap R S r, Subalgebra.algebraMap_mem _ _,
         (Ideal.quotientMap_mk (I := q) (f := algebraMap R S) (H := le_rfl)).symm⟩
     · rintro x y _ _ ⟨t₀, ht₀, rfl⟩ ⟨t₁, ht₁, rfl⟩
-      exact ⟨t₀ + t₁, Subalgebra.add_mem _ ht₀ ht₁, by simp [map_add]⟩
+      exact ⟨t₀ + t₁, Subalgebra.add_mem _ ht₀ ht₁, (map_add _ t₀ t₁).symm⟩
     · rintro x y _ _ ⟨t₀, ht₀, rfl⟩ ⟨t₁, ht₁, rfl⟩
-      exact ⟨t₀ * t₁, Subalgebra.mul_mem _ ht₀ ht₁, by simp [map_mul]⟩
-  exact ⟨t, ht_mem, Ideal.Quotient.eq.mp ht_eq⟩
+      exact ⟨t₀ * t₁, Subalgebra.mul_mem _ ht₀ ht₁, (map_mul _ t₀ t₁).symm⟩
+  exact ⟨t, ht, Ideal.Quotient.eq.mp ht_eq⟩
 
 omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
 /-- Nakayama argument: if `R/p[β] = S/q`, and `mS = π S + m_R · S` for some `π ∈ R[β]`,
@@ -288,24 +280,19 @@ lemma adjoin_eq_top_of_quotient
     intro k; induction k with
     | zero => simp [Ideal.span_singleton_one]
     | succ k ih =>
-      intro x hx; rw [pow_succ] at hx
-      refine Submodule.smul_induction_on hx (fun a ha b hb => ?_)
-        (fun _ _ hx hy => Ideal.add_mem _ hx hy)
-      obtain ⟨a₁, ha₁, a₂, ha₂, rfl⟩ := Submodule.mem_sup.mp (ih ha)
-      obtain ⟨b₁, hb₁, b₂, hb₂, rfl⟩ := Submodule.mem_sup.mp (h_ms ▸ hb)
-      obtain ⟨ca, rfl⟩ := Ideal.mem_span_singleton.mp ha₁
-      obtain ⟨cb, rfl⟩ := Ideal.mem_span_singleton.mp hb₁
-      rw [show (π ^ k * ca + a₂) • (π * cb + b₂) = π ^ (k + 1) * (ca * cb) +
-          (π ^ k * ca * b₂ + a₂ * (π * cb) + a₂ * b₂) from by
-        simp only [smul_eq_mul]; ring]
-      exact Submodule.add_mem_sup (Ideal.mem_span_singleton.mpr ⟨ca * cb, rfl⟩)
-        (Ideal.add_mem _ (Ideal.add_mem _ (Ideal.mul_mem_left _ _ hb₂)
-          (Ideal.mul_mem_right _ _ ha₂)) (Ideal.mul_mem_left _ _ hb₂))
+      rw [pow_succ]; calc ms ^ k * ms
+          ≤ (Ideal.span {π ^ k} ⊔ mR_S) * (Ideal.span {π} ⊔ mR_S) :=
+            Ideal.mul_mono ih h_ms.le
+        _ ≤ Ideal.span {π ^ (k + 1)} ⊔ mR_S := by
+            rw [Ideal.sup_mul, Ideal.mul_sup, Ideal.mul_sup]
+            refine sup_le (sup_le ?_ (Ideal.mul_le_left.trans le_sup_right))
+              (sup_le (Ideal.mul_le_right.trans le_sup_right)
+                (Ideal.mul_le_left.trans le_sup_right))
+            rw [Ideal.span_singleton_mul_span_singleton, pow_succ]; exact le_sup_left
   have h_iter : ∀ (k : ℕ) (x : S), x ∈ q →
       ∃ a ∈ A.toSubmodule, x - a ∈ (Ideal.span {π ^ k} ⊔ mR_S : Ideal S) := by
     intro k; induction k with
-    | zero =>
-      exact fun _ _ => ⟨0, Subalgebra.zero_mem A, by simp [Ideal.span_singleton_one]⟩
+    | zero => exact fun _ _ => ⟨0, Subalgebra.zero_mem A, by simp [Ideal.span_singleton_one]⟩
     | succ k ih =>
       intro x hx; obtain ⟨a₀, ha₀, hz⟩ := ih x hx
       obtain ⟨y, hy, r, hr, hyr⟩ := Submodule.mem_sup.mp hz
@@ -313,12 +300,11 @@ lemma adjoin_eq_top_of_quotient
       obtain ⟨a₁, ha₁, hc⟩ := h_lift c
       refine ⟨a₀ + a₁ * π ^ k, Subalgebra.add_mem A ha₀
         (Subalgebra.mul_mem A ha₁ (Subalgebra.pow_mem A hπ_mem k)), ?_⟩
-      have h_eq : x - (a₀ + a₁ * π ^ k) = π ^ k * (c - a₁) + r := by
-        linear_combination hyr.symm
-      rw [h_eq]; exact Ideal.add_mem _
-        (h_pow (k + 1) (by rw [pow_succ]; exact
-          Ideal.mul_mem_mul (Ideal.pow_mem_pow hπ_ms k) (hq_le hc)))
-        (Ideal.mem_sup_right hr)
+      rw [show x - (a₀ + a₁ * π ^ k) = π ^ k * (c - a₁) + r from
+        by linear_combination hyr.symm]
+      have hmem : π ^ k * (c - a₁) ∈ ms ^ (k + 1) := by
+        rw [pow_succ]; exact Ideal.mul_mem_mul (Ideal.pow_mem_pow hπ_ms k) (hq_le hc)
+      exact Ideal.add_mem _ (h_pow (k + 1) hmem) (Ideal.mem_sup_right hr)
   have h_q : (q.restrictScalars R : Submodule R S) ≤ A.toSubmodule ⊔ mR • ⊤ := by
     intro x hx; obtain ⟨a, ha, hxa⟩ := h_iter n x hx; rw [Ideal.smul_top_eq_map]
     exact Submodule.mem_sup.mpr ⟨a, ha, x - a, show x - a ∈ mR_S.restrictScalars R from
