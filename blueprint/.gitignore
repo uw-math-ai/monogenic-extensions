@@ -1,0 +1,11 @@
+*.pdf
+*.paux
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+print/
+web/
+__pycache__/
