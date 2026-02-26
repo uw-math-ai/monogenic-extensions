@@ -4,9 +4,6 @@ Monogenic._monogenic_of_surjective_map
 Monogenic._surjective_map_of_monogenic
 minpoly.natDegree_le'
 IsAdjoinRoot.mkOfAdjoinEqTop'
-Monogenic.residue_aeval_eq
-Monogenic.isUnit_of_residue_ne_zero
-Monogenic.residue_comp_algebraMap
 Monogenic.adjoin_residue_eq_top_of_adjoin_eq_top
 Monogenic.finrank_eq_finrank_residueField
 Monogenic.minpoly_map_residue
@@ -18,5 +15,5 @@ Monogenic.exists_aeval_add_eq
 Monogenic.maximalIdeal_eq_sup_of_etale_quotient
 Monogenic.exists_adjoin_sub_mem
 Monogenic.adjoin_eq_top_of_quotient
+Monogenic.exists_isAdjoinRootMonic_of_principal_adjust
 Monogenic.exists_isAdjoinRootMonic_of_quotientMap_etale
-Monogenic.exists_adjoin_eq_top_of_quotientMap_etale

@@ -56,7 +56,9 @@ noncomputable def _root_.IsAdjoinRoot.mkOfAdjoinEqTop'
     ((finrank_quotient_span_eq_natDegree' hf).trans hrank)
   have hφ_inj : Injective φ := fun x y h => OrzechProperty.injective_of_surjective_endomorphism
     (e.symm.toLinearMap.comp φ.toLinearMap) (e.symm.surjective.comp hφ_surj) (congr_arg e.symm h)
-  exact { IsAdjoinRoot.ofAdjoinRootEquiv (AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩) with monic := hf }
+  exact {
+    IsAdjoinRoot.ofAdjoinRootEquiv (AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩) with monic := hf
+  }
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -75,17 +77,6 @@ The proof proceeds through the residue fields:
 variable [IsLocalRing S]
 
 variable [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S]
-
-/-- The square
-      S → S/m_S
-      ↑     ↑
-      R → R/m_R
-    commutes. -/
-lemma residue_comp_algebraMap :
-    (IsLocalRing.residue S).comp (algebraMap R S) =
-    (algebraMap (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)).comp
-      (IsLocalRing.residue R) :=
-  rfl
 
 /--
 In Mathlib.RingTheory.LocalRing.ResidueField.Basic? maybe?
@@ -152,8 +143,8 @@ lemma minpoly_map_residue [Algebra.Etale R S]
   have hβ₀_int : IsIntegral kR β₀ := Algebra.IsIntegral.isIntegral β₀
   -- β₀ is a root of f_bar, so minpoly kR β₀ divides f_bar
   have hdvd : minpoly kR β₀ ∣ f_bar := minpoly.dvd kR β₀ (by
-    rw [aeval_def, eval₂_map, ← residue_comp_algebraMap,  ← hom_eval₂, ← aeval_def, minpoly.aeval,
-      map_zero])
+    rw [← map_aeval_eq_aeval_map (ψ := IsLocalRing.residue S)
+      (φ := IsLocalRing.residue R) rfl, minpoly.aeval, map_zero])
   have hβ₀_gen : Algebra.adjoin kR {β₀} = ⊤ := adjoin_residue_eq_top_of_adjoin_eq_top hadj
   -- Degree chain: natDegree f_bar = natDegree f = finrank R S
   --             = finrank kR kS = natDegree (minpoly kR β₀)
@@ -184,19 +175,14 @@ lemma isUnit_aeval_derivative_minpoly_of_adjoin_eq_top
     (hadj : Algebra.adjoin R {β} = ⊤) :
     IsUnit (aeval β (minpoly R β).derivative) := by
   -- Strategy: show residue of (aeval β f') is non-zero, hence aeval β f' is a unit
-  apply fun s h =>
-    IsLocalRing.notMem_maximalIdeal.mp <| mt (IsLocalRing.residue_eq_zero_iff s).mpr h
+  apply fun s => (IsLocalRing.residue_ne_zero_iff_isUnit s).mp
   let kR := IsLocalRing.ResidueField R
   let β₀ := IsLocalRing.residue S β
   -- Therefore, derivative of minpoly at β₀ is non-zero
   have hderiv_ne_zero : aeval β₀ (minpoly kR β₀).derivative ≠ 0 :=
     (Algebra.IsSeparable.isSeparable kR β₀).aeval_derivative_ne_zero (minpoly.aeval kR β₀)
-  let p := (minpoly R β).derivative
-  have residue_aeval_eq : IsLocalRing.residue S (aeval β <| p) =
-      p.eval₂ ((IsLocalRing.residue S).comp (algebraMap R S)) (IsLocalRing.residue S β) := by
-    simp only [aeval_def, hom_eval₂]
-  rw [residue_aeval_eq, residue_comp_algebraMap, ← eval₂_map,
-    ← derivative_map, minpoly_map_residue hadj, ← aeval_def]
+  rw [map_aeval_eq_aeval_map (ψ := IsLocalRing.residue S)
+    (φ := IsLocalRing.residue R) rfl, ← derivative_map, minpoly_map_residue hadj]
   exact hderiv_ne_zero
 
 /-!

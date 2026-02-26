@@ -179,75 +179,23 @@ the natural map $R[X]/(\operatorname{minpoly}_R \beta) \to S$ is an isomorphism,
 We now prove the main result for finite étale extensions of local rings:
 such extensions are monogenic, and the minimal polynomial has unit derivative.
 
-\section{Residue Field Lemmas}
-
-\begin{lemma}[Residue evaluation commutes]
-  \label{lem:residue_aeval_eq}
-  \lean{Monogenic.residue_aeval_eq}
-  \leanok
-  For a local ring $S$, polynomial $p \in R[X]$, and $\beta \in S$:
-  \[
-    \overline{p(\beta)} = \bar{p}(\bar{\beta})
-  \]
-  where $\overline{(\cdot)}$ denotes the residue map $S \twoheadrightarrow S/\mathfrak{m}_S$.
-\end{lemma}
-
-\begin{proof}
-  \leanok
-  Immediate from $\mathtt{hom\_eval_2}$.
-\end{proof}
-
-\begin{lemma}[Unit from nonzero residue]
-  \label{lem:isUnit_of_residue_ne_zero}
-  \lean{Monogenic.isUnit_of_residue_ne_zero}
-  \leanok
-  In a local ring $S$, an element $s$ is a unit if and only if its image
-  in $S/\mathfrak{m}_S$ is nonzero.
-\end{lemma}
-
-\begin{proof}
-  \leanok
-  An element is a non-unit iff it lies in $\mathfrak{m}_S$, iff its residue is zero.
-\end{proof}
-
-\begin{lemma}[Residue field square commutes]
-  \label{lem:residue_comp_algebraMap}
-  \lean{Monogenic.residue_comp_algebraMap}
-  \leanok
-  The square
-  \[
-    \begin{array}{ccc}
-      R & \xrightarrow{\varphi} & S \\
-      \downarrow & & \downarrow \\
-      R/\mathfrak{m}_R & \to & S/\mathfrak{m}_S
-    \end{array}
-  \]
-  commutes, i.e.,
-  $\operatorname{residue}_S \circ \varphi
-  = (\text{algebraMap}\; k_R\; k_S) \circ \operatorname{residue}_R$.
-\end{lemma}
-
-\begin{proof}
-  \leanok
-  This is definitional ($\mathtt{rfl}$).
-\end{proof}
-
 \section{Generator Descends to Residue Field}
 
 \begin{lemma}[Generator descends to residue fields]
   \label{lem:adjoin_residue_eq_top}
   \lean{Monogenic.adjoin_residue_eq_top_of_adjoin_eq_top}
   \leanok
-  \uses{lem:residue_comp_algebraMap}
   If $\beta$ generates $S$ over $R$ (i.e., $R[\beta] = S$),
   then $\bar\beta = \beta \bmod \mathfrak{m}_S$ generates $k_S$ over $k_R$.
 \end{lemma}
 
 \begin{proof}
   \leanok
-  \uses{lem:residue_comp_algebraMap}
   Given $x \in k_S$, lift to $s \in S$, express $s = p(\beta)$ for some $p \in R[X]$,
   then $x = \bar{p}(\bar\beta)$ where $\bar{p} = p \bmod \mathfrak{m}_R \in k_R[X]$.
+  The key commutativity ($\operatorname{residue}_S \circ \varphi
+  = \operatorname{algebraMap}_{k_R \to k_S} \circ \operatorname{residue}_R$)
+  is used via $\mathtt{map\_aeval\_eq\_aeval\_map}$.
 \end{proof}
 
 \section{Rank Equality across Residue Fields}
@@ -300,7 +248,7 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
   Set $f = \operatorname{minpoly}_R \beta$, $\bar f = f \bmod \mathfrak{m}_R$,
   $g = \operatorname{minpoly}_{k_R} \bar\beta$.
 
-  Since $\bar\beta$ is a root of $\bar f$ (by Lemma~\ref{lem:residue_aeval_eq}),
+  Since $\bar\beta$ is a root of $\bar f$ (by $\mathtt{hom\_eval_2}$),
   we have $g \mid \bar f$.
   Both $f$ and $g$ are monic, and $\bar f$ is monic.
 
@@ -327,7 +275,7 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
   \label{thm:isUnit_aeval_derivative_minpoly}
   \lean{Monogenic.isUnit_aeval_derivative_minpoly_of_adjoin_eq_top}
   \leanok
-  \uses{lem:minpoly_map_residue, lem:isUnit_of_residue_ne_zero, lem:residue_aeval_eq}
+  \uses{lem:minpoly_map_residue}
   Let $R \to S$ be a finite étale extension of local rings with faithful
   scalar action, and $\beta \in S$ with $R[\beta] = S$.  Then
   \[
@@ -338,9 +286,10 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
 
 \begin{proof}
   \leanok
-  \uses{lem:minpoly_map_residue, lem:isUnit_of_residue_ne_zero, lem:residue_aeval_eq}
-  By Lemma~\ref{lem:isUnit_of_residue_ne_zero}, it suffices to show
-  $\overline{f'(\beta)} \ne 0$ in $k_S$.
+  \uses{lem:minpoly_map_residue}
+  Since $S$ is a local ring, it suffices to show
+  $\overline{f'(\beta)} \ne 0$ in $k_S$
+  ($\mathtt{IsLocalRing.residue\_ne\_zero\_iff\_isUnit}$).
 
   Since $R \to S$ is étale, the residue field extension $k_R \to k_S$ is
   separable.  By Lemma~\ref{lem:minpoly_map_residue},
@@ -350,7 +299,7 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
   This means $\bar{f'}(\bar\beta) \ne 0$
   ($\mathtt{Separable.aeval\_derivative\_ne\_zero}$).
 
-  By Lemma~\ref{lem:residue_aeval_eq}, $\overline{f'(\beta)} = \bar{f'}(\bar\beta) \ne 0$.
+  By $\mathtt{hom\_eval_2}$, $\overline{f'(\beta)} = \bar{f'}(\bar\beta) \ne 0$.
 \end{proof}
 
 \section{Existence of Generator (Nakayama Argument)}
@@ -538,6 +487,46 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   By Nakayama's lemma, $A = S$.
 \end{proof}
 
+\section{Principal Adjustment Lemma}
+
+\begin{lemma}[Adjustment by principal generator]
+  \label{lem:exists_isAdjoinRootMonic_of_principal_adjust}
+  \lean{Monogenic.exists_isAdjoinRootMonic_of_principal_adjust}
+  \leanok
+  \uses{lem:taylor_expansion, lem:adjoin_eq_top_of_quotient, thm:mkOfAdjoinEqTop}
+  Let $(R, \mathfrak{m}_R)$ and $(S, \mathfrak{m}_S)$ be local domains with
+  $R$ integrally closed and $S$ a finite $R$-algebra with faithful scalar action.
+  Let $\mathfrak{q} \subset S$ be a prime ideal with $\mathfrak{q} = (q_0)$,
+  and let $\beta \in S$, $f_1 \in R[X]$ satisfy:
+  \begin{enumerate}
+    \item $f_1(\beta) \in \mathfrak{q}$,
+    \item $f_1'(\beta) \notin \mathfrak{m}_S$,
+    \item $\mathfrak{m}_S = \mathfrak{q} + \mathfrak{m}_R S$,
+    \item $\bar\beta$ generates $S/\mathfrak{q}$ over $R/(\mathfrak{q} \cap R)$,
+    \item $f_1(\beta)$ does \emph{not} already generate $\mathfrak{m}_S$ modulo $\mathfrak{m}_R S$.
+  \end{enumerate}
+  Then there exist a monic $f \in R[X]$ and an $\mathtt{IsAdjoinRootMonic}$ structure
+  for $S$ over $f$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \uses{lem:taylor_expansion, lem:adjoin_eq_top_of_quotient, thm:mkOfAdjoinEqTop}
+  Set $\beta' = \beta + q_0$.
+  By Lemma~\ref{lem:taylor_expansion},
+  $f_1(\beta') = q_0 \cdot (a + f_1'(\beta) + q_0 b)$.
+  Since $f_1'(\beta) \notin \mathfrak{m}_S$
+  and $a, q_0 b \in \mathfrak{m}_S$, the cofactor is a unit.
+  Hence $\operatorname{span}\{f_1(\beta')\} = \mathfrak{q}$, and
+  $\mathfrak{m}_S = \operatorname{span}\{f_1(\beta')\} + \mathfrak{m}_R S$.
+
+  Since $\beta' \equiv \bar\beta \pmod{\mathfrak{q}}$, it still generates
+  the quotient, so Lemma~\ref{lem:adjoin_eq_top_of_quotient} gives
+  $R[\beta'] = S$.
+  Finally, Theorem~\ref{thm:mkOfAdjoinEqTop} provides the
+  $\mathtt{IsAdjoinRootMonic}$ structure for $\operatorname{minpoly}_R \beta'$.
+\end{proof}
+
 \section{Main Theorem: Lemma 3.1}
 
 \begin{theorem}[Monogenicity from étale height-one quotient]
@@ -545,8 +534,9 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   \lean{Monogenic.exists_isAdjoinRootMonic_of_quotientMap_etale}
   \leanok
   \uses{thm:exists_adjoin_eq_top, thm:mkOfAdjoinEqTop, lem:height_one_principal,
-    lem:taylor_expansion, lem:maximalIdeal_eq_sup, lem:adjoin_eq_top_of_quotient,
-    thm:isUnit_aeval_derivative_minpoly}
+    lem:maximalIdeal_eq_sup, lem:adjoin_eq_top_of_quotient,
+    thm:isUnit_aeval_derivative_minpoly,
+    lem:exists_isAdjoinRootMonic_of_principal_adjust}
   Let $(R, \mathfrak{m}_R)$ and $(S, \mathfrak{m}_S)$ be local domains with
   $R$ integrally closed and $S$ a UFD.
   Let $R \to S$ be a finite injective ring homomorphism.
@@ -559,8 +549,9 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
 \begin{proof}
   \leanok
   \uses{thm:exists_adjoin_eq_top, thm:mkOfAdjoinEqTop, lem:height_one_principal,
-    lem:taylor_expansion, lem:maximalIdeal_eq_sup, lem:adjoin_eq_top_of_quotient,
-    thm:isUnit_aeval_derivative_minpoly}
+    lem:maximalIdeal_eq_sup, lem:adjoin_eq_top_of_quotient,
+    thm:isUnit_aeval_derivative_minpoly,
+    lem:exists_isAdjoinRootMonic_of_principal_adjust}
   \textbf{Case 1: $R \to S$ is already étale.}
   Apply Theorem~\ref{thm:exists_adjoin_eq_top} to find $\beta$ with $R[\beta] = S$,
   then Theorem~\ref{thm:mkOfAdjoinEqTop} for the isomorphism.
@@ -580,41 +571,14 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   $\mathfrak{m}_R S$, apply Lemma~\ref{lem:adjoin_eq_top_of_quotient} directly
   to conclude $R[\beta] = S$.
 
-  \textbf{Sub-case 2b:} Otherwise, set $\beta' = \beta + q_0$.
-  By Lemma~\ref{lem:taylor_expansion},
-  $f_1(\beta') = q_0 \cdot (a + f_1'(\beta) + q_0 b)$.
-  Since $f_1'(\beta) \notin \mathfrak{m}_S$
-  (by Theorem~\ref{thm:isUnit_aeval_derivative_minpoly} applied to the étale quotient)
-  and $a, q_0 b \in \mathfrak{m}_S$, the cofactor is a unit.
-  Hence $\operatorname{span}\{f_1(\beta')\} = \mathfrak{q}$, and
-  $\mathfrak{m}_S = \operatorname{span}\{f_1(\beta')\} + \mathfrak{m}_R S$.
-
-  Since $\beta' \equiv \beta_0 \pmod{\mathfrak{q}}$, it still generates
-  the quotient, so Lemma~\ref{lem:adjoin_eq_top_of_quotient} gives
-  $R[\beta'] = S$.
-  Finally, Theorem~\ref{thm:mkOfAdjoinEqTop} provides the
-  $\mathtt{IsAdjoinRootMonic}$ structure for $\operatorname{minpoly}_R \beta'$.
+  \textbf{Sub-case 2b:} Otherwise, apply
+  Lemma~\ref{lem:exists_isAdjoinRootMonic_of_principal_adjust}
+  with $q_0$, $\beta$, $f_1$.
+  The derivative condition $f_1'(\beta) \notin \mathfrak{m}_S$ follows from
+  Theorem~\ref{thm:isUnit_aeval_derivative_minpoly} applied to the étale quotient.
 \end{proof}
 
-\begin{theorem}[Alternative formulation with explicit ring homomorphism]
-  \label{thm:exists_adjoin_eq_top_of_quotientMap_etale}
-  \lean{Monogenic.exists_adjoin_eq_top_of_quotientMap_etale}
-  \leanok
-  \uses{thm:exists_isAdjoinRootMonic_of_quotientMap_etale}
-  Under the same hypotheses as Theorem~\ref{thm:exists_isAdjoinRootMonic_of_quotientMap_etale},
-  there exists $\beta \in S$ with $\varphi(R)[\beta] = S$, where $\varphi \colon R \to S$ is
-  the structure map.
-\end{theorem}
-
-\begin{proof}
-  \leanok
-  \uses{thm:exists_isAdjoinRootMonic_of_quotientMap_etale}
-  Apply Theorem~\ref{thm:exists_isAdjoinRootMonic_of_quotientMap_etale},
-  take $\beta = \mathtt{adj\_monic.root}$, and transfer the
-  $\operatorname{Algebra.adjoin}\; R\; \{\beta\} = \top$ statement to
-  $\operatorname{Algebra.adjoin}\; \varphi(R)\; \{\beta\} = \top$ by
-  mapping the polynomial coefficients through $R \cong \varphi(R)$.
-\end{proof}
+% Removed: exists_adjoin_eq_top_of_quotientMap_etale (trivial corollary, not formalized separately)
 
 
 \chapter{Plan for Mathlib PRs}
@@ -1147,8 +1111,14 @@ using \texttt{aeval\_add\_of\_sq\_eq\_zero}, then lifts via
 
 \subsection*{Sub-PR 7d: Main Theorem (Lemma 3.1)}
 
-\textbf{Declaration:}
-\texttt{exists\_isAdjoinRootMonic\_of\_quotientMap\_etale}
+\textbf{Declarations:}
+\begin{itemize}
+  \item \texttt{exists\_isAdjoinRootMonic\_of\_principal\_adjust}:
+    The principal adjustment sub-case (Case 2b), extracted as a
+    standalone lemma.
+  \item \texttt{exists\_isAdjoinRootMonic\_of\_quotientMap\_etale}:
+    The main theorem.
+\end{itemize}
 
 \textbf{File:} Same as 7c, or a dedicated file
 \texttt{Mathlib/RingTheory/Etale/Monogenic.lean}.
@@ -1172,7 +1142,8 @@ using \texttt{aeval\_add\_of\_sq\_eq\_zero}, then lifts via
 Case 1 uses PR~5 + PR~1 directly.
 Case 2 lifts a generator from the étale quotient, then either
 (2a) applies the Nakayama argument directly, or
-(2b) adjusts the generator by $q_0$ using the Taylor expansion
+(2b) delegates to \texttt{exists\_isAdjoinRootMonic\_of\_principal\_adjust},
+which adjusts the generator by $q_0$ using the Taylor expansion
 to ensure it generates $\mathfrak{q}$ modulo $\mathfrak{m}_R S$.
 
 \textbf{Notes:}
@@ -1180,11 +1151,10 @@ to ensure it generates $\mathfrak{q}$ modulo $\mathfrak{m}_R S$.
   \item The hypotheses include \texttt{IsIntegrallyClosed R} and
     \texttt{UniqueFactorizationMonoid S}. These are strong; reviewers may
     ask whether they can be weakened.
-  \item The alternative formulation \texttt{exists\_adjoin\_eq\_top\_of\_quotientMap\_etale}
-    (with explicit $\varphi$) can go in the same PR.
-    Its proof is mostly bookkeeping (transferring between
-    $\operatorname{Algebra.adjoin}\;R$ and
-    $\operatorname{Algebra.adjoin}\;\varphi(R)$).
+  \item An alternative formulation with an explicit ring homomorphism
+    (transferring between $\operatorname{Algebra.adjoin}\;R$ and
+    $\operatorname{Algebra.adjoin}\;\varphi(R)$) could be added as a
+    trivial corollary if needed.
 \end{itemize}
 
 
