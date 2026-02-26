@@ -120,6 +120,66 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
 
 end SubLemmas
 
+/-- When q is principal and f₁(B) doesn't already generate the maximal ideal quotient,
+    adjusting B by the generator q₀ yields a monogenic extension via Taylor expansion. -/
+lemma exists_isAdjoinRootMonic_of_principal_adjust
+    [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [Algebra R S]
+    [FaithfulSMul R S] [Module.Finite R S]
+    (q : Ideal S) [hq_prime : q.IsPrime]
+    (q₀ : S) (hq₀ : q = Ideal.span {q₀})
+    (B : S) (f₁ : R[X])
+    (h_f₁B_in_q : Polynomial.aeval B f₁ ∈ q)
+    (h_deriv_not_in_ms : f₁.derivative.aeval B ∉ IsLocalRing.maximalIdeal S)
+    (h_ms_eq : IsLocalRing.maximalIdeal S =
+      q ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R))
+    (h_adj : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
+      {Ideal.Quotient.mk q B} = ⊤)
+    (h_not_gen : ¬(Polynomial.aeval B f₁ ∈ IsLocalRing.maximalIdeal S ∧
+      Ideal.span {Polynomial.aeval B f₁} ⊔
+      Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) • ⊤ =
+      IsLocalRing.maximalIdeal S)) :
+    ∃ f : R[X], Nonempty (IsAdjoinRootMonic S f) := by
+  set ms := IsLocalRing.maximalIdeal S
+  have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
+  obtain ⟨a, ha⟩ : ∃ a : S, Polynomial.aeval B f₁ = q₀ * a := by
+    rw [hq₀] at h_f₁B_in_q; exact Ideal.mem_span_singleton.mp h_f₁B_in_q
+  let B' := B + q₀
+  -- Taylor: f₁(B+q₀) = f₁(B) + f₁'(B)·q₀ + q₀²·c = q₀·(a + f₁'(B) + q₀·c)
+  obtain ⟨b, hb⟩ : ∃ b : S, Polynomial.aeval B' f₁ =
+      q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
+    obtain ⟨c, hc⟩ := exists_aeval_add_eq f₁ B q₀
+    exact ⟨c, by rw [hc, show (aeval B) f₁ = q₀ * a from ha]; ring⟩
+  have h_cofactor_unit : IsUnit (a + f₁.derivative.aeval B + q₀ * b) := by
+    have hq₀_in_ms : q₀ ∈ ms := hq_le_ms (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
+    have ha_in_ms : a ∈ ms := by
+      by_contra ha_not_in_ms
+      have ha_unit := IsLocalRing.notMem_maximalIdeal.mp ha_not_in_ms
+      exact h_not_gen ⟨hq_le_ms h_f₁B_in_q, by
+        rw [show Ideal.span {Polynomial.aeval B f₁} = q from by
+          rw [ha, hq₀]
+          exact Ideal.span_singleton_mul_right_unit ha_unit q₀]
+        rw [h_ms_eq, Ideal.smul_eq_mul, Ideal.mul_top]⟩
+    have h_sum_in_ms : a + q₀ * b ∈ ms :=
+      Ideal.add_mem ms ha_in_ms (mul_comm q₀ b ▸ Ideal.mul_mem_left ms b hq₀_in_ms)
+    rw [show a + f₁.derivative.aeval B + q₀ * b =
+      f₁.derivative.aeval B + (a + q₀ * b) from by ring]
+    rw [← IsLocalRing.notMem_maximalIdeal]
+    exact fun h => h_deriv_not_in_ms (by convert Ideal.sub_mem ms h h_sum_in_ms using 1; ring)
+  have h_span_eq : Ideal.span {Polynomial.aeval B' f₁} = q := by
+    rw [hb, hq₀]; exact Ideal.span_singleton_mul_right_unit h_cofactor_unit q₀
+  have h_mk_eq : Ideal.Quotient.mk q B' = Ideal.Quotient.mk q B := by
+    change Ideal.Quotient.mk q (B + q₀) = Ideal.Quotient.mk q B
+    have : Ideal.Quotient.mk q q₀ = 0 :=
+      Ideal.Quotient.eq_zero_iff_mem.mpr (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
+    rw [map_add, this]; exact add_zero _
+  have h_adjoin_top : Algebra.adjoin R {B'} = ⊤ :=
+    adjoin_eq_top_of_quotient B' q (by rw [h_mk_eq]; exact h_adj)
+      (Polynomial.aeval B' f₁)
+      (by rw [Algebra.adjoin_singleton_eq_range_aeval]; exact ⟨f₁, rfl⟩)
+      (by rw [h_span_eq]; exact h_ms_eq)
+  exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
+    (Algebra.IsIntegral.isIntegral (R:=R) B') h_adjoin_top⟩⟩
+
 /-- Given regular local rings `R` and `S` with `S` a finite extension of `R`, if there exists a
 height one prime ideal `q ⊆ S` such that the induced map `R/(q ∩ R) → S/q` is étale,
 then `S` is a monogenic extension of `R`.
@@ -185,9 +245,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
       rw [Polynomial.hom_eval₂, hB, hcomp, ← Polynomial.eval₂_map, hf₁_map]
       change Polynomial.aeval B₀ f₀ = 0
       exact minpoly.aeval (A:=R₀) (B:=S₀) B₀
-    obtain ⟨a, ha⟩ : ∃ a : S, f₁_B = q₀ * a := by
-      rw [hq₀] at h_f₁B_in_q; exact Ideal.mem_span_singleton.mp h_f₁B_in_q
-    have h_deriv_unit : f₁.derivative.aeval B ∉ ms := by
+    have h_deriv_not_in_ms : f₁.derivative.aeval B ∉ ms := by
       have h_deriv_comm : Ideal.Quotient.mk q (f₁.derivative.aeval B) =
           (f₀.derivative).aeval B₀ := by
         simp only [Polynomial.aeval_def]
@@ -200,68 +258,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
         (isUnit_of_map_unit (Ideal.Quotient.mk q) _ h)
       rw [h_deriv_comm] at this
       exact this (isUnit_aeval_derivative_minpoly_of_adjoin_eq_top adj)
-    let B' := B + q₀
-    obtain ⟨b, hb⟩ : ∃ b : S, Polynomial.aeval B' f₁ =
-        q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
-      obtain ⟨c, hc⟩ := exists_aeval_add_eq f₁ B q₀
-      exact ⟨c, by rw [hc, show (aeval B) f₁ = q₀ * a from ha]; ring⟩
-    have h_cofactor_unit : IsUnit (a + f₁.derivative.aeval B + q₀ * b) := by
-      have hq₀_in_ms : q₀ ∈ ms := hq_le_ms (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
-      have ha_in_ms : a ∈ ms := by
-        by_contra ha_not_in_ms
-        have ha_unit := IsLocalRing.notMem_maximalIdeal.mp ha_not_in_ms
-        exact h_gen ⟨hq_le_ms h_f₁B_in_q, by
-          rw [show Ideal.span {f₁_B} = q from by
-            rw [show f₁_B = q₀ * a from ha, hq₀]
-            exact Ideal.span_singleton_mul_right_unit ha_unit q₀]
-          rw [h_ms_eq, Ideal.smul_eq_mul, Ideal.mul_top]⟩
-      have h_sum_in_ms : a + q₀ * b ∈ ms :=
-        Ideal.add_mem ms ha_in_ms (mul_comm q₀ b ▸ Ideal.mul_mem_left ms b hq₀_in_ms)
-      rw [show a + f₁.derivative.aeval B + q₀ * b =
-        f₁.derivative.aeval B + (a + q₀ * b) from by ring]
-      rw [← IsLocalRing.notMem_maximalIdeal]
-      exact fun h => h_deriv_unit (by convert Ideal.sub_mem ms h h_sum_in_ms using 1; ring)
-    have h_span_eq : Ideal.span {Polynomial.aeval B' f₁} = q := by
-      rw [hb, hq₀]; exact Ideal.span_singleton_mul_right_unit h_cofactor_unit q₀
-    have hB'_lifts : Ideal.Quotient.mk q B' = B₀ := by
-      change Ideal.Quotient.mk q (B + q₀) = B₀
-      rw [map_add, hB, Ideal.Quotient.eq_zero_iff_mem.mpr
-        (hq₀ ▸ Ideal.mem_span_singleton_self q₀)]; exact add_zero B₀
-    have h_adjoin_top : Algebra.adjoin R {B'} = ⊤ :=
-      adjoin_eq_top_of_quotient B' q (by convert adj using 3)
-        (Polynomial.aeval B' f₁)
-        (by rw [Algebra.adjoin_singleton_eq_range_aeval]; exact ⟨f₁, rfl⟩)
-        (by rw [h_span_eq]; exact h_ms_eq)
-    exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
-      (Algebra.IsIntegral.isIntegral (R:=R) B') h_adjoin_top⟩⟩
-
-theorem exists_adjoin_eq_top_of_quotientMap_etale
-    [IsDomain R] [IsDomain S] [IsIntegrallyClosed R]
-    [UniqueFactorizationMonoid S]
-    (φ : R →+* S) (hφ_fin : φ.Finite) (hφ_inj : Injective φ)
-    (q : Ideal S)
-    [hq_prime : q.IsPrime] (hq_height : q.height = 1)
-    (hétale : Etale (Ideal.quotientMap q φ (le_refl (q.comap φ)))) :
-    ∃(β : S), Algebra.adjoin φ.range {β} = ⊤ := by
-  letI : Algebra R S := φ.toAlgebra
-  have eq : φ = algebraMap R S := (algebraMap_toAlgebra φ).symm
-  rw [eq] at hφ_inj; rw [eq]
-  haveI : FaithfulSMul R S := (faithfulSMul_iff_algebraMap_injective R S).mpr hφ_inj
-  haveI : Module.Finite R S := finite_algebraMap.mp hφ_fin
-  obtain ⟨f, ⟨adj_monic⟩⟩ :=
-    exists_isAdjoinRootMonic_of_quotientMap_etale (R:=R) (S:=S) q hq_height hétale
-  use adj_monic.root
-  ext s; constructor
-  · intro _; trivial
-  · intro _
-    have hs : s ∈ Algebra.adjoin R {adj_monic.root} := by
-      rw [adj_monic.adjoin_root_eq_top]; trivial
-    rw [Algebra.adjoin_singleton_eq_range_aeval] at hs ⊢
-    obtain ⟨p, hp⟩ := hs
-    let p' : Polynomial φ.range := p.map (RingEquiv.ofBijective (φ.rangeRestrict)
-      ⟨fun _ _ h => hφ_inj (Subtype.ext_iff.mp h), φ.rangeRestrict_surjective⟩).toRingHom
-    use p'
-    change Polynomial.eval₂ (algebraMap φ.range S) adj_monic.root p' = s
-    rw [Polynomial.eval₂_map]; convert hp using 2
+    exact exists_isAdjoinRootMonic_of_principal_adjust q q₀ hq₀ B f₁
+      h_f₁B_in_q h_deriv_not_in_ms h_ms_eq (by rw [hB]; exact adj) h_gen
 
 end Monogenic
