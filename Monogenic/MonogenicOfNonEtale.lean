@@ -143,23 +143,16 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   let φ := algebraMap R S
   by_cases hφ_etale : Algebra.Etale R S
   · let ⟨β, adj⟩ := exists_adjoin_eq_top (R:=R) (S:=S)
-    haveI : Algebra.Smooth R S := ⟨inferInstance, inferInstance⟩
-    haveI : Module.Flat R S := Algebra.Smooth.flat R S
     haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
     exact ⟨minpoly R β, ⟨IsAdjoinRoot.mkOfAdjoinEqTop' adj⟩⟩
   let p : Ideal R := q.comap φ
   let R₀ := R ⧸ p; let S₀ := S ⧸ q
   let φ₀ : R₀ →+* S₀ := Ideal.quotientMap q φ (le_refl p)
   haveI hp_prime : p.IsPrime := Ideal.IsPrime.comap φ
-  haveI : IsDomain R₀ := Ideal.Quotient.isDomain p
-  haveI : IsDomain S₀ := Ideal.Quotient.isDomain q
   haveI : IsLocalRing R₀ := .of_surjective' _ Ideal.Quotient.mk_surjective
   haveI : IsLocalRing S₀ := .of_surjective' _ Ideal.Quotient.mk_surjective
-  haveI : IsScalarTower R R₀ S₀ := .of_algebraMap_eq' rfl
   haveI : Module.Finite R₀ S₀ := Module.Finite.of_restrictScalars_finite R _ _
   haveI : Algebra.Etale R₀ S₀ := RingHom.etale_algebraMap.mp hétale
-  haveI : FaithfulSMul R₀ S₀ :=
-    (faithfulSMul_iff_algebraMap_injective R₀ S₀).mpr Ideal.quotientMap_injective
   obtain ⟨B₀, adj⟩ := exists_adjoin_eq_top (R:=R₀) (S:=S₀)
   let f₀ := minpoly R₀ B₀
   obtain ⟨B, hB⟩ := Ideal.Quotient.mk_surjective B₀
@@ -175,7 +168,6 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   have h_ms_eq : ms = q ⊔ Ideal.map φ mr := maximalIdeal_eq_sup_of_etale_quotient q hétale
   let f₁_B := Polynomial.aeval B f₁
   obtain ⟨q₀, hq₀⟩ := Ideal.exists_span_singleton_eq_of_prime_of_height_one q hq_height
-  -- The commutative square: (mk q) ∘ φ = φ₀ ∘ (mk p)
   have hcomp : (Ideal.Quotient.mk q).comp (algebraMap R S) =
       φ₀.comp (Ideal.Quotient.mk p) := by
     ext r; change Ideal.Quotient.mk q (φ r) = φ₀ (Ideal.Quotient.mk p r)
