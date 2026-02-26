@@ -2,6 +2,7 @@ name = "monogenic"
 version = "0.1.0"
 keywords = ["math"]
 defaultTargets = ["Monogenic"]
+lintDriver = "batteries/runLinter"
 
 [leanOptions]
 pp.unicode.fun = true
@@ -13,6 +14,10 @@ maxSynthPendingDepth = 3
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4.git"
+
+[[require]]
+name = "checkdecls"
+git = "https://github.com/PatrickMassot/checkdecls.git"
 
 [[lean_lib]]
 name = "Monogenic"
