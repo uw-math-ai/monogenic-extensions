@@ -56,9 +56,7 @@ noncomputable def _root_.IsAdjoinRoot.mkOfAdjoinEqTop'
     ((finrank_quotient_span_eq_natDegree' hf).trans hrank)
   have hφ_inj : Injective φ := fun x y h => OrzechProperty.injective_of_surjective_endomorphism
     (e.symm.toLinearMap.comp φ.toLinearMap) (e.symm.surjective.comp hφ_surj) (congr_arg e.symm h)
-  exact {
-    IsAdjoinRoot.ofAdjoinRootEquiv (AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩) with monic := hf
-  }
+  exact { IsAdjoinRoot.ofAdjoinRootEquiv (AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩) with monic := hf }
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -386,7 +384,7 @@ being a monogenic extension with unit derivative.
 The proof constructs a `StandardEtalePresentation` using the pair `(f, f')`:
 since `f' · 1 + f · 0 = f'^1`, the derivative condition gives the Bézout-type
 relation needed for standard étaleness. -/
-theorem _root_.IsAdjoinRootMonic.algebra_etale
+theorem IsAdjoinRootMonic.algebra_etale
     {f : R[X]} (adj : IsAdjoinRootMonic S f)
     (hunit : IsUnit (aeval adj.root f.derivative)) :
     Algebra.Etale R S := by
