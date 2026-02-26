@@ -221,6 +221,21 @@ generates the maximal ideal modulo `mR · S`.
 -/
 
 omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
+/-- If `I = ⟨π⟩ + J`, then `I^k ≤ ⟨π^k⟩ + J`. Pure ideal arithmetic. -/
+lemma Ideal.pow_le_span_pow_sup {I J : Ideal S} {π : S}
+    (h : I = Ideal.span {π} ⊔ J) (k : ℕ) :
+    I ^ k ≤ Ideal.span {π ^ k} ⊔ J := by
+  induction k with
+  | zero => simp [Ideal.span_singleton_one]
+  | succ k ih =>
+    rw [pow_succ]; exact (Ideal.mul_mono ih h.le).trans (by
+      rw [Ideal.sup_mul, Ideal.mul_sup, Ideal.mul_sup]; exact sup_le (sup_le
+        (by rw [Ideal.span_singleton_mul_span_singleton, pow_succ]; exact le_sup_left)
+        (Ideal.mul_le_left.trans le_sup_right))
+        (sup_le (Ideal.mul_le_right.trans le_sup_right)
+          (Ideal.mul_le_left.trans le_sup_right)))
+
+omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
 /-- Let `ϕ : R → S` be a ring map. Given an ideal `q` in `S`, let `p = ϕ^{-1} q`.
     If `R/p [β] = S/q`, then every element of `S` is congruent to an element of `R[β]` mod `q`. -/
 lemma exists_adjoin_sub_mem
@@ -243,6 +258,32 @@ lemma exists_adjoin_sub_mem
     · rintro x y _ _ ⟨t₀, ht₀, rfl⟩ ⟨t₁, ht₁, rfl⟩
       exact ⟨t₀ * t₁, Subalgebra.mul_mem _ ht₀ ht₁, (map_mul _ t₀ t₁).symm⟩
   exact ⟨t, ht, Ideal.Quotient.eq.mp ht_eq⟩
+
+omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
+/-- Iterative approximation: each `x ∈ q` can be approximated by an element of `A`
+    modulo `⟨π^k⟩ + mR·S`, using the quotient-lifting and ideal arithmetic lemmas. -/
+lemma exists_sub_mem_adjoin_of_pow
+    {A : Subalgebra R S} {q ms mR_S : Ideal S} {π : S}
+    (h_lift : ∀ s : S, ∃ t ∈ A, s - t ∈ q)
+    (hπ_mem : π ∈ A) (hπ_ms : π ∈ ms) (hq_le : q ≤ ms)
+    (h_ms : ms = Ideal.span {π} ⊔ mR_S)
+    (k : ℕ) (x : S) :
+    ∃ a ∈ A.toSubmodule, x - a ∈ (Ideal.span {π ^ k} ⊔ mR_S : Ideal S) := by
+  induction k with
+  | zero => exact ⟨0, Subalgebra.zero_mem A, by simp [Ideal.span_singleton_one]⟩
+  | succ k ih =>
+    obtain ⟨a₀, ha₀, hz⟩ := ih
+    obtain ⟨y, hy, r, hr, hyr⟩ := Submodule.mem_sup.mp hz
+    obtain ⟨c, rfl⟩ := Ideal.mem_span_singleton.mp hy
+    obtain ⟨a₁, ha₁, hc⟩ := h_lift c
+    refine ⟨a₀ + a₁ * π ^ k, Subalgebra.add_mem A ha₀
+      (Subalgebra.mul_mem A ha₁ (Subalgebra.pow_mem A hπ_mem k)), ?_⟩
+    rw [show x - (a₀ + a₁ * π ^ k) = π ^ k * (c - a₁) + r from
+      by linear_combination hyr.symm]
+    exact Ideal.add_mem _ (Ideal.pow_le_span_pow_sup h_ms (k + 1) (by
+      rw [pow_succ]
+      exact Ideal.mul_mem_mul (Ideal.pow_mem_pow hπ_ms k) (hq_le hc)))
+      (Ideal.mem_sup_right hr)
 
 omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
 /-- Nakayama argument: if `R/p[β] = S/q`, and `mS = π S + m_R · S` for some `π ∈ R[β]`,
@@ -272,37 +313,10 @@ lemma adjoin_eq_top_of_quotient
   have h_lift := exists_adjoin_sub_mem β q h_gen
   have hπ_ms : π ∈ ms := h_ms ▸ Ideal.mem_sup_left (Ideal.mem_span_singleton_self π)
   have hq_le : q ≤ ms := IsLocalRing.le_maximalIdeal (Ideal.IsPrime.ne_top ‹_›)
-  have h_pow : ∀ k : ℕ, ms ^ k ≤ Ideal.span {π ^ k} ⊔ mR_S := by
-    intro k; induction k with
-    | zero => simp [Ideal.span_singleton_one]
-    | succ k ih =>
-      rw [pow_succ]; calc ms ^ k * ms
-          ≤ (Ideal.span {π ^ k} ⊔ mR_S) * (Ideal.span {π} ⊔ mR_S) :=
-            Ideal.mul_mono ih h_ms.le
-        _ ≤ Ideal.span {π ^ (k + 1)} ⊔ mR_S := by
-            rw [Ideal.sup_mul, Ideal.mul_sup, Ideal.mul_sup]
-            refine sup_le (sup_le ?_ (Ideal.mul_le_left.trans le_sup_right))
-              (sup_le (Ideal.mul_le_right.trans le_sup_right)
-                (Ideal.mul_le_left.trans le_sup_right))
-            rw [Ideal.span_singleton_mul_span_singleton, pow_succ]; exact le_sup_left
-  have h_iter : ∀ (k : ℕ) (x : S), x ∈ q →
-      ∃ a ∈ A.toSubmodule, x - a ∈ (Ideal.span {π ^ k} ⊔ mR_S : Ideal S) := by
-    intro k; induction k with
-    | zero => exact fun _ _ => ⟨0, Subalgebra.zero_mem A, by simp [Ideal.span_singleton_one]⟩
-    | succ k ih =>
-      intro x hx; obtain ⟨a₀, ha₀, hz⟩ := ih x hx
-      obtain ⟨y, hy, r, hr, hyr⟩ := Submodule.mem_sup.mp hz
-      obtain ⟨c, rfl⟩ := Ideal.mem_span_singleton.mp hy
-      obtain ⟨a₁, ha₁, hc⟩ := h_lift c
-      refine ⟨a₀ + a₁ * π ^ k, Subalgebra.add_mem A ha₀
-        (Subalgebra.mul_mem A ha₁ (Subalgebra.pow_mem A hπ_mem k)), ?_⟩
-      rw [show x - (a₀ + a₁ * π ^ k) = π ^ k * (c - a₁) + r from
-        by linear_combination hyr.symm]
-      have hmem : π ^ k * (c - a₁) ∈ ms ^ (k + 1) := by
-        rw [pow_succ]; exact Ideal.mul_mem_mul (Ideal.pow_mem_pow hπ_ms k) (hq_le hc)
-      exact Ideal.add_mem _ (h_pow (k + 1) hmem) (Ideal.mem_sup_right hr)
   have h_q : (q.restrictScalars R : Submodule R S) ≤ A.toSubmodule ⊔ mR • ⊤ := by
-    intro x hx; obtain ⟨a, ha, hxa⟩ := h_iter n x hx; rw [Ideal.smul_top_eq_map]
+    intro x hx
+    obtain ⟨a, ha, hxa⟩ := exists_sub_mem_adjoin_of_pow h_lift hπ_mem hπ_ms hq_le h_ms n x
+    rw [Ideal.smul_top_eq_map]
     exact Submodule.mem_sup.mpr ⟨a, ha, x - a, show x - a ∈ mR_S.restrictScalars R from
       (sup_le (Ideal.span_le.mpr (Set.singleton_subset_iff.mpr
         (hn (Ideal.pow_mem_pow hπ_ms n)))) le_rfl) hxa, by ring⟩
@@ -376,36 +390,23 @@ theorem _root_.IsAdjoinRootMonic.algebra_etale
     {f : R[X]} (adj : IsAdjoinRootMonic S f)
     (hunit : IsUnit (aeval adj.root f.derivative)) :
     Algebra.Etale R S := by
-  let P : StandardEtalePair R :=
-    ⟨f, adj.monic, f.derivative, 1, 0, 1, by ring⟩
+  set P : StandardEtalePair R := ⟨f, adj.monic, f.derivative, 1, 0, 1, by ring⟩
   have hmap : P.HasMap adj.root := ⟨adj.aeval_root_self, hunit⟩
-  set e := adj.toIsAdjoinRoot.adjoinRootAlgEquiv with he_def
+  set e := adj.toIsAdjoinRoot.adjoinRootAlgEquiv with he
   set bwd : S →ₐ[R] P.Ring :=
-    (AdjoinRoot.liftAlgHom f _ P.X P.hasMap_X.1).comp e.symm.toAlgHom with hbwd_def
-  have h_left_eq : bwd.comp (P.lift adj.root hmap) = AlgHom.id R P.Ring := by
-    apply P.hom_ext
-    change bwd (P.lift adj.root hmap P.X) = P.X
-    simp [hbwd_def, he_def]
-  have h_left : ∀ x, bwd (P.lift adj.root hmap x) = x :=
-    fun x => by simpa using DFunLike.congr_fun h_left_eq x
+    (AdjoinRoot.liftAlgHom f _ P.X P.hasMap_X.1).comp e.symm.toAlgHom with hbwd
+  have h_inv : ∀ x, bwd (P.lift adj.root hmap x) = x := DFunLike.congr_fun
+    (show bwd.comp (P.lift adj.root hmap) = AlgHom.id R P.Ring from by
+      apply P.hom_ext; change bwd (P.lift adj.root hmap P.X) = P.X; simp [hbwd, he])
   have h_right : ∀ s, P.lift adj.root hmap (bwd s) = s := by
-    intro s
-    obtain ⟨p, rfl⟩ := adj.map_surjective s
-    have h1 : e.symm (adj.map p) = AdjoinRoot.mk f p :=
-      e.symm_apply_eq.mpr (adj.toIsAdjoinRoot.adjoinRootAlgEquiv_apply_mk p).symm
-    have h_bwd_val : bwd (adj.map p) = aeval P.X p := by
-      change (AdjoinRoot.liftAlgHom f _ P.X P.hasMap_X.1) (e.symm (adj.map p)) = aeval P.X p
-      rw [h1]; simp [aeval_def]
-    rw [h_bwd_val]
-    calc P.lift adj.root hmap (aeval P.X p)
-        = aeval (P.lift adj.root hmap P.X) p := (aeval_algHom_apply _ _ _).symm
-      _ = aeval adj.root p := by rw [P.lift_X]
-      _ = adj.map p := by simp
-  have lift_bij : Function.Bijective (P.lift adj.root hmap) :=
-    ⟨fun a b hab => by rw [← h_left a, ← h_left b, hab],
-     fun s => ⟨bwd s, h_right s⟩⟩
-  haveI : Algebra.IsStandardEtale R S := ⟨⟨P, adj.root, hmap, lift_bij⟩⟩
-  exact inferInstance
+    intro s; obtain ⟨p, rfl⟩ := adj.map_surjective s
+    have : bwd (adj.map p) = aeval P.X p := by
+      change (AdjoinRoot.liftAlgHom f _ P.X P.hasMap_X.1) (e.symm (adj.map p)) = _
+      rw [e.symm_apply_eq.mpr (adj.toIsAdjoinRoot.adjoinRootAlgEquiv_apply_mk p).symm]
+      simp [aeval_def]
+    rw [this, ← aeval_algHom_apply, P.lift_X]; simp
+  exact haveI : Algebra.IsStandardEtale R S := ⟨⟨P, adj.root, hmap,
+    fun a b h => by rw [← h_inv a, ← h_inv b, h], fun s => ⟨bwd s, h_right s⟩⟩⟩; inferInstance
 
 end Monogenic
 
