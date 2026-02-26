@@ -74,17 +74,6 @@ The proof proceeds through the residue fields:
 -- For a local ring `S`, we denote its maximal ideal by `m_S`.
 variable [IsLocalRing S]
 
-/-- Given a polynomial `p ∈ R[x]` and `β ∈ S`,
-    `p(β) mod m_S = (p mod m_S)(β mod m_S)` -/
-theorem residue_aeval_eq (β : S) (p : R[X]) :
-    IsLocalRing.residue S (aeval β p) =
-    p.eval₂ ((IsLocalRing.residue S).comp (algebraMap R S)) (IsLocalRing.residue S β) := by
-  simp only [aeval_def, hom_eval₂]
-
-/-- In a local ring `S`, an element is a unit iff its image in `S/m_S` is non-zero. -/
-lemma isUnit_of_residue_ne_zero {s : S} (h : IsLocalRing.residue S s ≠ 0) : IsUnit s :=
-  IsLocalRing.notMem_maximalIdeal.mp <| mt (IsLocalRing.residue_eq_zero_iff s).mpr h
-
 variable [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S]
 
 /-- The square
@@ -384,7 +373,7 @@ being a monogenic extension with unit derivative.
 The proof constructs a `StandardEtalePresentation` using the pair `(f, f')`:
 since `f' · 1 + f · 0 = f'^1`, the derivative condition gives the Bézout-type
 relation needed for standard étaleness. -/
-theorem IsAdjoinRootMonic.algebra_etale
+theorem _root_.IsAdjoinRootMonic.algebra_etale
     {f : R[X]} (adj : IsAdjoinRootMonic S f)
     (hunit : IsUnit (aeval adj.root f.derivative)) :
     Algebra.Etale R S := by

@@ -148,7 +148,6 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   let p : Ideal R := q.comap φ
   let R₀ := R ⧸ p; let S₀ := S ⧸ q
   let φ₀ : R₀ →+* S₀ := Ideal.quotientMap q φ (le_refl p)
-  haveI hp_prime : p.IsPrime := Ideal.IsPrime.comap φ
   haveI : IsLocalRing R₀ := .of_surjective' _ Ideal.Quotient.mk_surjective
   haveI : IsLocalRing S₀ := .of_surjective' _ Ideal.Quotient.mk_surjective
   haveI : Module.Finite R₀ S₀ := Module.Finite.of_restrictScalars_finite R _ _
@@ -173,15 +172,13 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
     ext r; change Ideal.Quotient.mk q (φ r) = φ₀ (Ideal.Quotient.mk p r)
     exact Ideal.quotientMap_mk.symm
   by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
-  · -- Case 1: f₁(B) generates ms/(mr·S), so R[B] = S
-    have h_adjoin_top : Algebra.adjoin R {B} = ⊤ :=
+  · have h_adjoin_top : Algebra.adjoin R {B} = ⊤ :=
       adjoin_eq_top_of_quotient B q (by convert adj using 3)
         f₁_B (by rw [Algebra.adjoin_singleton_eq_range_aeval]; exact ⟨f₁, rfl⟩)
         (by simpa [Ideal.smul_eq_mul, Ideal.mul_top] using h_gen.2.symm)
     exact ⟨minpoly R B, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
       (Algebra.IsIntegral.isIntegral (R:=R) B) h_adjoin_top⟩⟩
-  · -- Case 2: f₁(B) does not generate the right ideal
-    have h_f₁B_in_q : f₁_B ∈ q := by
+  · have h_f₁B_in_q : f₁_B ∈ q := by
       rw [← Ideal.Quotient.eq_zero_iff_mem]
       change Ideal.Quotient.mk q (Polynomial.aeval B f₁) = 0
       simp only [Polynomial.aeval_def]
@@ -204,7 +201,6 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
       rw [h_deriv_comm] at this
       exact this (isUnit_aeval_derivative_minpoly_of_adjoin_eq_top adj)
     let B' := B + q₀
-    -- Taylor: f₁(B+q₀) = f₁(B) + f₁'(B)·q₀ + q₀²·c = q₀·(a + f₁'(B) + q₀·c)
     obtain ⟨b, hb⟩ : ∃ b : S, Polynomial.aeval B' f₁ =
         q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
       obtain ⟨c, hc⟩ := exists_aeval_add_eq f₁ B q₀
