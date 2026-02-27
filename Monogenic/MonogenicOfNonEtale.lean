@@ -96,7 +96,7 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
   haveI : IsLocalHom (algebraMap (R ⧸ p) (S ⧸ q)) := by
     rw [hφ₀_eq]; exact RingHom.IsIntegral.isLocalHom (.of_finite
       (RingHom.finite_algebraMap.mpr ‹_›)) Ideal.quotientMap_injective
-  haveI : Algebra.EssFiniteType (R ⧸ p) (S ⧸ q) := .of_finiteType _ _
+  -- haveI : Algebra.EssFiniteType (R ⧸ p) (S ⧸ q) := .of_finiteType _ _
   -- map (mk I) (maximalIdeal T) = maximalIdeal (T ⧸ I) for prime I
   have mk_max_R : (IsLocalRing.maximalIdeal R).map (Ideal.Quotient.mk p) =
       IsLocalRing.maximalIdeal (R ⧸ p) := by
