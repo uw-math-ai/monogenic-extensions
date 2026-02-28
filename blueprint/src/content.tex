@@ -30,69 +30,6 @@ local rings, residue fields, and the primitive element theorem.
 \end{thebibliography}
 
 
-\chapter{Basic Definitions and Equivalences}
-\label{ch:basic}
-
-\section{Monogenic Extensions}
-\label{sec:monogenic_def}
-
-\begin{definition}[Monogenic extension]
-  \label{def:monogenic_adjoin}
-  \lean{Monogenic._monogenic_of_univQuot}
-  \leanok
-  Let $\varphi \colon R \to S$ be an $R$-algebra.
-  We say $S$ is a \emph{monogenic extension} of $R$ if there exist a polynomial
-  $f \in R[X]$ and an $R$-algebra isomorphism $S \cong R[X]/(f)$.
-  Equivalently, there exists $\beta \in S$ such that $R[\beta] = S$, i.e.,
-  $\operatorname{Algebra.adjoin} R \{\beta\} = \top$.
-\end{definition}
-
-\begin{lemma}[Monogenic from quotient isomorphism]
-  \label{lem:monogenic_of_univQuot}
-  \lean{Monogenic._monogenic_of_univQuot}
-  \leanok
-  If there exists $f \in R[X]$ and an $R$-algebra isomorphism
-  $R[X]/(f) \cong_R S$, then there exists $\beta \in S$ with
-  $\operatorname{Algebra.adjoin} R \{\beta\} = \top$.
-\end{lemma}
-
-\begin{proof}
-  \leanok
-  Use $\mathtt{IsAdjoinRoot.ofAdjoinRootEquiv}$ to obtain an
-  $\mathtt{IsAdjoinRoot}$ structure, then extract
-  $\beta = \mathtt{adj.root}$ and apply $\mathtt{adj.adjoin\_root\_eq\_top}$.
-\end{proof}
-
-\begin{lemma}[Surjective evaluation gives generator]
-  \label{lem:monogenic_of_surjective_map}
-  \lean{Monogenic._monogenic_of_surjective_map}
-  \leanok
-  If $f \colon R[X] \to_R S$ is a surjective $R$-algebra map, then
-  $\operatorname{Algebra.adjoin} R \{f(X)\} = \top$.
-\end{lemma}
-
-\begin{proof}
-  \leanok
-  By $\mathtt{Algebra.adjoin\_singleton\_eq\_range\_aeval}$, the subalgebra
-  $R[f(X)]$ equals the range of $\operatorname{aeval}_{f(X)}$.
-  Surjectivity of $f$ transfers to surjectivity of
-  $\operatorname{aeval}_{f(X)}$ via $\mathtt{aeval\_algHom\_apply}$.
-\end{proof}
-
-\begin{lemma}[Generator gives surjective evaluation]
-  \label{lem:surjective_map_of_monogenic}
-  \lean{Monogenic._surjective_map_of_monogenic}
-  \leanok
-  If $\beta \in S$ satisfies $\operatorname{Algebra.adjoin} R \{\beta\} = \top$,
-  then $\operatorname{aeval}_\beta \colon R[X] \to S$ is surjective.
-\end{lemma}
-
-\begin{proof}
-  \leanok
-  Immediate from $\mathtt{Algebra.adjoin\_singleton\_eq\_range\_aeval}$.
-\end{proof}
-
-
 \chapter{The Quotient Isomorphism}
 \label{ch:generator}
 
@@ -132,7 +69,7 @@ the natural map $R[X]/(\operatorname{minpoly}_R \beta) \to S$ is an isomorphism,
 
 \begin{theorem}[Quotient isomorphism without integrally closed hypothesis]
   \label{thm:mkOfAdjoinEqTop}
-  \lean{IsAdjoinRoot.mkOfAdjoinEqTop'}
+  \lean{IsAdjoinRootMonic.mkOfAdjoinEqTop'}
   \leanok
   \uses{lem:minpoly_natDegree_le}
   Let $R \to S$ be a finite free extension with $R$ nontrivial,
@@ -339,7 +276,6 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
   \label{thm:algebra_etale}
   \lean{IsAdjoinRootMonic.algebra_etale}
   \leanok
-  \uses{def:monogenic_adjoin}
   Let $f \in R[X]$ be monic with $S \cong R[X]/(f)$
   (via an $\mathtt{IsAdjoinRootMonic}$ structure).
   If $f'(\beta) \in S^\times$ where $\beta$ is the image of $X$,
@@ -445,9 +381,11 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
 
 \begin{proof}
   \leanok
-  Apply $\mathtt{Algebra.adjoin\_induction}$ to the element
-  $\overline{s} \in (R/\mathfrak{p})[\bar\beta] = S/\mathfrak{q}$
-  to find a preimage in $R[\beta]$.
+  Since $(R/\mathfrak{p})[\bar\beta] = S/\mathfrak{q}$, the map
+  $\operatorname{aeval}_{\bar\beta}$ is surjective.
+  Lift a polynomial preimage of $\bar s$ through
+  $\mathtt{Polynomial.map\_surjective}$ to obtain $t \in R[\beta]$
+  with $s - t \in \mathfrak{q}$.
 \end{proof}
 
 \begin{lemma}[Nakayama argument for quotient generation]
@@ -636,7 +574,7 @@ The key Mathlib files involved are:
     Generalizes the existing \texttt{minpoly.natDegree\_le} in
     \texttt{FieldTheory/IntermediateField/Adjoin/Basic.lean}
     (which requires $K, L$ to be fields with \texttt{FiniteDimensional}).
-  \item \texttt{IsAdjoinRoot.mkOfAdjoinEqTop'}: If $R[\alpha] = S$ and $S$ is
+  \item \texttt{IsAdjoinRootMonic.mkOfAdjoinEqTop'}: If $R[\alpha] = S$ and $S$ is
     finite free over $R$, then $S$ admits an \texttt{IsAdjoinRootMonic}
     structure for $\operatorname{minpoly}_R \alpha$.
 \end{itemize}
@@ -665,15 +603,14 @@ then import it from \texttt{IsAdjoinRoot.lean} for \texttt{mkOfAdjoinEqTop'}.
 
 \begin{itemize}
   \item \texttt{minpoly.natDegree\_le'}: Currently uses \texttt{\_root\_} prefix
-    to escape the \texttt{Monogenic} namespace. In Mathlib, it would be
-    \texttt{minpoly.natDegree\_le\_finrank} or similar
-    (the prime suffix is not idiomatic). Consider whether to
-    replace the existing field-level \texttt{minpoly.natDegree\_le}
-    or keep both.
-  \item \texttt{IsAdjoinRoot.mkOfAdjoinEqTop'}: Rename to something like
-    \texttt{IsAdjoinRootMonic.ofAdjoinEqTop} or
-    \texttt{IsAdjoinRootMonic.mk\_of\_adjoin\_eq\_top}.
-    The prime suffix should be dropped for Mathlib.
+    to escape the \texttt{Monogenic} namespace. In Mathlib, consider renaming to
+    \texttt{minpoly.natDegree\_le\_finrank} or similar,
+    and whether to replace the existing field-level
+    \texttt{minpoly.natDegree\_le} or keep both.
+  \item \texttt{IsAdjoinRootMonic.mkOfAdjoinEqTop'}: Already in the correct
+    namespace (matching the Mathlib original \texttt{IsAdjoinRootMonic.mkOfAdjoinEqTop}).
+    For Mathlib, the prime suffix should be dropped; the existing Mathlib version
+    requires \texttt{IsIntegrallyClosed}, so this would replace it.
 \end{itemize}
 
 \subsection*{Required imports (for the declarations)}
@@ -719,15 +656,6 @@ then import it from \texttt{IsAdjoinRoot.lean} for \texttt{mkOfAdjoinEqTop'}.
 \subsection*{Declarations}
 
 \begin{itemize}
-  \item \texttt{residue\_aeval\_eq}: $\overline{p(\beta)} = \bar p(\bar\beta)$
-    for polynomial evaluation through the residue map.
-    One-liner via \texttt{hom\_eval\_2}.
-  \item \texttt{isUnit\_of\_residue\_ne\_zero}: Nonzero residue $\Rightarrow$ unit.
-    One-liner combining \texttt{notMem\_maximalIdeal} and
-    \texttt{residue\_eq\_zero\_iff}.
-  \item \texttt{residue\_comp\_algebraMap}: The square
-    $R \to S \to k_S$ equals $R \to k_R \to k_S$.
-    Proved by \texttt{rfl}.
   \item \texttt{adjoin\_residue\_eq\_top\_of\_adjoin\_eq\_top}:
     If $R[\beta] = S$ then $k_R[\bar\beta] = k_S$.
   \item \texttt{finrank\_eq\_finrank\_residueField}:
@@ -737,31 +665,23 @@ then import it from \texttt{IsAdjoinRoot.lean} for \texttt{mkOfAdjoinEqTop'}.
 
 \subsection*{File placement}
 
-The first four lemmas are general local ring facts.
+\texttt{adjoin\_residue\_eq\_top\_of\_adjoin\_eq\_top} is a general local ring fact.
 \texttt{finrank\_eq\_finrank\_residueField} requires étale hypotheses.
 
-\textbf{Option A:} Put the first four in
+\textbf{Option A:} Put the first in
 \texttt{Mathlib/RingTheory/LocalRing/ResidueField/Basic.lean}
 (which already has \texttt{residue\_surjective}, \texttt{ker\_residue}, etc.)
 and the étale-specific \texttt{finrank\_eq\_finrank\_residueField} in a new
 file or in \texttt{Mathlib/RingTheory/Etale/LocalRing.lean}.
 
-\textbf{Option B (simpler):} All five in a new file
+\textbf{Option B (simpler):} Both in a new file
 \texttt{Mathlib/RingTheory/LocalRing/ResidueField/Algebra.lean}
 that imports both \texttt{ResidueField/Basic} and the étale/unramified files.
-
-\textbf{Possible issue:} \texttt{residue\_aeval\_eq} and
-\texttt{residue\_comp\_algebraMap} need polynomial evaluation imports
-(\texttt{Algebra.Polynomial.AlgebraMap} or similar).
-\texttt{ResidueField/Basic.lean} currently does not import polynomial files,
-so a new file may be cleaner.
 
 \subsection*{Namespace}
 
 Currently in \texttt{Monogenic} namespace; for Mathlib these should go in
-\texttt{IsLocalRing} namespace (for \texttt{residue\_aeval\_eq},
-\texttt{isUnit\_of\_residue\_ne\_zero}, \texttt{residue\_comp\_algebraMap})
-or no namespace / \texttt{Algebra} namespace for the generation/rank lemmas.
+\texttt{IsLocalRing} or \texttt{Algebra} namespace.
 
 \subsection*{Required imports}
 \begin{itemize}
@@ -785,9 +705,6 @@ or no namespace / \texttt{Algebra} namespace for the generation/rank lemmas.
     Check if there is now a more direct Mathlib lemma for this
     (e.g., a version of \texttt{finrank\_quotient\_map} that takes
     an ideal equality).
-  \item \texttt{isUnit\_of\_residue\_ne\_zero}: check for existing Mathlib
-    duplicates; the content is essentially
-    $s \notin \mathfrak{m} \Leftrightarrow \text{unit}$.
 \end{itemize}
 
 \subsection*{Potential issues}
@@ -797,7 +714,7 @@ or no namespace / \texttt{Algebra} namespace for the generation/rank lemmas.
     imports. Consider whether to state it more generally for
     ``finite free local extensions where $\mathfrak{m}_R S = \mathfrak{m}_S$''
     rather than requiring \texttt{Algebra.Etale}.
-  \item Some of these lemmas may already exist in Mathlib under different names.
+  \item These lemmas may already exist in Mathlib under different names.
     Search carefully before submitting.
 \end{itemize}
 
@@ -831,7 +748,7 @@ Alternatively, it could go into \texttt{Mathlib/FieldTheory/Minpoly/LocalRing.le
 \subsection*{Required imports}
 \begin{itemize}
   \item Everything from PR~2 (residue field lemmas).
-  \item \texttt{IsAdjoinRoot.mkOfAdjoinEqTop'} from PR~1
+  \item \texttt{IsAdjoinRootMonic.mkOfAdjoinEqTop'} from PR~1
     (used in the degree chain: $\deg f = \operatorname{finrank}_R S$
      via \texttt{.finrank}).
   \item \texttt{Mathlib.FieldTheory.IntermediateField.Adjoin.Basic}
@@ -901,7 +818,7 @@ or \texttt{IsLocalRing.isUnit\_aeval\_derivative\_minpoly\_of\_adjoin\_eq\_top}.
 Short proof: reduce to residue field via \texttt{minpoly\_map\_residue},
 apply separability of $k_R \to k_S$ (from étale), conclude
 $\bar{f'}(\bar\beta) \ne 0$, lift back to unit via
-\texttt{isUnit\_of\_residue\_ne\_zero}.
+\texttt{IsLocalRing.residue\_ne\_zero\_iff\_isUnit}.
 
 \subsection*{Potential issues}
 \begin{itemize}
@@ -954,8 +871,10 @@ with appropriate variable scoping.
 
 Primitive element theorem gives $\beta_0 \in k_S$ with $k_R[\beta_0] = k_S$.
 Lift to $\beta \in S$.
-Show $S \subseteq R[\beta] + \mathfrak{m}_R S$ by lifting elements through
-the residue map (using \texttt{Algebra.adjoin\_induction}).
+Show $S \subseteq R[\beta] + \mathfrak{m}_R S$: for each $s \in S$,
+lift a polynomial preimage of $\bar s$ through
+$\mathtt{Polynomial.map\_surjective}$ to find $t \in R[\beta]$
+with $s - t \in \mathfrak{m}_S = \mathfrak{m}_R S$.
 Conclude by Nakayama.
 
 \subsection*{Potential issues}
@@ -1104,9 +1023,11 @@ using \texttt{aeval\_add\_of\_sq\_eq\_zero}, then lifts via
     which may be fragile.
   \item \texttt{adjoin\_eq\_top\_of\_quotient} is the most intricate proof
     in the project (Artinian descent + iterative reduction + Nakayama).
-    Reviewers will likely want this broken into smaller helper lemmas.
-  \item \texttt{exists\_adjoin\_sub\_mem} uses \texttt{Algebra.adjoin\_induction}
-    with four cases. This is a standard pattern but verbose.
+    It is already decomposed into helper lemmas:
+    \texttt{Ideal.pow\_le\_span\_pow\_sup} (pure ideal arithmetic)
+    and \texttt{exists\_sub\_mem\_adjoin\_of\_pow} (iterative approximation).
+  \item \texttt{exists\_adjoin\_sub\_mem} lifts polynomials through
+    the quotient map via \texttt{Polynomial.map\_surjective}.
 \end{itemize}
 
 \subsection*{Sub-PR 7d: Main Theorem (Lemma 3.1)}

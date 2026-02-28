@@ -1,36 +1,43 @@
 /-
 Copyright (c) 2026 University of Washington Math AI Lab. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bianca Viray, Bryan Boehnke, Grant Yang, George Peykanu, Tianshuo Wang
 -/
 import Monogenic.Generator
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.Ideal.Height
 
-
-open Polynomial
-open Function
-open RingHom
-
-namespace Monogenic
-variable {R S} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
-
 /-!
-## Monogenicity from Étale Height-One Quotients
+# Monogenicity from étale height-one quotients
 
-This theorem states that if R and S are regular local rings with S a finite extension of R,
-and there exists a height one prime ideal q in S such that the induced map R/(q ∩ R) → S/q
-is étale, then S is a monogenic extension of R.
+If `R` and `S` are local integral domains with `S` a finite extension of `R`, `R` integrally
+closed, `S` a UFD, and there exists a height-one prime `q ⊆ S` such that `R/(q ∩ R) → S/q` is
+étale, then `S ≅ R[X]/(f)` for some monic `f`. This formalizes Lemma 3.1 of
+[arXiv:2503.07846](https://arxiv.org/abs/2503.07846).
 
-The key idea is that the étale condition on the quotient forces the extension to have a
-particularly simple structure, which can be captured by a single generator.
+## Main results
 
-## Extracted Sub-lemmas
+* `Monogenic.exists_isAdjoinRootMonic_of_quotientMap_etale`: the main theorem (Lemma 3.1).
 
-The following lemmas are extracted from the main theorem to improve modularity.
+## Auxiliary lemmas
+
+* `Ideal.exists_span_singleton_eq_of_prime_of_height_one`: in a UFD, a height-one prime ideal
+  is principal.
+* `Monogenic.exists_aeval_add_eq`: Taylor expansion `f(x + h) = f(x) + f'(x)·h + h²·c`.
+* `Monogenic.maximalIdeal_eq_sup_of_etale_quotient`: when `R/p → S/q` is étale,
+  `m_S = q + m_R·S`.
+* `Monogenic.exists_isAdjoinRootMonic_of_principal_adjust`: adjusting a generator by adding
+  a generator of `q` when the naïve lift does not already give the right maximal ideal
+  decomposition.
 -/
 
-section SubLemmas
+open Polynomial Function RingHom
 
+namespace Monogenic
+
+variable {R S} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
+
+section SubLemmas
 
 omit [IsLocalRing R] [IsLocalRing S] in
 --Can be placed in Height.lean with no additional imports
@@ -55,11 +62,9 @@ lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRin
   exact hp_prime.ne_zero h0
 
 --Can be placed in Taylor.lean with no additional imports.
-/-- Taylor expansion for polynomial evaluation over a commutative ring:
-    For any polynomial `f` and elements `x`, `h`, there exists `c` such that
-    `f(x + h) = f(x) + f'(x) · h + h² · c`.
-
-    Proved by lifting `Polynomial.aeval_add_of_sq_eq_zero` from `S ⧸ ⟨h²⟩`. -/
+/-- Taylor expansion: for any polynomial `f` and elements `x`, `h`,
+there exists `c` such that `f(x + h) = f(x) + f'(x) · h + h² · c`.
+Proved by lifting `Polynomial.aeval_add_of_sq_eq_zero` from `S ⧸ ⟨h²⟩`. -/
 lemma exists_aeval_add_eq {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (f : R[X]) (x h : S) :
     ∃ c : S, f.aeval (x + h) = f.aeval x + f.derivative.aeval x * h + h ^ 2 * c := by
@@ -72,9 +77,8 @@ lemma exists_aeval_add_eq {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
   obtain ⟨c, hc⟩ := Ideal.mem_span_singleton.mp (Ideal.Quotient.eq_zero_iff_mem.mp key)
   exact ⟨c, by linear_combination hc⟩
 
-/-- When the quotient map `R/p → S/q` is étale (with p = q.comap (algebraMap R S)),
-    and both rings are local, the maximal ideal of `S` decomposes as
-    `m_S = q + m_R S`. -/
+/-- When the quotient map `R/p → S/q` is étale and both rings are local,
+the maximal ideal of `S` decomposes as `m_S = q + m_R·S`. -/
 lemma maximalIdeal_eq_sup_of_etale_quotient
     [Algebra R S] [Module.Finite R S]
     (q : Ideal S) [hq_prime : q.IsPrime]
@@ -120,8 +124,9 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
 
 end SubLemmas
 
-/-- When q is principal and f₁(B) doesn't already generate the maximal ideal quotient,
-    adjusting B by the generator q₀ yields a monogenic extension via Taylor expansion. -/
+/-- When `q` is principal and `f₁(B)` doesn't already generate the
+maximal ideal quotient, adjusting `B` by the generator `q₀` yields a
+monogenic extension via Taylor expansion. -/
 lemma exists_isAdjoinRootMonic_of_principal_adjust
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [Algebra R S]
     [FaithfulSMul R S] [Module.Finite R S]
@@ -180,19 +185,11 @@ lemma exists_isAdjoinRootMonic_of_principal_adjust
   exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
     (Algebra.IsIntegral.isIntegral (R:=R) B') h_adjoin_top⟩⟩
 
-/-- Given regular local rings `R` and `S` with `S` a finite extension of `R`, if there exists a
-height one prime ideal `q ⊆ S` such that the induced map `R/(q ∩ R) → S/q` is étale,
-then `S` is a monogenic extension of `R`.
-
-Here:
-- `φ : R →+* S` is the structure map making S an extension of R
-- `hφ_fin` asserts that S is a finite R-module via φ
-- `hφ_inj` asserts that φ is injective (so R embeds into S)
-- `q` is a prime ideal of S with height 1
-- The "intersection" q ∩ R is formalized as `q.comap φ` (the preimage of q under φ)
-- The induced quotient map is `Ideal.quotientMap q φ` which gives `R/(q ∩ R) →+* S/q`
-- `hétale` asserts this quotient map is étale
--/
+/-- **Lemma 3.1** of [arXiv:2503.07846](https://arxiv.org/abs/2503.07846).
+If `R` and `S` are local integral domains with `R` integrally closed,
+`S` a UFD, and `R → S` finite and injective, and there exists a
+height-one prime `q ⊆ S` such that `R/(q ∩ R) → S/q` is étale, then
+there exists a monic `f` with `S ≅ R[X]/(f)`. -/
 theorem exists_isAdjoinRootMonic_of_quotientMap_etale
     [IsDomain R] [IsDomain S] [IsIntegrallyClosed R] [UniqueFactorizationMonoid S] [Algebra R S]
     [FaithfulSMul R S] [Module.Finite R S]
@@ -204,7 +201,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   by_cases hφ_etale : Algebra.Etale R S
   · let ⟨β, adj⟩ := exists_adjoin_eq_top (R:=R) (S:=S)
     haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
-    exact ⟨minpoly R β, ⟨IsAdjoinRoot.mkOfAdjoinEqTop' adj⟩⟩
+    exact ⟨minpoly R β, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop' adj⟩⟩
   let p : Ideal R := q.comap φ
   let R₀ := R ⧸ p; let S₀ := S ⧸ q
   let φ₀ : R₀ →+* S₀ := Ideal.quotientMap q φ (le_refl p)
@@ -215,7 +212,8 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   obtain ⟨B₀, adj⟩ := exists_adjoin_eq_top (R:=R₀) (S:=S₀)
   let f₀ := minpoly R₀ B₀
   obtain ⟨B, hB⟩ := Ideal.Quotient.mk_surjective B₀
-  obtain ⟨f₁, hf₁_map, hf₁_monic⟩ : ∃ f₁ : R[X], f₁.map (Ideal.Quotient.mk p) = f₀ ∧ f₁.Monic := by
+  obtain ⟨f₁, hf₁_map, hf₁_monic⟩ :
+      ∃ f₁ : R[X], f₁.map (Ideal.Quotient.mk p) = f₀ ∧ f₁.Monic := by
     have h_lifts : f₀ ∈ Polynomial.lifts (Ideal.Quotient.mk p) :=
       (Polynomial.mem_lifts _).mpr
         (Polynomial.map_surjective _ Ideal.Quotient.mk_surjective f₀)

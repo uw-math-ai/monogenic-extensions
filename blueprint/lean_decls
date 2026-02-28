@@ -1,9 +1,5 @@
-Monogenic._monogenic_of_univQuot
-Monogenic._monogenic_of_univQuot
-Monogenic._monogenic_of_surjective_map
-Monogenic._surjective_map_of_monogenic
 minpoly.natDegree_le'
-IsAdjoinRoot.mkOfAdjoinEqTop'
+IsAdjoinRootMonic.mkOfAdjoinEqTop'
 Monogenic.adjoin_residue_eq_top_of_adjoin_eq_top
 Monogenic.finrank_eq_finrank_residueField
 Monogenic.minpoly_map_residue
