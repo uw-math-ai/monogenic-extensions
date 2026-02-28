@@ -78,10 +78,7 @@ variable [IsLocalRing S]
 
 variable [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S]
 
-/--
-In Mathlib.RingTheory.LocalRing.ResidueField.Basic? maybe?
-
-When `β` generates `S` over `R`, the residue `β₀ = β mod m_S`
+/-- When `β` generates `S` over `R`, the residue `β₀ = β mod m_S`
 generates `S / m_S` over `R / m_R.`
 
   R[X] --aeval β-->  S
@@ -98,7 +95,8 @@ lemma adjoin_residue_eq_top_of_adjoin_eq_top
   obtain ⟨s, rfl⟩ := IsLocalRing.residue_surjective (R := S) x
   obtain ⟨p, rfl⟩ := hβ_gen s
   exact ⟨p.map (IsLocalRing.residue R),
-    by simp only [aeval_def, eval₂_map, hom_eval₂]; rfl⟩
+    (map_aeval_eq_aeval_map (ψ := IsLocalRing.residue S)
+      (φ := IsLocalRing.residue R) rfl p β).symm⟩
 
 /-- For finite étale extensions of local rings, `rank_R S = rank_{R/m_R} S/m_S`.
 -- Q: Is this in the right level of generality?
@@ -111,21 +109,16 @@ lemma adjoin_residue_eq_top_of_adjoin_eq_top
 lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
     Module.finrank R S =
       Module.finrank (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) := by
-  -- Étale ⟹ flat, and finite + flat over local ring ⟹ Free
   haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
-  -- Étale ⟹ m_R · S = m_S
   have hmaximal : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) =
       IsLocalRing.maximalIdeal S := Algebra.FormallyUnramified.map_maximalIdeal
-  -- finrank_quotient_map gives: finrank (R ⧸ m_R) (S ⧸ Ideal.map m_R) = finrank R S
-  have h := IsLocalRing.finrank_quotient_map (R := R) (S := S)
-  -- Use the linear equivalence from quotEquivOfEq to transfer finrank
   let e : (S ⧸ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R))
       ≃ₗ[R ⧸ IsLocalRing.maximalIdeal R] (S ⧸ IsLocalRing.maximalIdeal S) :=
     AddEquiv.toLinearEquiv (Ideal.quotEquivOfEq hmaximal).toAddEquiv (fun r x => by
       obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
       obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
       simp only [RingEquiv.toAddEquiv_eq_coe]; rfl)
-  erw [← e.finrank_eq, h]
+  erw [← e.finrank_eq, IsLocalRing.finrank_quotient_map (R := R) (S := S)]
 
 /-- Let `β ∈ S`, and let `f ∈ R[x]` be the minimal polynomial for `β` over `R`.
     Then `f mod m_S` is the minimal polynomial for `β mod m_S`.
@@ -216,21 +209,15 @@ lemma exists_adjoin_sub_mem
     (h_gen : Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
       {Ideal.Quotient.mk q β} = ⊤) (s : S) :
     ∃ t ∈ Algebra.adjoin R {β}, s - t ∈ q := by
-  have hs₀ : Ideal.Quotient.mk q s ∈ Algebra.adjoin (R ⧸ q.comap (algebraMap R S))
-      {Ideal.Quotient.mk q β} := by rw [h_gen]; trivial
-  obtain ⟨t, ht, ht_eq⟩ : ∃ t ∈ Algebra.adjoin R {β},
-      Ideal.Quotient.mk q s = Ideal.Quotient.mk q t := by
-    refine Algebra.adjoin_induction ?_ ?_ ?_ ?_ hs₀
-    · intro x hx; simp only [Set.mem_singleton_iff] at hx
-      exact ⟨β, Algebra.subset_adjoin rfl, by rw [hx]⟩
-    · intro r; obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
-      exact ⟨algebraMap R S r, Subalgebra.algebraMap_mem _ _,
-        (Ideal.quotientMap_mk (I := q) (f := algebraMap R S) (H := le_rfl)).symm⟩
-    · rintro x y _ _ ⟨t₀, ht₀, rfl⟩ ⟨t₁, ht₁, rfl⟩
-      exact ⟨t₀ + t₁, Subalgebra.add_mem _ ht₀ ht₁, (map_add _ t₀ t₁).symm⟩
-    · rintro x y _ _ ⟨t₀, ht₀, rfl⟩ ⟨t₁, ht₁, rfl⟩
-      exact ⟨t₀ * t₁, Subalgebra.mul_mem _ ht₀ ht₁, (map_mul _ t₀ t₁).symm⟩
-  exact ⟨t, ht, Ideal.Quotient.eq.mp ht_eq⟩
+  rw [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at h_gen
+  obtain ⟨p, hp⟩ := h_gen (Ideal.Quotient.mk q s)
+  obtain ⟨r, rfl⟩ := Polynomial.map_surjective _ Ideal.Quotient.mk_surjective p
+  refine ⟨aeval β r, ?_, Ideal.Quotient.eq.mp ?_⟩
+  · rw [Algebra.adjoin_singleton_eq_range_aeval]; exact ⟨r, rfl⟩
+  · rw [map_aeval_eq_aeval_map (ψ := Ideal.Quotient.mk q)
+      (φ := Ideal.Quotient.mk (q.comap (algebraMap R S)))
+      (by ext; exact (Ideal.quotientMap_mk (I := q) (f := algebraMap R S)
+        (H := le_rfl)).symm), hp]
 
 omit [IsLocalRing S] [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S] in
 /-- Iterative approximation: each `x ∈ q` can be approximated by an element of `A`
@@ -318,26 +305,21 @@ theorem exists_adjoin_eq_top [Algebra.Etale R S] :
   have h_adjoin_top : Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} = ⊤ := by
     rw [← IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic
       (Algebra.IsAlgebraic.isAlgebraic β₀), hβ₀, IntermediateField.top_toSubalgebra]
+  rw [show β₀ = IsLocalRing.residue S β by exact hβ.symm,
+    Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at h_adjoin_top
   set mR := IsLocalRing.maximalIdeal R
   have h_le_sup : (⊤ : Submodule R S) ≤ (Algebra.adjoin R {β}).toSubmodule ⊔ mR • ⊤ := by
     intro s _
-    have hs₀ : IsLocalRing.residue S s ∈ Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} :=
-      h_adjoin_top ▸ trivial
-    obtain ⟨t₀, ht₀_mem, ht₀_eq⟩ : ∃ t₀ ∈ Algebra.adjoin R {β},
-        IsLocalRing.residue S s = IsLocalRing.residue S t₀ := by
-      refine Algebra.adjoin_induction ?_ ?_ ?_ ?_ hs₀
-      · exact fun x hx => ⟨β, Algebra.subset_adjoin rfl,
-          (Set.mem_singleton_iff.mp hx).symm ▸ hβ.symm⟩
-      · intro r; obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
-        exact ⟨algebraMap R S r, Subalgebra.algebraMap_mem _ _, rfl⟩
-      · rintro _ _ - - ⟨a, ha, rfl⟩ ⟨b, hb, rfl⟩
-        exact ⟨a + b, Subalgebra.add_mem _ ha hb, (map_add _ a b).symm⟩
-      · rintro _ _ - - ⟨a, ha, rfl⟩ ⟨b, hb, rfl⟩
-        exact ⟨a * b, Subalgebra.mul_mem _ ha hb, (map_mul _ a b).symm⟩
+    obtain ⟨p, hp⟩ := h_adjoin_top (IsLocalRing.residue S s)
+    obtain ⟨q, rfl⟩ := Polynomial.map_surjective _ IsLocalRing.residue_surjective p
     rw [Ideal.smul_top_eq_map]
-    exact Submodule.mem_sup.mpr ⟨t₀, ht₀_mem, s - t₀,
-      (Algebra.FormallyUnramified.map_maximalIdeal (R := R) (S := S)) ▸
-        Ideal.Quotient.eq.mp ht₀_eq, by ring⟩
+    refine Submodule.mem_sup.mpr ⟨aeval β q, ?_, s - aeval β q, ?_, by ring⟩
+    · rw [Algebra.adjoin_singleton_eq_range_aeval]; exact ⟨q, rfl⟩
+    · exact (Algebra.FormallyUnramified.map_maximalIdeal (R := R) (S := S)) ▸
+        Ideal.Quotient.eq.mp
+          (show IsLocalRing.residue S s = IsLocalRing.residue S (aeval β q) by
+            rw [map_aeval_eq_aeval_map (ψ := IsLocalRing.residue S)
+              (φ := IsLocalRing.residue R) rfl, hp])
   exact eq_top_iff.mpr (Submodule.le_of_le_smul_of_le_jacobson_bot
     (Module.finite_def.mp inferInstance) (IsLocalRing.maximalIdeal_le_jacobson ⊥) h_le_sup)
 

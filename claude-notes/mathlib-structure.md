@@ -44,41 +44,10 @@
 - `Algebra.adjoin_image`: `Mathlib/RingTheory/Adjoin/Basic.lean` — `adjoin R (f '' s) = (adjoin R s).map f`
 - `Ideal.span_singleton_mul_left_unit`: `Mathlib/RingTheory/Ideal/Span.lean:111`
 
-## Known Mathlib Duplicates in Our Code
-
-| Our lemma | Mathlib equivalent | Notes |
-|-----------|-------------------|-------|
-| `isUnit_of_residue_ne_zero` | `IsLocalRing.residue_ne_zero_iff_isUnit` | Exact duplicate — can be replaced |
-| `residue_comp_algebraMap` | `IsLocalRing.ResidueField.map_comp_residue` | Same content, but Mathlib version uses `ResidueField.map f` not `algebraMap kR kS`; requires `IsLocalHom` |
-| `residue_aeval_eq` | No direct equivalent | Trivial from `hom_eval₂` but not stated as standalone |
-
 ## Simplification Opportunities
-
-### 1. `isUnit_of_residue_ne_zero` → just use `(residue_ne_zero_iff_isUnit _).mp`
-Drop our lemma entirely after updating callers.
-
-### 2. `residue_comp_algebraMap` → use `map_comp_residue`
-Our version: `(residue S).comp (algebraMap R S) = (algebraMap kR kS).comp (residue R)`
-Mathlib version: `(ResidueField.map f).comp (residue R) = (residue S).comp f`
-These are the same statement (with `f = algebraMap R S`) but written in opposite order and using `ResidueField.map` instead of `algebraMap kR kS`. Need to check if `algebraMap kR kS = ResidueField.map (algebraMap R S)` definitionally.
-
-### 3. `adjoin_residue_eq_top_of_adjoin_eq_top` → might simplify with `Algebra.adjoin_image`
-The manual `adjoin_induction` with 4 cases could potentially be replaced by:
-```
-Algebra.adjoin_image (residue S as AlgHom) {β} = (adjoin R {β}).map (residue S)
-```
-But `residue S` is a RingHom not an AlgHom, so this needs `ResidueField.map` and careful scalar tower handling. May not actually simplify.
 
 ### 4. `exists_adjoin_eq_top` (lines 323-353) — same adjoin_induction pattern
 The manual 4-case adjoin_induction lifting from kR[β₀] to R[β] could similarly benefit from `adjoin_image`, but same AlgHom vs RingHom issue applies.
-
-### 5. `finrank_eq_finrank_residueField` — manual LinearEquiv from RingEquiv
-The construction of `AddEquiv.toLinearEquiv (Ideal.quotEquivOfEq ...).toAddEquiv` with manual scalar proof is clunky. Look for:
-- `Ideal.quotEquivOfEq` as a `LinearEquiv` directly
-- Or `Submodule.Quotient.equiv` with less manual work
-
-### 6. `mkOfAdjoinEqTop'` — Orzech argument is already clean
-The current proof is essentially optimal. The Orzech pattern (surjective endo on free module → injective) is the right approach. No simpler path found.
 
 ### 7. `maximalIdeal_eq_sup_of_etale_quotient` — verbose instance setup
 Lines 84-101 set up many instances manually. Some may be inferable:
