@@ -21,7 +21,7 @@ lake exe cache get
 lake update
 
 # Check a single file
-lake env lean Monogenic/Basic.lean
+lake env lean Monogenic/Generator.lean
 ```
 
 ## Architecture
@@ -29,7 +29,6 @@ lake env lean Monogenic/Basic.lean
 ### Core Files
 
 - **`Monogenic.lean`** - Root import file (imports Basic, Generator, MonogenicOfNonEtale)
-- **`Monogenic/Basic.lean`** - Equivalences between monogenic formulations: `IsAdjoinRoot` from quotient iso, generation from surjective map, surjectivity from generation
 - **`Monogenic/Generator.lean`** - Main results for the fully étale case (Lemma 3.2), plus the converse. Contains:
   - `minpoly.natDegree_le'` - Cayley-Hamilton degree bound
   - `IsAdjoinRoot.mkOfAdjoinEqTop'` - constructs `IsAdjoinRootMonic` without `IsIntegrallyClosed`

@@ -15,7 +15,7 @@ import Mathlib.RingTheory.IsAdjoinRoot
 
 Given a finite étale extension `R → S` of local rings, we construct a single generator `β ∈ S`
 such that `S ≅ R[X]/(minpoly R β)` as `R`-algebras, and show the derivative `f'(β)` is a unit.
-This formalizes Lemma 3.2 of [arXiv:2503.07846](https://arxiv.org/abs/2503.07846).
+This formalizes Lemma 3.2 of [arXiv:2503.07846](https://arxiv.org/abs/2503.07846) (Balçik et al.).
 We also prove the converse: if `S` has such a presentation with unit derivative, then `R → S`
 is étale.
 
@@ -95,8 +95,9 @@ noncomputable def _root_.IsAdjoinRootMonic.mkOfAdjoinEqTop'
 /-!
 ## Helper lemmas for the derivative unit condition
 
-A key fact from Lemma 3.2 of arXiv:2503.07846 is that for a finite étale extension of local rings,
-the derivative of the minimal polynomial evaluated at the generator is a unit.
+A key fact from Lemma 3.2 of [arXiv:2503.07846](https://arxiv.org/abs/2503.07846)
+is that for a finite étale extension of local rings, the derivative of the
+minimal polynomial evaluated at the generator is a unit.
 
 The proof proceeds through the residue fields:
 1. Since `R -> S` is étale, the residue field extension `R / m_R → S / m_S` is separable
@@ -110,6 +111,7 @@ variable [IsLocalRing S]
 
 variable [IsLocalRing R] [Module.Finite R S] [FaithfulSMul R S]
 
+-- Mathlib.RingTheory.LocalRing.ResidueField.Basic?
 /-- When `β` generates `S` over `R`, the residue `β₀ = β mod m_S`
 generates `S/m_S` over `R/m_R`. -/
 lemma adjoin_residue_eq_top_of_adjoin_eq_top
@@ -142,7 +144,7 @@ lemma finrank_eq_finrank_residueField [Algebra.Etale R S] :
       simp only [RingEquiv.toAddEquiv_eq_coe]; rfl)
   erw [← e.finrank_eq, IsLocalRing.finrank_quotient_map (R := R) (S := S)]
 
-/-- For an étale extension of local rings, the minimal polynomial of `β`
+/-- For a monogenic étale extension of local rings, the minimal polynomial of `β`
 maps to the minimal polynomial of `β mod m_S` over the residue field. -/
 lemma minpoly_map_residue [Algebra.Etale R S]
     {β : S} (hadj : Algebra.adjoin R {β} = ⊤) :

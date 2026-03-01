@@ -58,13 +58,8 @@ the natural map $R[X]/(\operatorname{minpoly}_R \beta) \to S$ is an isomorphism,
   $\operatorname{aeval}_\alpha(\operatorname{charpoly}(\ell_\alpha)) = 0$.
   Since $\operatorname{charpoly}(\ell_\alpha)$ is monic, the minimal polynomial
   divides it, so
-  \[
-    \deg(\operatorname{minpoly}_R \alpha)
-    \le \deg(\operatorname{charpoly}(\ell_\alpha))
-    = \operatorname{finrank}_R S. \qedhere
-  \]
-\end{proof}
-
+  $\deg(\operatorname{minpoly}_R \alpha) \le \deg(\operatorname{charpoly}(\ell_\alpha)) = \operatorname{finrank}_R S$.
+  \end{proof}
 \section{The Isomorphism via Orzech's Property}
 
 \begin{theorem}[Quotient isomorphism without integrally closed hypothesis]
@@ -93,7 +88,7 @@ the natural map $R[X]/(\operatorname{minpoly}_R \beta) \to S$ is an isomorphism,
   follows from Lemma~\ref{lem:minpoly_natDegree_le}.
   For the lower bound, consider the surjection $\varphi$.
   By the quotient rank formula
-  ($\mathtt{finrank\_quotient\_span\_eq\_natDegree'}$),
+  ($\mathtt{finrank\_quotient\_}\allowbreak\mathtt{span\_eq\_natDegree'}$),
   $\operatorname{finrank}_R(R[X]/(f)) = \deg f$.
   Since $\varphi$ is surjective,
   $\operatorname{finrank}_R S \le \operatorname{finrank}_R(R[X]/(f)) = \deg f$.
@@ -104,7 +99,7 @@ the natural map $R[X]/(\operatorname{minpoly}_R \beta) \to S$ is an isomorphism,
   and $\varphi$ is surjective, the composite
   $e^{-1} \circ \varphi$ is a surjective endomorphism of a finitely generated
   free module (where $e$ is a linear equivalence from the rank equality).
-  By $\mathtt{OrzechProperty.injective\_of\_surjective\_endomorphism}$
+  By $\mathtt{OrzechProperty.}\allowbreak\mathtt{injective\_of\_surjective\_endomorphism}$
   (which holds for all commutative rings), this composite is injective,
   hence $\varphi$ is injective.
 \end{proof}
@@ -155,7 +150,7 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
   ($\mathtt{Module.free\_of\_flat\_of\_isLocalRing}$).
 
   The étale condition gives $\mathfrak{m}_R \cdot S = \mathfrak{m}_S$
-  ($\mathtt{Algebra.FormallyUnramified.map\_maximalIdeal}$), so
+  ($\mathtt{Algebra.FormallyUnramified.}\allowbreak\mathtt{map\_maximalIdeal}$), so
   $S / \mathfrak{m}_R S \cong k_S$.
   By $\mathtt{IsLocalRing.finrank\_quotient\_map}$,
   $\operatorname{finrank}_{k_R}(S/\mathfrak{m}_R S) = \operatorname{finrank}_R S$.
@@ -226,7 +221,7 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
   \uses{lem:minpoly_map_residue}
   Since $S$ is a local ring, it suffices to show
   $\overline{f'(\beta)} \ne 0$ in $k_S$
-  ($\mathtt{IsLocalRing.residue\_ne\_zero\_iff\_isUnit}$).
+  ($\mathtt{IsLocalRing.}\allowbreak\mathtt{residue\_ne\_zero\_iff\_isUnit}$).
 
   Since $R \to S$ is étale, the residue field extension $k_R \to k_S$ is
   separable.  By Lemma~\ref{lem:minpoly_map_residue},
@@ -258,7 +253,7 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
   $\mathtt{Ideal.Quotient.mk\_surjective}$.
 
   It suffices to show $\operatorname{Algebra.adjoin} R \{\beta\} = \top$.
-  By Nakayama's lemma ($\mathtt{Submodule.le\_of\_le\_smul\_of\_le\_jacobson\_bot}$),
+  By Nakayama's lemma ($\mathtt{Submodule.}\allowbreak\mathtt{le\_of\_le\_smul\_of\_le\_jacobson\_bot}$),
   it suffices to show $S \subseteq R[\beta] + \mathfrak{m}_R \cdot S$.
 
   For any $s \in S$, the residue $\bar s \in k_S = k_R[\beta_0]$, so there exists
@@ -650,7 +645,7 @@ then import it from \texttt{IsAdjoinRoot.lean} for \texttt{mkOfAdjoinEqTop'}.
 
 
 %% ===== PR 2 =====
-\section{PR 2: Residue Field Helper Lemmas}
+\section{PR 2: Residue Field Properties for \'Etale Local Extensions}
 \label{sec:pr2}
 
 \subsection*{Declarations}
@@ -661,27 +656,22 @@ then import it from \texttt{IsAdjoinRoot.lean} for \texttt{mkOfAdjoinEqTop'}.
   \item \texttt{finrank\_eq\_finrank\_residueField}:
     $\operatorname{finrank}_R S = \operatorname{finrank}_{k_R} k_S$
     for finite étale local extensions.
+  \item \texttt{minpoly\_map\_residue}: For a finite étale local extension
+    with $R[\beta] = S$:
+    $(\operatorname{minpoly}_R \beta) \bmod \mathfrak{m}_R
+    = \operatorname{minpoly}_{k_R} \bar\beta$.
+  \item \texttt{isUnit\_aeval\_derivative\_minpoly\_of\_adjoin\_eq\_top}:
+    For a finite étale local extension with $R[\beta] = S$,
+    $f'(\beta) \in S^\times$ where $f = \operatorname{minpoly}_R \beta$.
 \end{itemize}
 
 \subsection*{File placement}
 
-\texttt{adjoin\_residue\_eq\_top\_of\_adjoin\_eq\_top} is a general local ring fact.
-\texttt{finrank\_eq\_finrank\_residueField} requires étale hypotheses.
-
-\textbf{Option A:} Put the first in
-\texttt{Mathlib/RingTheory/LocalRing/ResidueField/Basic.lean}
-(which already has \texttt{residue\_surjective}, \texttt{ker\_residue}, etc.)
-and the étale-specific \texttt{finrank\_eq\_finrank\_residueField} in a new
-file or in \texttt{Mathlib/RingTheory/Etale/LocalRing.lean}.
-
-\textbf{Option B (simpler):} Both in a new file
-\texttt{Mathlib/RingTheory/LocalRing/ResidueField/Algebra.lean}
-that imports both \texttt{ResidueField/Basic} and the étale/unramified files.
+\textbf{Preferred:} A new file \texttt{Mathlib/RingTheory/LocalRing/ResidueField/Minpoly.lean} or \texttt{Mathlib/RingTheory/Etale/Monogenic.lean} that collects these cohesive residue field properties for étale local extensions.
 
 \subsection*{Namespace}
 
-Currently in \texttt{Monogenic} namespace; for Mathlib these should go in
-\texttt{IsLocalRing} or \texttt{Algebra} namespace.
+\texttt{IsLocalRing} or \texttt{Algebra.Etale} namespace.
 
 \subsection*{Required imports}
 \begin{itemize}
@@ -696,145 +686,54 @@ Currently in \texttt{Monogenic} namespace; for Mathlib these should go in
     (for \texttt{free\_of\_flat\_of\_isLocalRing}).
   \item \texttt{Mathlib.RingTheory.LocalRing.Quotient}
     (for \texttt{finrank\_quotient\_map}).
-\end{itemize}
-
-\subsection*{Proof adjustments}
-\begin{itemize}
-  \item \texttt{finrank\_eq\_finrank\_residueField} constructs a
-    \texttt{LinearEquiv} from \texttt{Ideal.quotEquivOfEq} manually.
-    Check if there is now a more direct Mathlib lemma for this
-    (e.g., a version of \texttt{finrank\_quotient\_map} that takes
-    an ideal equality).
-\end{itemize}
-
-\subsection*{Potential issues}
-\begin{itemize}
-  \item \texttt{finrank\_eq\_finrank\_residueField} uses the étale
-    $\Rightarrow$ smooth $\Rightarrow$ flat chain. This may pull in heavy
-    imports. Consider whether to state it more generally for
-    ``finite free local extensions where $\mathfrak{m}_R S = \mathfrak{m}_S$''
-    rather than requiring \texttt{Algebra.Etale}.
-  \item These lemmas may already exist in Mathlib under different names.
-    Search carefully before submitting.
-\end{itemize}
-
-
-%% ===== PR 3 =====
-\section{PR 3: Minimal Polynomial Descends to Residue Field}
-\label{sec:pr3}
-
-\subsection*{Declarations}
-
-\begin{itemize}
-  \item \texttt{minpoly\_map\_residue}: For a finite étale local extension
-    with $R[\beta] = S$:
-    $(\operatorname{minpoly}_R \beta) \bmod \mathfrak{m}_R
-    = \operatorname{minpoly}_{k_R} \bar\beta$.
-\end{itemize}
-
-\subsection*{File placement}
-
-\textbf{Preferred:} New file
-\texttt{Mathlib/RingTheory/LocalRing/ResidueField/Minpoly.lean},
-since it bridges local ring residue fields with minimal polynomials.
-Alternatively, it could go into \texttt{Mathlib/FieldTheory/Minpoly/LocalRing.lean}.
-
-\subsection*{Namespace}
-
-\texttt{IsLocalRing} or root namespace. The current name
-\texttt{Monogenic.minpoly\_map\_residue} should become something like
-\texttt{IsLocalRing.minpoly\_map\_residue} or just \texttt{minpoly.map\_residue}.
-
-\subsection*{Required imports}
-\begin{itemize}
-  \item Everything from PR~2 (residue field lemmas).
   \item \texttt{IsAdjoinRootMonic.mkOfAdjoinEqTop'} from PR~1
     (used in the degree chain: $\deg f = \operatorname{finrank}_R S$
      via \texttt{.finrank}).
   \item \texttt{Mathlib.FieldTheory.IntermediateField.Adjoin.Basic}
     (for \texttt{IntermediateField.adjoin.finrank},
      \texttt{adjoin\_simple\_toSubalgebra\_of\_isAlgebraic}).
-\end{itemize}
-
-\subsection*{Proof structure}
-
-The proof is a degree-comparison argument:
-$g \mid \bar f$, both monic, same degree $\Rightarrow$ equal.
-The degree chain uses \texttt{mkOfAdjoinEqTop'.finrank} (PR~1),
-\texttt{finrank\_eq\_finrank\_residueField} (PR~2), and
-\texttt{IntermediateField.adjoin.finrank} (Mathlib).
-
-\subsection*{Potential issues}
-\begin{itemize}
-  \item The étale hypothesis is used only to get
-    $\operatorname{finrank}_R S = \operatorname{finrank}_{k_R} k_S$.
-    If this equality holds more generally (e.g., for any finite free local
-    extension with $\mathfrak{m}_R S = \mathfrak{m}_S$), the lemma
-    could be stated without \texttt{Algebra.Etale}. Reviewers may ask for
-    this generalization.
-  \item Uses \texttt{eq\_of\_monic\_of\_dvd\_of\_natDegree\_le} --- verify
-    this is still the canonical Mathlib name.
-\end{itemize}
-
-
-%% ===== PR 4 =====
-\section{PR 4: Unit Derivative of Minimal Polynomial}
-\label{sec:pr4}
-
-\subsection*{Declarations}
-
-\begin{itemize}
-  \item \texttt{isUnit\_aeval\_derivative\_minpoly\_of\_adjoin\_eq\_top}:
-    For a finite étale local extension with $R[\beta] = S$,
-    $f'(\beta) \in S^\times$ where $f = \operatorname{minpoly}_R \beta$.
-\end{itemize}
-
-\subsection*{File placement}
-
-\textbf{Preferred:} Same file as PR~3
-(\texttt{LocalRing/ResidueField/Minpoly.lean}), since it directly
-follows from \texttt{minpoly\_map\_residue}.
-Alternatively, a new file \texttt{Mathlib/RingTheory/Etale/Monogenic.lean}
-that collects all étale-monogenic results.
-
-\subsection*{Namespace}
-
-In Mathlib: \texttt{Algebra.Etale.isUnit\_aeval\_derivative\_minpoly}
-or \texttt{IsLocalRing.isUnit\_aeval\_derivative\_minpoly\_of\_adjoin\_eq\_top}.
-
-\subsection*{Required imports}
-\begin{itemize}
-  \item PR~3 (\texttt{minpoly\_map\_residue}).
   \item \texttt{Mathlib.FieldTheory.Separable}
     (for \texttt{Algebra.IsSeparable.isSeparable},
      \texttt{Separable.aeval\_derivative\_ne\_zero}).
-  \item Étale $\Rightarrow$ separable residue field extension
-    (should already be available from
-     \texttt{Mathlib.RingTheory.Etale.Basic} or the unramified files).
 \end{itemize}
 
 \subsection*{Proof structure}
-
-Short proof: reduce to residue field via \texttt{minpoly\_map\_residue},
-apply separability of $k_R \to k_S$ (from étale), conclude
-$\bar{f'}(\bar\beta) \ne 0$, lift back to unit via
-\texttt{IsLocalRing.residue\_ne\_zero\_iff\_isUnit}.
+\begin{itemize}
+  \item \textbf{Residue generator \& rank:} \texttt{finrank\_eq\_finrank\_residueField} uses étale $\Rightarrow$ smooth $\Rightarrow$ flat $\Rightarrow$ free.
+  \item \textbf{Minimal polynomial descent:} \texttt{minpoly\_map\_residue} compares degrees:
+    $g \mid \bar f$, both monic, same degree $\Rightarrow$ equal.
+    The degree chain uses \texttt{mkOfAdjoinEqTop'.finrank} (PR~1),
+    \texttt{finrank\_eq\_finrank\_residueField}, and
+    \texttt{IntermediateField.adjoin.finrank} (Mathlib).
+  \item \textbf{Unit derivative:} Reduce to residue field via \texttt{minpoly\_map\_residue},
+    apply separability of $k_R \to k_S$ (from étale), conclude
+    $\bar{f'}(\bar\beta) \ne 0$, lift back to unit via
+    \texttt{IsLocalRing.residue\_ne\_zero\_iff\_isUnit}.
+\end{itemize}
 
 \subsection*{Potential issues}
 \begin{itemize}
+  \item \texttt{finrank\_eq\_finrank\_residueField} uses the étale
+    $\Rightarrow$ smooth $\Rightarrow$ flat chain. Consider whether to state it more generally for
+    ``finite free local extensions where $\mathfrak{m}_R S = \mathfrak{m}_S$''.
+  \item The étale hypothesis is used only to get
+    $\operatorname{finrank}_R S = \operatorname{finrank}_{k_R} k_S$.
+    If this equality holds more generally, the \texttt{minpoly\_map\_residue} lemma
+    could be stated without \texttt{Algebra.Etale}. Reviewers may ask for
+    this generalization.
   \item The hypothesis chain étale $\Rightarrow$ separable residue field
     should be automatic, but verify the instance path works:
     \texttt{Algebra.Etale R S} $\Rightarrow$
     \texttt{Algebra.FormallyUnramified R S} $\Rightarrow$
     \texttt{Algebra.IsSeparable kR kS}.
-    The last step may require \texttt{FaithfulSMul R S} or
-    \texttt{IsLocalHom (algebraMap R S)}.
+  \item Uses \texttt{eq\_of\_monic\_of\_dvd\_of\_natDegree\_le} --- verify
+    this is still the canonical Mathlib name.
 \end{itemize}
 
 
-%% ===== PR 5 =====
-\section{PR 5: Finite \'Etale Local Extensions are Monogenic}
-\label{sec:pr5}
+%% ===== PR 3 =====
+\section{PR 3: Finite \'Etale Local Extensions are Monogenic}
+\label{sec:pr3}
 
 \subsection*{Declarations}
 
@@ -879,7 +778,7 @@ Conclude by Nakayama.
 
 \subsection*{Potential issues}
 \begin{itemize}
-  \item This PR is \emph{independent} of PRs 1--4.
+  \item This PR is \emph{independent} of PRs 1 and 2.
     It does not need \texttt{mkOfAdjoinEqTop'} or
     \texttt{minpoly\_map\_residue}; it only produces a generator $\beta$,
     not an isomorphism $S \cong R[X]/(f)$.
@@ -894,9 +793,9 @@ Conclude by Nakayama.
 \end{itemize}
 
 
-%% ===== PR 6 =====
-\section{PR 6: Converse --- Standard \'Etale from Unit Derivative}
-\label{sec:pr6}
+%% ===== PR 4 =====
+\section{PR 4: Converse --- Standard \'Etale from Unit Derivative}
+\label{sec:pr4}
 
 \subsection*{Declarations}
 
@@ -950,13 +849,13 @@ Verify left/right inverse on generators via \texttt{P.hom\_ext}.
 \end{itemize}
 
 
-%% ===== PR 7 =====
-\section{PR 7: Nakayama Helpers and Partially \'Etale Case (Lemma 3.1)}
-\label{sec:pr7}
+%% ===== PR 5 =====
+\section{PR 5: Nakayama Helpers and Partially \'Etale Case (Lemma 3.1)}
+\label{sec:pr5}
 
 This is the most complex PR. It should likely be split into several sub-PRs.
 
-\subsection*{Sub-PR 7a: Height-One Primes in UFDs are Principal}
+\subsection*{Sub-PR 5a: Height-One Primes in UFDs are Principal}
 
 \textbf{Declaration:}
 \texttt{Ideal.exists\_span\_singleton\_eq\_of\_prime\_of\_height\_one}
@@ -972,7 +871,7 @@ The proof uses \texttt{IsPrime.exists\_mem\_prime\_of\_ne\_bot},
 \texttt{height\_strict\_mono\_of\_is\_prime}, and
 \texttt{primeHeight\_eq\_zero\_iff}.
 
-\subsection*{Sub-PR 7b: Taylor Expansion for Polynomial Evaluation}
+\subsection*{Sub-PR 5b: Taylor Expansion for Polynomial Evaluation}
 
 \textbf{Declaration:}
 \texttt{exists\_aeval\_add\_eq}: $f(x+h) = f(x) + f'(x)h + h^2 c$.
@@ -988,7 +887,7 @@ and \texttt{Ideal.Quotient} basics.
 using \texttt{aeval\_add\_of\_sq\_eq\_zero}, then lifts via
 \texttt{Ideal.mem\_span\_singleton}. Very clean.
 
-\subsection*{Sub-PR 7c: Maximal Ideal Decomposition and Quotient Lifting}
+\subsection*{Sub-PR 5c: Maximal Ideal Decomposition and Quotient Lifting}
 
 \textbf{Declarations:}
 \begin{itemize}
@@ -1030,7 +929,7 @@ using \texttt{aeval\_add\_of\_sq\_eq\_zero}, then lifts via
     the quotient map via \texttt{Polynomial.map\_surjective}.
 \end{itemize}
 
-\subsection*{Sub-PR 7d: Main Theorem (Lemma 3.1)}
+\subsection*{Sub-PR 5d: Main Theorem (Lemma 3.1)}
 
 \textbf{Declarations:}
 \begin{itemize}
@@ -1041,26 +940,26 @@ using \texttt{aeval\_add\_of\_sq\_eq\_zero}, then lifts via
     The main theorem.
 \end{itemize}
 
-\textbf{File:} Same as 7c, or a dedicated file
+\textbf{File:} Same as 5c, or a dedicated file
 \texttt{Mathlib/RingTheory/Etale/Monogenic.lean}.
 
-\textbf{Dependencies:} PRs 1, 4, 5, and sub-PRs 7a--7c.
+\textbf{Dependencies:} PRs 1, 2, 3, and sub-PRs 5a--5c.
 
-\textbf{Imports (beyond 7c):}
+\textbf{Imports (beyond 5c):}
 \begin{itemize}
-  \item \texttt{Mathlib.RingTheory.Ideal.Height} (for height-one primes, 7a).
-  \item \texttt{Mathlib.Algebra.Polynomial.Taylor} (for Taylor expansion, 7b).
+  \item \texttt{Mathlib.RingTheory.Ideal.Height} (for height-one primes, 5a).
+  \item \texttt{Mathlib.Algebra.Polynomial.Taylor} (for Taylor expansion, 5b).
   \item \texttt{Mathlib.Algebra.Polynomial.Lifts}
     (for \texttt{lifts\_and\_degree\_eq\_and\_monic}, used to lift
      $f_0 \in R_0[X]$ to monic $f_1 \in R[X]$).
   \item PR~1 (\texttt{mkOfAdjoinEqTop'}, used to build the isomorphism).
-  \item PR~4 (\texttt{isUnit\_aeval\_derivative\_minpoly}, for the
+  \item PR~2 (\texttt{isUnit\_aeval\_derivative\_minpoly\_of\_adjoin\_eq\_top}, for the
      derivative non-vanishing in Case 2b).
-  \item PR~5 (\texttt{exists\_adjoin\_eq\_top}, applied to the étale quotient).
+  \item PR~3 (\texttt{exists\_adjoin\_eq\_top}, applied to the étale quotient).
 \end{itemize}
 
 \textbf{Proof structure:} Case split on whether $R \to S$ is already étale.
-Case 1 uses PR~5 + PR~1 directly.
+Case 1 uses PR~3 + PR~1 directly.
 Case 2 lifts a generator from the étale quotient, then either
 (2a) applies the Nakayama argument directly, or
 (2b) delegates to \texttt{exists\_isAdjoinRootMonic\_of\_principal\_adjust},
@@ -1085,16 +984,13 @@ to ensure it generates $\mathfrak{q}$ modulo $\mathfrak{m}_R S$.
 The PR dependency structure is:
 \[
   \begin{array}{ccccc}
-    \text{PR 1} & & \text{PR 2} & & \\
+    \text{PR 1} & & \text{PR 3} & & \text{PR 4} \\
     \downarrow & & \downarrow & & \\
-    & \searrow & \text{PR 3} & & \text{PR 5} \quad \text{PR 6} \\
-    & & \downarrow & & \downarrow \\
-    & & \text{PR 4} & \to & \text{PR 7} \\
+    \text{PR 2} & \to & \text{PR 5} & & \\
   \end{array}
 \]
 
-PRs 1, 2, 5, and 6 can be submitted independently and in parallel.
-PR 3 depends on PRs 1 and 2.
-PR 4 depends on PR 3.
-PR 7 depends on PRs 1, 4, and 5.
-Sub-PRs 7a and 7b are fully independent and can be submitted first.
+PRs 1, 3, and 4 can be submitted independently and in parallel.
+PR 2 depends on PR 1.
+PR 5 depends on PRs 1, 2, and 3.
+Sub-PRs 5a and 5b are fully independent and can be submitted first.
