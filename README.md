@@ -3,7 +3,7 @@
 
 Lean 4 formalization of Lemmas 3.1 and 3.2 from [arXiv:2503.07846](https://arxiv.org/abs/2503.07846) (Balçik et al.), proving that finite étale extensions of local rings are monogenic among other results. See our [lean blueprint](https://uw-math-ai.github.io/monogenic-extensions) (built from `blueprint/`).
 
-We are the Algebraic Geoemtry group at the [UW Math AI lab](https://sites.math.washington.edu/ai/) for Autumn 2025 and Winter 2026.
+We are the Algebraic Geometry group at the [UW Math AI lab](https://sites.math.washington.edu/ai/) for Autumn 2025 and Winter 2026.
 
 Currently, we are working on upstreaming these results into Mathlib.
 

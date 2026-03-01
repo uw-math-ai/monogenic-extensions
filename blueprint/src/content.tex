@@ -60,6 +60,7 @@ the natural map $R[X]/(\operatorname{minpoly}_R \beta) \to S$ is an isomorphism,
   divides it, so
   $\deg(\operatorname{minpoly}_R \alpha) \le \deg(\operatorname{charpoly}(\ell_\alpha)) = \operatorname{finrank}_R S$.
   \end{proof}
+
 \section{The Isomorphism via Orzech's Property}
 
 \begin{theorem}[Quotient isomorphism without integrally closed hypothesis]
@@ -430,13 +431,12 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   Let $(R, \mathfrak{m}_R)$ and $(S, \mathfrak{m}_S)$ be local domains with
   $R$ integrally closed and $S$ a finite $R$-algebra with faithful scalar action.
   Let $\mathfrak{q} \subset S$ be a prime ideal with $\mathfrak{q} = (q_0)$,
-  and let $\beta \in S$, $f_1 \in R[X]$ satisfy:
+  and let $\beta \in S$, $f_1 \in R[X]$, $a \in S$ satisfy:
   \begin{enumerate}
-    \item $f_1(\beta) \in \mathfrak{q}$,
+    \item $f_1(\beta) = q_0 \cdot a$ with $a \in \mathfrak{m}_S$,
     \item $f_1'(\beta) \notin \mathfrak{m}_S$,
     \item $\mathfrak{m}_S = \mathfrak{q} + \mathfrak{m}_R S$,
-    \item $\bar\beta$ generates $S/\mathfrak{q}$ over $R/(\mathfrak{q} \cap R)$,
-    \item $f_1(\beta)$ does \emph{not} already generate $\mathfrak{m}_S$ modulo $\mathfrak{m}_R S$.
+    \item $\bar\beta$ generates $S/\mathfrak{q}$ over $R/(\mathfrak{q} \cap R)$.
   \end{enumerate}
   Then there exist a monic $f \in R[X]$ and an $\mathtt{IsAdjoinRootMonic}$ structure
   for $S$ over $f$.
@@ -447,9 +447,9 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   \uses{lem:taylor_expansion, lem:adjoin_eq_top_of_quotient, thm:mkOfAdjoinEqTop}
   Set $\beta' = \beta + q_0$.
   By Lemma~\ref{lem:taylor_expansion},
-  $f_1(\beta') = q_0 \cdot (a + f_1'(\beta) + q_0 b)$.
+  $f_1(\beta') = q_0 \cdot (a + f_1'(\beta) + q_0 b)$ for some $b \in S$.
   Since $f_1'(\beta) \notin \mathfrak{m}_S$
-  and $a, q_0 b \in \mathfrak{m}_S$, the cofactor is a unit.
+  and $a, q_0 b \in \mathfrak{m}_S$ (the former by hypothesis), the cofactor is a unit.
   Hence $\operatorname{span}\{f_1(\beta')\} = \mathfrak{q}$, and
   $\mathfrak{m}_S = \operatorname{span}\{f_1(\beta')\} + \mathfrak{m}_R S$.
 
@@ -504,11 +504,14 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   $\mathfrak{m}_R S$, apply Lemma~\ref{lem:adjoin_eq_top_of_quotient} directly
   to conclude $R[\beta] = S$.
 
-  \textbf{Sub-case 2b:} Otherwise, apply
-  Lemma~\ref{lem:exists_isAdjoinRootMonic_of_principal_adjust}
-  with $q_0$, $\beta$, $f_1$.
+  \textbf{Sub-case 2b:} Otherwise, since $f_1(\beta) \in \mathfrak{q} = (q_0)$,
+  write $f_1(\beta) = q_0 \cdot a$.  If $a$ were a unit, then
+  $\operatorname{span}\{f_1(\beta)\} = \mathfrak{q}$ and Sub-case~2a would apply;
+  so $a \in \mathfrak{m}_S$.
   The derivative condition $f_1'(\beta) \notin \mathfrak{m}_S$ follows from
   Theorem~\ref{thm:isUnit_aeval_derivative_minpoly} applied to the étale quotient.
+  Now apply Lemma~\ref{lem:exists_isAdjoinRootMonic_of_principal_adjust}
+  with $q_0$, $\beta$, $f_1$, and $a$.
 \end{proof}
 
 % Removed: exists_adjoin_eq_top_of_quotientMap_etale (trivial corollary, not formalized separately)
@@ -551,7 +554,7 @@ The key Mathlib files involved are:
   \item \texttt{Mathlib/FieldTheory/PrimitiveElement.lean} ---
     contains \texttt{Field.exists\_primitive\_element}.
   \item \texttt{Mathlib/RingTheory/Nakayama.lean} ---
-    contains \texttt{Submodule.le\_of\_le\_smul\_of\_le\_jacobson\_bot}.
+    contains \texttt{Submodule.le\_of\_le\_smul\_of\_le\_}\allowbreak\texttt{jacobson\_bot}.
   \item \texttt{Mathlib/Algebra/Polynomial/Taylor.lean} ---
     contains \texttt{aeval\_add\_of\_sq\_eq\_zero}.
 \end{itemize}
@@ -678,7 +681,7 @@ then import it from \texttt{IsAdjoinRoot.lean} for \texttt{mkOfAdjoinEqTop'}.
   \item \texttt{Mathlib.RingTheory.LocalRing.ResidueField.Defs}
     (for \texttt{residue}, \texttt{ResidueField}).
   \item \texttt{Mathlib.RingTheory.Unramified.LocalRing}
-    (for \texttt{FormallyUnramified.map\_maximalIdeal},
+    (for \texttt{FormallyUnramified.}\allowbreak\texttt{map\_maximalIdeal},
      used by \texttt{finrank\_eq\_finrank\_residueField}).
   \item \texttt{Mathlib.RingTheory.Smooth.Flat}
     (for \texttt{Algebra.Smooth.flat}, used in the étale $\Rightarrow$ free chain).
@@ -691,7 +694,7 @@ then import it from \texttt{IsAdjoinRoot.lean} for \texttt{mkOfAdjoinEqTop'}.
      via \texttt{.finrank}).
   \item \texttt{Mathlib.FieldTheory.IntermediateField.Adjoin.Basic}
     (for \texttt{IntermediateField.adjoin.finrank},
-     \texttt{adjoin\_simple\_toSubalgebra\_of\_isAlgebraic}).
+     \texttt{adjoin\_simple\_toSubalgebra\_}\allowbreak\texttt{of\_isAlgebraic}).
   \item \texttt{Mathlib.FieldTheory.Separable}
     (for \texttt{Algebra.IsSeparable.isSeparable},
      \texttt{Separable.aeval\_derivative\_ne\_zero}).
@@ -759,9 +762,9 @@ with appropriate variable scoping.
   \item \texttt{Mathlib.FieldTheory.PrimitiveElement}
     (for \texttt{Field.exists\_primitive\_element}).
   \item \texttt{Mathlib.RingTheory.Unramified.LocalRing}
-    (for \texttt{FormallyUnramified.map\_maximalIdeal}).
+    (for \texttt{FormallyUnramified.}\allowbreak\texttt{map\_maximalIdeal}).
   \item \texttt{Mathlib.RingTheory.Nakayama}
-    (for \texttt{Submodule.le\_of\_le\_smul\_of\_le\_jacobson\_bot}).
+    (for \texttt{Submodule.le\_of\_le\_smul\_of\_le\_}\allowbreak\texttt{jacobson\_bot}).
   \item \texttt{Mathlib.RingTheory.LocalRing.ResidueField.Defs}
     (for \texttt{residue}, \texttt{ResidueField}).
 \end{itemize}
@@ -905,20 +908,20 @@ using \texttt{aeval\_add\_of\_sq\_eq\_zero}, then lifts via
 \textbf{Imports:}
 \begin{itemize}
   \item \texttt{Mathlib.RingTheory.Unramified.LocalRing}
-    (for \texttt{FormallyUnramified.map\_maximalIdeal}).
+    (for \texttt{FormallyUnramified.}\allowbreak\texttt{map\_maximalIdeal}).
   \item \texttt{Mathlib.RingTheory.RingHom.Etale}
     (for \texttt{RingHom.Etale}).
   \item \texttt{Mathlib.RingTheory.LocalRing.Quotient}
-    (for \texttt{exists\_maximalIdeal\_pow\_le\_of\_isArtinianRing\_quotient}).
+    (for \texttt{exists\_maximalIdeal\_pow\_le\_of\_}\allowbreak\texttt{isArtinianRing\_quotient}).
   \item \texttt{Mathlib.RingTheory.Nakayama}.
 \end{itemize}
 
 \textbf{Notes:}
 \begin{itemize}
-  \item \texttt{maximalIdeal\_eq\_sup\_of\_etale\_quotient} has a somewhat
+  \item \texttt{maximalIdeal\_eq\_sup\_of\_}\allowbreak\texttt{etale\_quotient} has a somewhat
     long proof involving quotient maps and the commutative square
     $\operatorname{map}(\operatorname{mk}\;\mathfrak{q})$.
-    It uses \texttt{Ideal.map\_eq\_iff\_sup\_ker\_eq\_of\_surjective}
+    It uses \texttt{Ideal.map\_eq\_iff\_sup\_ker\_}\allowbreak\texttt{eq\_of\_surjective}
     which may be fragile.
   \item \texttt{adjoin\_eq\_top\_of\_quotient} is the most intricate proof
     in the project (Artinian descent + iterative reduction + Nakayama).
@@ -962,9 +965,9 @@ using \texttt{aeval\_add\_of\_sq\_eq\_zero}, then lifts via
 Case 1 uses PR~3 + PR~1 directly.
 Case 2 lifts a generator from the étale quotient, then either
 (2a) applies the Nakayama argument directly, or
-(2b) delegates to \texttt{exists\_isAdjoinRootMonic\_of\_principal\_adjust},
-which adjusts the generator by $q_0$ using the Taylor expansion
-to ensure it generates $\mathfrak{q}$ modulo $\mathfrak{m}_R S$.
+(2b) extracts $a$ with $f_1(\beta) = q_0 \cdot a$ and shows $a \in \mathfrak{m}_S$
+(if $a$ were a unit, Sub-case~2a would apply), then delegates to
+\texttt{exists\_isAdjoinRootMonic\_of\_principal\_adjust}.
 
 \textbf{Notes:}
 \begin{itemize}
