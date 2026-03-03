@@ -38,33 +38,47 @@ is étale.
   minimal polynomial over the residue field.
 * `Monogenic.adjoin_eq_top_of_quotient`: Nakayama-type argument lifting generation from a
   quotient `S/q` to `S`.
+
+## References
+
+* [Balçik et al., *Monogenic generators for étale extensions of local rings*](https://arxiv.org/abs/2503.07846)
+
+## Tags
+
+étale, monogenic, local ring, minimal polynomial
 -/
 
 open Polynomial Function RingHom
 
 namespace Monogenic
 
-variable {R S} [CommRing R] [CommRing S] [Algebra R S]
+variable {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
 
+-- #min_imports in
+-- avoid _root_.
+/- Minpoly.Basic is missing LinearMap.toMatrixAlgEquiv and Module.finrank -/
+/-- For finite free modules over a nontrivial ring,
+the degree of the minimal polynomial of any element is bounded by the rank of the module -/
 theorem _root_.minpoly.natDegree_le' [Module.Finite R S]
     [Module.Free R S] [Nontrivial R] (α : S) :
     (minpoly R α).natDegree ≤ Module.finrank R S := by
   classical
-  let b := Module.Free.chooseBasis R S
+  have b := Module.Free.chooseBasis R S
   let M := LinearMap.toMatrixAlgEquiv b (Algebra.lmul R S α)
-  have haeval : aeval α M.charpoly = 0 := by
-    have h := Matrix.aeval_self_charpoly M
-    rwa [aeval_algHom_apply, map_eq_zero_iff _ (LinearMap.toMatrixAlgEquiv b).injective,
-      aeval_algHom_apply, map_eq_zero_iff _ Algebra.lmul_injective] at h
-  exact (natDegree_le_natDegree (minpoly.min R α M.charpoly_monic haeval)).trans
+  refine (natDegree_le_natDegree (minpoly.min R α M.charpoly_monic ?_)).trans
     (M.charpoly_natDegree_eq_dim.trans (Module.finrank_eq_card_chooseBasisIndex R S).symm).le
+  let h := Matrix.aeval_self_charpoly M
+  rwa [aeval_algHom_apply, map_eq_zero_iff _ (LinearMap.toMatrixAlgEquiv b).injective,
+    aeval_algHom_apply, map_eq_zero_iff _ Algebra.lmul_injective] at h
 
+-- #find_home! minpoly.natDegree_le'
 /-- If `Algebra.adjoin R {α} = ⊤` and `S` is a finite free `R`-module,
 then `S ≅ R[X]/(minpoly R α)` as an `R`-algebra.
 
 This avoids the `IsIntegrallyClosed` hypothesis by using Cayley–Hamilton
 to bound the degree, quotient rank for the reverse bound, and the Orzech
 property for injectivity of the evaluation map. -/
+-- R[X] → S
 noncomputable def _root_.IsAdjoinRootMonic.mkOfAdjoinEqTop'
   [Module.Finite R S]
   [Module.Free R S] [Nontrivial R]
@@ -91,6 +105,14 @@ noncomputable def _root_.IsAdjoinRootMonic.mkOfAdjoinEqTop'
   exact
     { IsAdjoinRoot.ofAdjoinRootEquiv
         (AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩) with monic := hf }
+
+lemma mkOfAdjoinEqTop'_map
+    [Module.Finite R S]
+    [Module.Free R S] [Nontrivial R]
+    {α : S} {hα : Algebra.adjoin R {α} = ⊤} :
+    (IsAdjoinRootMonic.mkOfAdjoinEqTop' hα).map = (aeval α) := by
+  unfold IsAdjoinRootMonic.mkOfAdjoinEqTop'
+  ext; simp
 
 /-!
 ## Helper lemmas for the derivative unit condition
@@ -188,11 +210,9 @@ lemma isUnit_aeval_derivative_minpoly_of_adjoin_eq_top
   let kR := IsLocalRing.ResidueField R
   let β₀ := IsLocalRing.residue S β
   -- Therefore, derivative of minpoly at β₀ is non-zero
-  have hderiv_ne_zero : aeval β₀ (minpoly kR β₀).derivative ≠ 0 :=
-    (Algebra.IsSeparable.isSeparable kR β₀).aeval_derivative_ne_zero (minpoly.aeval kR β₀)
   rw [map_aeval_eq_aeval_map (ψ := IsLocalRing.residue S)
     (φ := IsLocalRing.residue R) rfl, ← derivative_map, minpoly_map_residue hadj]
-  exact hderiv_ne_zero
+  exact (Algebra.IsSeparable.isSeparable kR β₀).aeval_derivative_ne_zero (minpoly.aeval kR β₀)
 
 /-!
 ## Nakayama helpers for the quotient-lifting argument
@@ -309,7 +329,7 @@ theorem exists_adjoin_eq_top [Algebra.Etale R S] :
   have h_adjoin_top : Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} = ⊤ := by
     rw [← IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic
       (Algebra.IsAlgebraic.isAlgebraic β₀), hβ₀, IntermediateField.top_toSubalgebra]
-  rw [show β₀ = IsLocalRing.residue S β by exact hβ.symm,
+  rw [show β₀ = IsLocalRing.residue S β from hβ.symm,
     Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at h_adjoin_top
   set mR := IsLocalRing.maximalIdeal R
   have h_le_sup : (⊤ : Submodule R S) ≤ (Algebra.adjoin R {β}).toSubmodule ⊔ mR • ⊤ := by

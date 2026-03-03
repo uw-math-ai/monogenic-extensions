@@ -28,18 +28,26 @@ closed, `S` a UFD, and there exists a height-one prime `q ⊆ S` such that `R/(q
   `m_S = q + m_R·S`.
 * `Monogenic.exists_isAdjoinRootMonic_of_principal_adjust`: adjusting a generator by adding
   a generator of `q` via Taylor expansion when `f₁(B) = q₀ · a` with `a ∈ m_S`.
+
+## References
+
+* [Balçik et al., *Monogenic generators for étale extensions of local rings*](https://arxiv.org/abs/2503.07846)
+
+## Tags
+
+étale, monogenic, local ring, height one, UFD
 -/
 
 open Polynomial Function RingHom
 
 namespace Monogenic
 
-variable {R S} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
+variable {R S : Type*} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
 
 section SubLemmas
 
 omit [IsLocalRing R] [IsLocalRing S] in
---Can be placed in Height.lean with no additional imports
+/- Can be placed in `Height.lean` with no additional imports. -/
 /-- In a UFD, a height one prime ideal is principal. -/
 lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRing S] [IsDomain S]
     [UniqueFactorizationMonoid S]
@@ -60,7 +68,7 @@ lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRin
     Ideal.span_singleton_eq_bot] at h0
   exact hp_prime.ne_zero h0
 
---Can be placed in Taylor.lean with no additional imports.
+/- Can be placed in `Taylor.lean` with no additional imports. -/
 /-- Taylor expansion: for any polynomial `f` and elements `x`, `h`,
 there exists `c` such that `f(x + h) = f(x) + f'(x) · h + h² · c`.
 Proved by lifting `Polynomial.aeval_add_of_sq_eq_zero` from `S ⧸ ⟨h²⟩`. -/
