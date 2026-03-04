@@ -61,12 +61,12 @@ lemma Ideal.exists_span_singleton_eq_of_prime_of_height_one {S : Type*} [CommRin
   haveI : (Ideal.span {p}).IsPrime := (Ideal.span_singleton_prime hp_prime.ne_zero).mpr hp_prime
   haveI : q.FiniteHeight := ⟨Or.inr (by rw [hq_height]; exact ENat.one_ne_top)⟩
   haveI := Ideal.finiteHeight_of_le h_lt.le hq_prime.ne_top
-  have h0 : (Ideal.span {p}).height = 0 := ENat.lt_one_iff_eq_zero.mp (by
+  apply hp_prime.ne_zero
+  rw [← Ideal.span_singleton_eq_bot, ← Set.mem_singleton_iff,
+    ← IsDomain.minimalPrimes_eq_singleton_bot, ← Ideal.primeHeight_eq_zero_iff,
+    ← Ideal.height_eq_primeHeight]
+  exact ENat.lt_one_iff_eq_zero.mp (by
     have := Ideal.height_strict_mono_of_is_prime h_lt; rwa [hq_height] at this)
-  rw [Ideal.height_eq_primeHeight, Ideal.primeHeight_eq_zero_iff,
-    IsDomain.minimalPrimes_eq_singleton_bot, Set.mem_singleton_iff,
-    Ideal.span_singleton_eq_bot] at h0
-  exact hp_prime.ne_zero h0
 
 /- Can be placed in `Taylor.lean` with no additional imports. -/
 /-- Taylor expansion: for any polynomial `f` and elements `x`, `h`,
@@ -107,8 +107,6 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
   haveI : IsLocalHom (algebraMap (R ⧸ p) (S ⧸ q)) := by
     rw [hφ₀_eq]; exact RingHom.IsIntegral.isLocalHom (.of_finite
       (RingHom.finite_algebraMap.mpr ‹_›)) Ideal.quotientMap_injective
-  -- haveI : Algebra.EssFiniteType (R ⧸ p) (S ⧸ q) := .of_finiteType _ _
-  -- map (mk I) (maximalIdeal T) = maximalIdeal (T ⧸ I) for prime I
   have mk_max_R : (IsLocalRing.maximalIdeal R).map (Ideal.Quotient.mk p) =
       IsLocalRing.maximalIdeal (R ⧸ p) := by
     haveI := IsLocalHom.of_surjective (Ideal.Quotient.mk p) Ideal.Quotient.mk_surjective
@@ -178,6 +176,18 @@ lemma exists_isAdjoinRootMonic_of_principal_adjust
   exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
     (Algebra.IsIntegral.isIntegral (R:=R) B') h_adjoin_top⟩⟩
 
+omit [IsLocalRing R] [IsLocalRing S] in
+lemma Ideal.quotient_comp_map [Algebra R S] (q: Ideal S) : (Ideal.Quotient.mk q).comp (algebraMap R S) =
+      (Ideal.quotientMap q (algebraMap R S) (le_refl (q.comap (algebraMap R S)))).comp
+      (Ideal.Quotient.mk (q.comap (algebraMap R S))) := by
+    let R₀ := R ⧸ (q.comap (algebraMap R S)) ; let S₀ := S ⧸ q
+    let φ := algebraMap R S
+    let φ₀ := Ideal.quotientMap q φ (le_refl (q.comap (algebraMap R S)))
+    ext r; change Ideal.Quotient.mk q (φ r) =
+      φ₀ (Ideal.Quotient.mk (q.comap (algebraMap R S)) r)
+    exact Ideal.quotientMap_mk.symm
+
+
 /-- **Lemma 3.1** of [arXiv:2503.07846](https://arxiv.org/abs/2503.07846).
 If `R` and `S` are local integral domains with `R` integrally closed,
 `S` a UFD, and `R → S` finite and injective, and there exists a
@@ -218,10 +228,6 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
   have h_ms_eq : ms = q ⊔ Ideal.map φ mr := maximalIdeal_eq_sup_of_etale_quotient q hétale
   let f₁_B := Polynomial.aeval B f₁
   obtain ⟨q₀, hq₀⟩ := Ideal.exists_span_singleton_eq_of_prime_of_height_one q hq_height
-  have hcomp : (Ideal.Quotient.mk q).comp (algebraMap R S) =
-      φ₀.comp (Ideal.Quotient.mk p) := by
-    ext r; change Ideal.Quotient.mk q (φ r) = φ₀ (Ideal.Quotient.mk p r)
-    exact Ideal.quotientMap_mk.symm
   by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
   · have h_adjoin_top : Algebra.adjoin R {B} = ⊤ :=
       adjoin_eq_top_of_quotient B q (by convert adj using 3)
@@ -233,7 +239,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
       rw [← Ideal.Quotient.eq_zero_iff_mem]
       change Ideal.Quotient.mk q (Polynomial.aeval B f₁) = 0
       simp only [Polynomial.aeval_def]
-      rw [Polynomial.hom_eval₂, hB, hcomp, ← Polynomial.eval₂_map, hf₁_map]
+      rw [Polynomial.hom_eval₂, hB, Ideal.quotient_comp_map, ← Polynomial.eval₂_map, hf₁_map]
       change Polynomial.aeval B₀ f₀ = 0
       exact minpoly.aeval (A:=R₀) (B:=S₀) B₀
     obtain ⟨a, ha⟩ : ∃ a : S, f₁_B = q₀ * a := by
@@ -250,7 +256,7 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
       have h_deriv_comm : Ideal.Quotient.mk q (f₁.derivative.aeval B) =
           (f₀.derivative).aeval B₀ := by
         simp only [Polynomial.aeval_def]
-        rw [Polynomial.hom_eval₂, hB, hcomp, ← Polynomial.eval₂_map]
+        rw [Polynomial.hom_eval₂, hB, Ideal.quotient_comp_map, ← Polynomial.eval₂_map]
         congr 1; rw [← Polynomial.derivative_map, hf₁_map]
       intro h_in_ms
       haveI : IsLocalHom (Ideal.Quotient.mk q) :=
