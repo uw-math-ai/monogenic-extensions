@@ -126,8 +126,31 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
     Ideal.mk_ker, sup_eq_left.mpr (IsLocalRing.le_maximalIdeal hq_prime.ne_top),
     sup_comm] at key
 
+omit [IsLocalRing R] [IsLocalRing S] in
+lemma Ideal.quotient_adjust (q: Ideal S) (q₀ : S) (hq₀ : q = Ideal.span {q₀}) (B : S) (B' : S)
+    (hB' : B' = B + q₀) : Ideal.Quotient.mk q B' = Ideal.Quotient.mk q B := by
+    have eq : Ideal.Quotient.mk q (B + q₀) = Ideal.Quotient.mk q B := by
+      refine Ideal.Quotient.eq.mpr ?_; simp[hq₀]
+      exact Ideal.mem_span_singleton_self q₀
+    have : Ideal.Quotient.mk q q₀ = 0 :=
+      Ideal.Quotient.eq_zero_iff_mem.mpr (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
+    rw [hB', eq]
+
+omit [IsLocalRing R] [IsLocalRing S] in
+lemma Ideal.quotient_comp_map [Algebra R S] (q: Ideal S) : (Ideal.Quotient.mk q).comp (algebraMap R S) =
+      (Ideal.quotientMap q (algebraMap R S) (le_refl (q.comap (algebraMap R S)))).comp
+      (Ideal.Quotient.mk (q.comap (algebraMap R S))) := by
+    let R₀ := R ⧸ (q.comap (algebraMap R S)) ; let S₀ := S ⧸ q
+    let φ := algebraMap R S
+    let φ₀ := Ideal.quotientMap q φ (le_refl (q.comap (algebraMap R S)))
+    ext r; change Ideal.Quotient.mk q (φ r) =
+      φ₀ (Ideal.Quotient.mk (q.comap (algebraMap R S)) r)
+    exact Ideal.quotientMap_mk.symm
+
 
 end SubLemmas
+
+
 
 /-- When `q` is principal, `f₁(B) = q₀ · a` with `a ∈ m_S`, and `f₁'(B) ∉ m_S`,
 adjusting `B` to `B + q₀` yields a monogenic extension via Taylor expansion. -/
@@ -148,7 +171,6 @@ lemma exists_isAdjoinRootMonic_of_principal_adjust
   set ms := IsLocalRing.maximalIdeal S
   have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
   let B' := B + q₀
-  -- Taylor: f₁(B+q₀) = f₁(B) + f₁'(B)·q₀ + q₀²·c = q₀·(a + f₁'(B) + q₀·c)
   obtain ⟨b, hb⟩ : ∃ b : S, Polynomial.aeval B' f₁ =
       q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
     obtain ⟨c, hc⟩ := exists_aeval_add_eq f₁ B q₀
@@ -168,24 +190,14 @@ lemma exists_isAdjoinRootMonic_of_principal_adjust
     have : Ideal.Quotient.mk q q₀ = 0 :=
       Ideal.Quotient.eq_zero_iff_mem.mpr (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
     rw [map_add, this]; exact add_zero _
+  have hB': B' = B + q₀ := rfl
   have h_adjoin_top : Algebra.adjoin R {B'} = ⊤ :=
-    adjoin_eq_top_of_quotient B' q (by rw [h_mk_eq]; exact h_adj)
+    adjoin_eq_top_of_quotient B' q (by rw [(Ideal.quotient_adjust q q₀ hq₀ B B' hB')]; exact h_adj)
       (Polynomial.aeval B' f₁)
       (by rw [Algebra.adjoin_singleton_eq_range_aeval]; exact ⟨f₁, rfl⟩)
       (by rw [h_span_eq]; exact h_ms_eq)
   exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
     (Algebra.IsIntegral.isIntegral (R:=R) B') h_adjoin_top⟩⟩
-
-omit [IsLocalRing R] [IsLocalRing S] in
-lemma Ideal.quotient_comp_map [Algebra R S] (q: Ideal S) : (Ideal.Quotient.mk q).comp (algebraMap R S) =
-      (Ideal.quotientMap q (algebraMap R S) (le_refl (q.comap (algebraMap R S)))).comp
-      (Ideal.Quotient.mk (q.comap (algebraMap R S))) := by
-    let R₀ := R ⧸ (q.comap (algebraMap R S)) ; let S₀ := S ⧸ q
-    let φ := algebraMap R S
-    let φ₀ := Ideal.quotientMap q φ (le_refl (q.comap (algebraMap R S)))
-    ext r; change Ideal.Quotient.mk q (φ r) =
-      φ₀ (Ideal.Quotient.mk (q.comap (algebraMap R S)) r)
-    exact Ideal.quotientMap_mk.symm
 
 
 /-- **Lemma 3.1** of [arXiv:2503.07846](https://arxiv.org/abs/2503.07846).
