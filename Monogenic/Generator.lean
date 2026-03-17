@@ -60,16 +60,15 @@ variable {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
 /-- For finite free modules over a nontrivial ring,
 the degree of the minimal polynomial of any element is bounded by the rank of the module -/
 theorem _root_.minpoly.natDegree_le' [Module.Finite R S]
-    [Module.Free R S] [Nontrivial R] (α : S) :
-    (minpoly R α).natDegree ≤ Module.finrank R S := by
-  classical
+  [Module.Free R S] [Nontrivial R] {x : S} :
+    (minpoly R x).natDegree ≤ Module.finrank R S := by
   have b := Module.Free.chooseBasis R S
-  let M := LinearMap.toMatrixAlgEquiv b (Algebra.lmul R S α)
-  refine (natDegree_le_natDegree (minpoly.min R α M.charpoly_monic ?_)).trans
+  let M := LinearMap.toMatrixAlgEquiv b (Algebra.lmul R S x)
+  refine (natDegree_le_natDegree (minpoly.min R x M.charpoly_monic ?_)).trans
     (M.charpoly_natDegree_eq_dim.trans (Module.finrank_eq_card_chooseBasisIndex R S).symm).le
   let h := Matrix.aeval_self_charpoly M
-  rwa [aeval_algHom_apply, map_eq_zero_iff _ (LinearMap.toMatrixAlgEquiv b).injective,
-    aeval_algHom_apply, map_eq_zero_iff _ Algebra.lmul_injective] at h
+  rwa [aeval_algHom_apply, _root_.map_eq_zero_iff _ (LinearMap.toMatrixAlgEquiv b).injective,
+    aeval_algHom_apply, _root_.map_eq_zero_iff _ Algebra.lmul_injective] at h
 
 -- #find_home! minpoly.natDegree_le'
 /-- If `Algebra.adjoin R {α} = ⊤` and `S` is a finite free `R`-module,
@@ -86,21 +85,23 @@ noncomputable def _root_.IsAdjoinRootMonic.mkOfAdjoinEqTop'
     IsAdjoinRootMonic S (minpoly R α) := by
   set f := minpoly R α
   have hf : f.Monic := minpoly.monic (Algebra.IsIntegral.isIntegral α)
-  haveI := hf.free_adjoinRoot; haveI := hf.finite_adjoinRoot
+  letI : Module R (AdjoinRoot f) := Algebra.toModule
+  haveI := hf.free_adjoinRoot; haveI finite := hf.finite_adjoinRoot
   let φ : AdjoinRoot f →ₐ[R] S :=
     AdjoinRoot.liftAlgHom f (Algebra.ofId R S) α (minpoly.aeval R α)
-  have hφ_surj : Surjective φ := by
+  have hφ_surj : Function.Surjective φ := by
     rw [Algebra.adjoin_singleton_eq_range_aeval, AlgHom.range_eq_top] at hα
     exact fun s =>
       let ⟨p, hp⟩ := hα s; ⟨AdjoinRoot.mk f p, by simp [φ, ← aeval_def, hp]⟩
-  have hrank : f.natDegree = Module.finrank R S := le_antisymm (minpoly.natDegree_le' α) (by
+  have hrank : f.natDegree = Module.finrank R S := le_antisymm (minpoly.natDegree_le') (by
     have e := φ.toLinearMap.quotKerEquivRange.trans
       (LinearEquiv.ofTop _ (LinearMap.range_eq_top.mpr hφ_surj))
     rw [← e.finrank_eq]
     exact (Submodule.finrank_quotient_le _).trans (finrank_quotient_span_eq_natDegree' hf).le)
   have e := LinearEquiv.ofFinrankEq (R := R) (AdjoinRoot f) S
     ((finrank_quotient_span_eq_natDegree' hf).trans hrank)
-  have hφ_inj : Injective φ := fun x y h => OrzechProperty.injective_of_surjective_endomorphism
+  have hφ_inj : Function.Injective φ :=
+    fun x y h => OrzechProperty.injective_of_surjective_endomorphism
     (e.symm.toLinearMap.comp φ.toLinearMap) (e.symm.surjective.comp hφ_surj) (congr_arg e.symm h)
   exact
     { IsAdjoinRoot.ofAdjoinRootEquiv
@@ -190,7 +191,7 @@ lemma minpoly_map_residue [Algebra.Etale R S]
     exact IntermediateField.toSubalgebra_injective hβ₀_gen
   have hdeg_eq : f_bar.natDegree = (minpoly kR β₀).natDegree := by
     haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
-    rw [hmonic.natDegree_map _,
+    erw [hmonic.natDegree_map _,
       ← (IsAdjoinRootMonic.mkOfAdjoinEqTop' hadj).finrank,
       finrank_eq_finrank_residueField, ← IntermediateField.finrank_top', ← hβ₀_field_gen,
       IntermediateField.adjoin.finrank hβ₀_int]
@@ -322,8 +323,19 @@ This is Lemma 3.2, part 1 of [arXiv:2503.07846](https://arxiv.org/abs/2503.07846
 The proof lifts a primitive element of the residue field extension via Nakayama's lemma. -/
 theorem exists_adjoin_eq_top [Algebra.Etale R S] :
     ∃ β : S, Algebra.adjoin R {β} = ⊤ := by
-  obtain ⟨β₀, hβ₀⟩ := Field.exists_primitive_element (IsLocalRing.ResidueField R)
+  -- TODO: something is very broken here:
+  -- letI := inferInstance will work to synthesize the instances,
+  -- but exists_primitive_element will still not pick them up!!
+  -- instead I am just doing it explicitly....
+  -- this is so cursed, why is lean like this.
+  obtain ⟨β₀, hβ₀⟩ := @Field.exists_primitive_element
+    (IsLocalRing.ResidueField R)
     (IsLocalRing.ResidueField S)
+    _  -- Field (ResidueField R)
+    _  -- Field (ResidueField S)
+    _  -- Algebra (ResidueField R) (ResidueField S)
+    IsLocalRing.ResidueField.finite_of_module_finite
+    Algebra.instIsSeparableResidueFieldOfFormallyUnramified
   obtain ⟨β, hβ⟩ := Ideal.Quotient.mk_surjective β₀
   refine ⟨β, ?_⟩
   have h_adjoin_top : Algebra.adjoin (IsLocalRing.ResidueField R) {β₀} = ⊤ := by

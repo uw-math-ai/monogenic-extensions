@@ -130,10 +130,12 @@ lemma cofactor_mem_maximalIdeal_of_not_generator
     [Algebra R S]
     (f₁_B : S) (q : Ideal S) [hq_prime : q.IsPrime]
     (h_f₁B_in_q : f₁_B ∈ q)
-    (h_gen : ¬ (f₁_B ∈ IsLocalRing.maximalIdeal S ∧ Ideal.span {f₁_B} ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) • ⊤ = IsLocalRing.maximalIdeal S))
+    (h_gen : ¬ (f₁_B ∈ IsLocalRing.maximalIdeal S ∧ Ideal.span {f₁_B} ⊔ Ideal.map (algebraMap R S)
+      (IsLocalRing.maximalIdeal R) • ⊤ = IsLocalRing.maximalIdeal S))
     (q₀ : S) (hq₀ : q = Ideal.span {q₀})
     (a : S) (ha : f₁_B = q₀ * a)
-    (h_ms_eq : IsLocalRing.maximalIdeal S = q ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R)) :
+    (h_ms_eq : IsLocalRing.maximalIdeal S =
+      q ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R)) :
     a ∈ IsLocalRing.maximalIdeal S := by
   by_contra ha_not_in_ms
   exact h_gen ⟨(IsLocalRing.le_maximalIdeal hq_prime.ne_top) h_f₁B_in_q, by
@@ -144,14 +146,14 @@ lemma cofactor_mem_maximalIdeal_of_not_generator
     rw [h_ms_eq, Ideal.smul_eq_mul, Ideal.mul_top]⟩
 
 omit [IsLocalRing R] [IsLocalRing S] in
-lemma Ideal.quotient_adjust (q: Ideal S) (q₀ : S) (hq₀ : q = Ideal.span {q₀}) (B : S) (B' : S)
+lemma Ideal.quotient_adjust (q : Ideal S) (q₀ : S) (hq₀ : q = Ideal.span {q₀}) (B : S) (B' : S)
     (hB' : B' = B + q₀) : Ideal.Quotient.mk q B' = Ideal.Quotient.mk q B := by
-    have eq : Ideal.Quotient.mk q (B + q₀) = Ideal.Quotient.mk q B := by
-      refine Ideal.Quotient.eq.mpr ?_; simp only[add_sub_cancel_left]; rw[hq₀]
-      exact Ideal.mem_span_singleton_self q₀
-    have : Ideal.Quotient.mk q q₀ = 0 :=
-      Ideal.Quotient.eq_zero_iff_mem.mpr (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
-    rw [hB', eq]
+  have eq : Ideal.Quotient.mk q (B + q₀) = Ideal.Quotient.mk q B := by
+    refine Ideal.Quotient.eq.mpr ?_; simp only[add_sub_cancel_left]; rw[hq₀]
+    exact Ideal.mem_span_singleton_self q₀
+  have : Ideal.Quotient.mk q q₀ = 0 :=
+    Ideal.Quotient.eq_zero_iff_mem.mpr (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
+  rw [hB', eq]
 
 omit [IsLocalRing R] [IsLocalRing S] in
 lemma Ideal.quotient_comp_map [Algebra R S] (q : Ideal S) : (Ideal.Quotient.mk q).comp
