@@ -9,6 +9,7 @@ IsAdjoinRootMonic.algebra_etale
 Monogenic.Ideal.exists_span_singleton_eq_of_prime_of_height_one
 Monogenic.exists_aeval_add_eq
 Monogenic.maximalIdeal_eq_sup_of_etale_quotient
+Monogenic.Ideal.quotient_adjust
 Monogenic.exists_adjoin_sub_mem
 Monogenic.adjoin_eq_top_of_quotient
 Monogenic.exists_isAdjoinRootMonic_of_principal_adjust

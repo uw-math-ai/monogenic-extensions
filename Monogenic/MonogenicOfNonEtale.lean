@@ -92,11 +92,11 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
     (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
     IsLocalRing.maximalIdeal S =
       q ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) := by
-  set φ := algebraMap R S; set p := q.comap φ
-  set φ₀ : R ⧸ p →+* S ⧸ q := Ideal.quotientMap q φ le_rfl
+  set p := q.comap (algebraMap R S)
+  set φ₀ : R ⧸ p →+* S ⧸ q := Ideal.quotientMap q (algebraMap R S) le_rfl
   letI : Algebra (R ⧸ p) (S ⧸ q) := φ₀.toAlgebra
   have hφ₀_eq : algebraMap (R ⧸ p) (S ⧸ q) = φ₀ := RingHom.algebraMap_toAlgebra φ₀
-  haveI hp : p.IsPrime := Ideal.IsPrime.comap φ
+  haveI hp : p.IsPrime := Ideal.IsPrime.comap (algebraMap R S)
   haveI : IsLocalRing (R ⧸ p) := .of_surjective' _ Ideal.Quotient.mk_surjective
   haveI : IsLocalRing (S ⧸ q) := .of_surjective' _ Ideal.Quotient.mk_surjective
   haveI : Algebra.FormallyUnramified (R ⧸ p) (S ⧸ q) := by
@@ -118,7 +118,7 @@ lemma maximalIdeal_eq_sup_of_etale_quotient
     ext x; obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
     simp [sup_eq_left.mpr (IsLocalRing.le_maximalIdeal hq_prime.ne_top)]
   have key : (IsLocalRing.maximalIdeal S).map (Ideal.Quotient.mk q) =
-      (Ideal.map φ (IsLocalRing.maximalIdeal R)).map (Ideal.Quotient.mk q) := by
+      (Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R)).map (Ideal.Quotient.mk q) := by
     rw [mk_max_S, ← (by rw [← hφ₀_eq]; exact Algebra.FormallyUnramified.map_maximalIdeal :
       Ideal.map φ₀ (IsLocalRing.maximalIdeal (R ⧸ p)) = IsLocalRing.maximalIdeal (S ⧸ q)),
       ← mk_max_R, Ideal.map_map, Ideal.map_map]; congr 1
@@ -138,37 +138,29 @@ lemma cofactor_mem_maximalIdeal_of_not_generator
       q ⊔ Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R)) :
     a ∈ IsLocalRing.maximalIdeal S := by
   by_contra ha_not_in_ms
-  exact h_gen ⟨(IsLocalRing.le_maximalIdeal hq_prime.ne_top) h_f₁B_in_q, by
+  exact h_gen ⟨IsLocalRing.le_maximalIdeal hq_prime.ne_top h_f₁B_in_q, by
     rw [show Ideal.span {f₁_B} = q from by
       rw [ha, hq₀]
       exact Ideal.span_singleton_mul_right_unit
         (IsLocalRing.notMem_maximalIdeal.mp ha_not_in_ms) q₀]
     rw [h_ms_eq, Ideal.smul_eq_mul, Ideal.mul_top]⟩
 
+-- private lemma?
 omit [IsLocalRing R] [IsLocalRing S] in
-lemma Ideal.quotient_adjust (q : Ideal S) (q₀ : S) (hq₀ : q = Ideal.span {q₀}) (B : S) (B' : S)
-    (hB' : B' = B + q₀) : Ideal.Quotient.mk q B' = Ideal.Quotient.mk q B := by
-  have eq : Ideal.Quotient.mk q (B + q₀) = Ideal.Quotient.mk q B := by
-    refine Ideal.Quotient.eq.mpr ?_; simp only[add_sub_cancel_left]; rw[hq₀]
-    exact Ideal.mem_span_singleton_self q₀
-  have : Ideal.Quotient.mk q q₀ = 0 :=
-    Ideal.Quotient.eq_zero_iff_mem.mpr (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
-  rw [hB', eq]
+lemma Ideal.quotient_adjust (q : Ideal S) (q₀ : S) (hq₀ : q = Ideal.span {q₀}) (B : S) :
+    Ideal.Quotient.mk q (B + q₀) = Ideal.Quotient.mk q B :=
+  Ideal.Quotient.eq.mpr <| by
+    simp only [add_sub_cancel_left]
+    exact hq₀ ▸ Ideal.mem_span_singleton_self q₀
 
 omit [IsLocalRing R] [IsLocalRing S] in
 lemma Ideal.quotient_comp_map [Algebra R S] (q : Ideal S) : (Ideal.Quotient.mk q).comp
       (algebraMap R S) = (Ideal.quotientMap q (algebraMap R S) (le_refl (q.comap
       (algebraMap R S)))).comp (Ideal.Quotient.mk (q.comap (algebraMap R S))) := by
-    let R₀ := R ⧸ (q.comap (algebraMap R S)) ; let S₀ := S ⧸ q
-    let φ := algebraMap R S
-    let φ₀ := Ideal.quotientMap q φ (le_refl (q.comap (algebraMap R S)))
-    ext r; change Ideal.Quotient.mk q (φ r) =
-      φ₀ (Ideal.Quotient.mk (q.comap (algebraMap R S)) r)
-    exact Ideal.quotientMap_mk.symm
+  ext r; exact (Ideal.quotientMap_mk (I := q) (f := algebraMap R S) (H := le_rfl)).symm
 
 
 end SubLemmas
-
 
 
 /-- When `q` is principal, `f₁(B) = q₀ · a` with `a ∈ m_S`, and `f₁'(B) ∉ m_S`,
@@ -188,30 +180,30 @@ lemma exists_isAdjoinRootMonic_of_principal_adjust
       {Ideal.Quotient.mk q B} = ⊤) :
     ∃ f : R[X], Nonempty (IsAdjoinRootMonic S f) := by
   set ms := IsLocalRing.maximalIdeal S
+  set B' := B + q₀
   have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
-  let B' := B + q₀
   obtain ⟨b, hb⟩ : ∃ b : S, Polynomial.aeval B' f₁ =
       q₀ * (a + f₁.derivative.aeval B + q₀ * b) := by
     obtain ⟨c, hc⟩ := exists_aeval_add_eq f₁ B q₀
     exact ⟨c, by rw [hc, show (aeval B) f₁ = q₀ * a from ha]; ring⟩
   have h_cofactor_unit : IsUnit (a + f₁.derivative.aeval B + q₀ * b) := by
-    have hq₀_in_ms : q₀ ∈ ms := hq_le_ms (hq₀ ▸ Ideal.mem_span_singleton_self q₀)
-    have h_sum_in_ms : a + q₀ * b ∈ ms :=
-      Ideal.add_mem ms ha_mem (mul_comm q₀ b ▸ Ideal.mul_mem_left ms b hq₀_in_ms)
     rw [show a + f₁.derivative.aeval B + q₀ * b =
-      f₁.derivative.aeval B + (a + q₀ * b) from by ring]
-    rw [← IsLocalRing.notMem_maximalIdeal]
-    exact fun h => h_deriv_not_in_ms (by convert Ideal.sub_mem ms h h_sum_in_ms using 1; ring)
+      f₁.derivative.aeval B + (a + q₀ * b) by ring, ← IsLocalRing.notMem_maximalIdeal]
+    refine fun h => h_deriv_not_in_ms ?_
+    have : a + q₀ * b ∈ ms :=
+      Ideal.add_mem ms ha_mem
+        (mul_comm q₀ b ▸
+      Ideal.mul_mem_left ms b (hq_le_ms (hq₀ ▸ Ideal.mem_span_singleton_self q₀)))
+    convert Ideal.sub_mem ms h this using 1; ring
   have h_span_eq : Ideal.span {Polynomial.aeval B' f₁} = q := by
     rw [hb, hq₀]; exact Ideal.span_singleton_mul_right_unit h_cofactor_unit q₀
-  have hB': B' = B + q₀ := rfl
-  have h_adjoin_top : Algebra.adjoin R {B'} = ⊤ :=
-    adjoin_eq_top_of_quotient B' q (by rw [(Ideal.quotient_adjust q q₀ hq₀ B B' hB')]; exact h_adj)
+  exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
+    (Algebra.IsIntegral.isIntegral (R := R) B')
+    (adjoin_eq_top_of_quotient B' q
+      (by rw [Ideal.quotient_adjust q q₀ hq₀ B]; exact h_adj)
       (Polynomial.aeval B' f₁)
       (by rw [Algebra.adjoin_singleton_eq_range_aeval]; exact ⟨f₁, rfl⟩)
-      (by rw [h_span_eq]; exact h_ms_eq)
-  exact ⟨minpoly R B', ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
-    (Algebra.IsIntegral.isIntegral (R:=R) B') h_adjoin_top⟩⟩
+      (by rw [h_span_eq]; exact h_ms_eq))⟩⟩
 
 
 /-- **Lemma 3.1** of [arXiv:2503.07846](https://arxiv.org/abs/2503.07846).
@@ -226,66 +218,59 @@ theorem exists_isAdjoinRootMonic_of_quotientMap_etale
     [hq_prime : q.IsPrime] (hq_height : q.height = 1)
     (hétale : (Ideal.quotientMap q (algebraMap R S) le_rfl).Etale) :
     ∃ f : R[X], Nonempty (IsAdjoinRootMonic S f) := by
-  let φ := algebraMap R S
   by_cases hφ_etale : Algebra.Etale R S
-  · let ⟨β, adj⟩ := exists_adjoin_eq_top (R:=R) (S:=S)
+  · obtain ⟨β, adj⟩ := exists_adjoin_eq_top (R := R) (S := S)
     haveI : Module.Free R S := Module.free_of_flat_of_isLocalRing
     exact ⟨minpoly R β, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop' adj⟩⟩
-  let p : Ideal R := q.comap φ
-  let R₀ := R ⧸ p; let S₀ := S ⧸ q
-  let φ₀ : R₀ →+* S₀ := Ideal.quotientMap q φ (le_refl p)
-  haveI : IsLocalRing R₀ := .of_surjective' _ Ideal.Quotient.mk_surjective
-  haveI : IsLocalRing S₀ := .of_surjective' _ Ideal.Quotient.mk_surjective
-  haveI : Module.Finite R₀ S₀ := Module.Finite.of_restrictScalars_finite R _ _
-  haveI : Algebra.Etale R₀ S₀ := RingHom.etale_algebraMap.mp hétale
-  obtain ⟨B₀, adj⟩ := exists_adjoin_eq_top (R:=R₀) (S:=S₀)
-  let f₀ := minpoly R₀ B₀
+  set p := q.comap (algebraMap R S)
+  set φ₀ := Ideal.quotientMap q (algebraMap R S) (le_refl p)
+  haveI : IsLocalRing (R ⧸ p) := .of_surjective' _ Ideal.Quotient.mk_surjective
+  haveI : IsLocalRing (S ⧸ q) := .of_surjective' _ Ideal.Quotient.mk_surjective
+  haveI : Module.Finite (R ⧸ p) (S ⧸ q) := Module.Finite.of_restrictScalars_finite R _ _
+  haveI : Algebra.Etale (R ⧸ p) (S ⧸ q) := RingHom.etale_algebraMap.mp hétale
+  obtain ⟨B₀, adj⟩ := exists_adjoin_eq_top (R := R ⧸ p) (S := S ⧸ q)
   obtain ⟨B, hB⟩ := Ideal.Quotient.mk_surjective B₀
   obtain ⟨f₁, hf₁_map, hf₁_monic⟩ :
-      ∃ f₁ : R[X], f₁.map (Ideal.Quotient.mk p) = f₀ ∧ f₁.Monic := by
-    have h_lifts : f₀ ∈ Polynomial.lifts (Ideal.Quotient.mk p) :=
+      ∃ f₁ : R[X], f₁.map (Ideal.Quotient.mk p) = minpoly (R ⧸ p) B₀ ∧ f₁.Monic := by
+    have h_lifts : (minpoly (R ⧸ p) B₀) ∈ Polynomial.lifts (Ideal.Quotient.mk p) :=
       (Polynomial.mem_lifts _).mpr
-        (Polynomial.map_surjective _ Ideal.Quotient.mk_surjective f₀)
+        (Polynomial.map_surjective _ Ideal.Quotient.mk_surjective _)
     obtain ⟨f₁, hf₁_eq, _, hf₁_monic⟩ := Polynomial.lifts_and_degree_eq_and_monic
       h_lifts (minpoly.monic (Algebra.IsIntegral.isIntegral B₀))
     exact ⟨f₁, hf₁_eq, hf₁_monic⟩
-  let mr := IsLocalRing.maximalIdeal R; let ms := IsLocalRing.maximalIdeal S
-  have hq_le_ms : q ≤ ms := IsLocalRing.le_maximalIdeal hq_prime.ne_top
-  have h_ms_eq : ms = q ⊔ Ideal.map φ mr := maximalIdeal_eq_sup_of_etale_quotient q hétale
-  let f₁_B := Polynomial.aeval B f₁
+  set ms := IsLocalRing.maximalIdeal S
+  have h_ms_eq := maximalIdeal_eq_sup_of_etale_quotient q hétale
   obtain ⟨q₀, hq₀⟩ := Ideal.exists_span_singleton_eq_of_prime_of_height_one q hq_height
-  by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map φ mr • ⊤ = ms
-  · have h_adjoin_top : Algebra.adjoin R {B} = ⊤ :=
-      adjoin_eq_top_of_quotient B q (by convert adj using 3)
+  set f₁_B := Polynomial.aeval B f₁
+  have h_f₁B_in_q : f₁_B ∈ q := by
+    rw [← Ideal.Quotient.eq_zero_iff_mem]
+    change Ideal.Quotient.mk q (Polynomial.aeval B f₁) = 0
+    simp only [Polynomial.aeval_def]
+    rw [Polynomial.hom_eval₂, hB, Ideal.quotient_comp_map, ← Polynomial.eval₂_map, hf₁_map]
+    exact minpoly.aeval (R ⧸ p) B₀
+  by_cases h_gen : f₁_B ∈ ms ∧ Ideal.span {f₁_B} ⊔ Ideal.map (algebraMap R S)
+      (IsLocalRing.maximalIdeal R) • ⊤ = ms
+  · exact ⟨minpoly R B, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
+      (Algebra.IsIntegral.isIntegral (R := R) B)
+      (adjoin_eq_top_of_quotient B q (by convert adj using 3)
         f₁_B (by rw [Algebra.adjoin_singleton_eq_range_aeval]; exact ⟨f₁, rfl⟩)
-        (by simpa [Ideal.smul_eq_mul, Ideal.mul_top] using h_gen.2.symm)
-    exact ⟨minpoly R B, ⟨IsAdjoinRootMonic.mkOfAdjoinEqTop
-      (Algebra.IsIntegral.isIntegral (R:=R) B) h_adjoin_top⟩⟩
-  · have h_f₁B_in_q : f₁_B ∈ q := by
-      rw [← Ideal.Quotient.eq_zero_iff_mem]
-      change Ideal.Quotient.mk q (Polynomial.aeval B f₁) = 0
-      simp only [Polynomial.aeval_def]
-      rw [Polynomial.hom_eval₂, hB, Ideal.quotient_comp_map, ← Polynomial.eval₂_map, hf₁_map]
-      change Polynomial.aeval B₀ f₀ = 0
-      exact minpoly.aeval (A:=R₀) (B:=S₀) B₀
-    obtain ⟨a, ha⟩ : ∃ a : S, f₁_B = q₀ * a := by
+        (by simpa [Ideal.smul_eq_mul, Ideal.mul_top] using h_gen.2.symm))⟩⟩
+  · obtain ⟨a, ha⟩ : ∃ a : S, f₁_B = q₀ * a := by
       rw [hq₀] at h_f₁B_in_q; exact Ideal.mem_span_singleton.mp h_f₁B_in_q
-    have ha_mem : a ∈ ms :=
-      cofactor_mem_maximalIdeal_of_not_generator f₁_B q h_f₁B_in_q h_gen q₀ hq₀ a ha h_ms_eq
     have h_deriv_not_in_ms : f₁.derivative.aeval B ∉ ms := by
-      have h_deriv_comm : Ideal.Quotient.mk q (f₁.derivative.aeval B) =
-          (f₀.derivative).aeval B₀ := by
-        simp only [Polynomial.aeval_def]
-        rw [Polynomial.hom_eval₂, hB, Ideal.quotient_comp_map, ← Polynomial.eval₂_map]
-        congr 1; rw [← Polynomial.derivative_map, hf₁_map]
       intro h_in_ms
       haveI : IsLocalHom (Ideal.Quotient.mk q) :=
         IsLocalHom.of_surjective _ Ideal.Quotient.mk_surjective
-      have := fun h => (IsLocalRing.mem_maximalIdeal _).mp h_in_ms
-        (isUnit_of_map_unit (Ideal.Quotient.mk q) _ h)
-      rw [h_deriv_comm] at this
-      exact this (isUnit_aeval_derivative_minpoly_of_adjoin_eq_top adj)
-    exact exists_isAdjoinRootMonic_of_principal_adjust q q₀ hq₀ B f₁ a ha ha_mem
+      refine (IsLocalRing.mem_maximalIdeal _).mp h_in_ms
+        (isUnit_of_map_unit (Ideal.Quotient.mk q) _ ?_)
+      have h_deriv_comm : Ideal.Quotient.mk q (f₁.derivative.aeval B) =
+          (minpoly (R ⧸ p) B₀).derivative.aeval B₀ := by
+        simp only [Polynomial.aeval_def]
+        rw [Polynomial.hom_eval₂, hB, Ideal.quotient_comp_map, ← Polynomial.eval₂_map]
+        congr 1; rw [← Polynomial.derivative_map, hf₁_map]
+      exact h_deriv_comm ▸ isUnit_aeval_derivative_minpoly_of_adjoin_eq_top adj
+    exact exists_isAdjoinRootMonic_of_principal_adjust q q₀ hq₀ B f₁ a ha
+      (cofactor_mem_maximalIdeal_of_not_generator f₁_B q h_f₁B_in_q h_gen q₀ hq₀ a ha h_ms_eq)
       h_deriv_not_in_ms h_ms_eq (by rw [hB]; exact adj)
 
 end Monogenic

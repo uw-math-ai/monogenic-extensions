@@ -28,7 +28,7 @@ lake env lean Monogenic/Generator.lean
 
 ### Core Files
 
-- **`Monogenic.lean`** - Root import file (imports Basic, Generator, MonogenicOfNonEtale)
+- **`Monogenic.lean`** - Root import file (imports Generator, MonogenicOfNonEtale)
 - **`Monogenic/Generator.lean`** - Main results for the fully étale case (Lemma 3.2), plus the converse. Contains:
   - `minpoly.natDegree_le'` - Cayley-Hamilton degree bound
   - `IsAdjoinRoot.mkOfAdjoinEqTop'` - constructs `IsAdjoinRootMonic` without `IsIntegrallyClosed`

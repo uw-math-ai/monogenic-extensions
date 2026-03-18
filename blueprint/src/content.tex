@@ -188,15 +188,15 @@ such extensions are monogenic, and the minimal polynomial has unit derivative.
   The degree chain:
   \begin{align*}
     \deg \bar f &= \deg f
-      &&\text{(monic polynomial preserves degree under reduction)} \\
+      && \text{(monic polynomial preserves degree under reduction)} \\
     &= \operatorname{finrank}_R S
-      &&\text{(Theorem~\ref{thm:mkOfAdjoinEqTop})} \\
+      && \text{(Theorem~\ref{thm:mkOfAdjoinEqTop})} \\
     &= \operatorname{finrank}_{k_R} k_S
-      &&\text{(Lemma~\ref{lem:finrank_eq_finrank_residueField})} \\
+      && \text{(Lemma~\ref{lem:finrank_eq_finrank_residueField})} \\
     &= [k_R(\bar\beta) : k_R]
-      &&\text{(Lemma~\ref{lem:adjoin_residue_eq_top}: $k_R[\bar\beta] = k_S$)} \\
+      && \text{(Lemma~\ref{lem:adjoin_residue_eq_top}: } k_R[\bar\beta] = k_S \text{)} \\
     &= \deg g
-      &&\text{(degree of minimal polynomial = extension degree)}
+      && \text{(degree of minimal polynomial = extension degree)}
   \end{align*}
   Since $g \mid \bar f$, both are monic, and they have the same degree,
   $\bar f = g$.
@@ -364,7 +364,23 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   $\mathfrak{m}_S = \mathfrak{q} + \mathfrak{m}_R S$.
 \end{proof}
 
+\begin{lemma}[Quotient adjustment]
+  \label{lem:quotient_adjust}
+  \lean{Monogenic.Ideal.quotient_adjust}
+  \leanok
+  Let $\mathfrak{q} \subset S$ be an ideal and $\mathfrak{q} = \operatorname{span}\{q_0\}$.
+  Then for any $\beta \in S$, the image of $\beta + q_0$ in $S/\mathfrak{q}$ is
+  equal to the image of $\beta$.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Since $(\beta + q_0) - \beta = q_0 \in \mathfrak{q}$, the elements are congruent
+  modulo $\mathfrak{q}$.
+\end{proof}
+
 \section{Nakayama Helpers}
+
 
 \begin{lemma}[Quotient lifting]
   \label{lem:exists_adjoin_sub_mem}
@@ -427,7 +443,7 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   \label{lem:exists_isAdjoinRootMonic_of_principal_adjust}
   \lean{Monogenic.exists_isAdjoinRootMonic_of_principal_adjust}
   \leanok
-  \uses{lem:taylor_expansion, lem:adjoin_eq_top_of_quotient, thm:mkOfAdjoinEqTop}
+  \uses{lem:taylor_expansion, lem:adjoin_eq_top_of_quotient, thm:mkOfAdjoinEqTop, lem:quotient_adjust}
   Let $(R, \mathfrak{m}_R)$ and $(S, \mathfrak{m}_S)$ be local domains with
   $R$ integrally closed and $S$ a finite $R$-algebra with faithful scalar action.
   Let $\mathfrak{q} \subset S$ be a prime ideal with $\mathfrak{q} = (q_0)$,
@@ -444,7 +460,7 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
 
 \begin{proof}
   \leanok
-  \uses{lem:taylor_expansion, lem:adjoin_eq_top_of_quotient, thm:mkOfAdjoinEqTop}
+  \uses{lem:taylor_expansion, lem:adjoin_eq_top_of_quotient, thm:mkOfAdjoinEqTop, lem:quotient_adjust}
   Set $\beta' = \beta + q_0$.
   By Lemma~\ref{lem:taylor_expansion},
   $f_1(\beta') = q_0 \cdot (a + f_1'(\beta) + q_0 b)$ for some $b \in S$.
@@ -453,9 +469,9 @@ on the rings (domains, integrally closed, UFD) but weaker on the map
   Hence $\operatorname{span}\{f_1(\beta')\} = \mathfrak{q}$, and
   $\mathfrak{m}_S = \operatorname{span}\{f_1(\beta')\} + \mathfrak{m}_R S$.
 
-  Since $\beta' \equiv \bar\beta \pmod{\mathfrak{q}}$, it still generates
-  the quotient, so Lemma~\ref{lem:adjoin_eq_top_of_quotient} gives
-  $R[\beta'] = S$.
+  Since $\beta' \equiv \beta \pmod{\mathfrak{q}}$ (Lemma~\ref{lem:quotient_adjust}),
+  it still generates the quotient, so Lemma~\ref{lem:adjoin_eq_top_of_quotient}
+  gives $R[\beta'] = S$.
   Finally, Theorem~\ref{thm:mkOfAdjoinEqTop} provides the
   $\mathtt{IsAdjoinRootMonic}$ structure for $\operatorname{minpoly}_R \beta'$.
 \end{proof}
